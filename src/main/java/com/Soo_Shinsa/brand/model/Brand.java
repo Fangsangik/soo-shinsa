@@ -1,5 +1,6 @@
 package com.Soo_Shinsa.brand.model;
 
+import com.Soo_Shinsa.category.model.SubCategory;
 import com.Soo_Shinsa.constant.BaseTimeEntity;
 import com.Soo_Shinsa.constant.BrandStatus;
 import com.Soo_Shinsa.coupon.model.CouponBrandRelation;
@@ -8,18 +9,11 @@ import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.DynamicInsert;
-import org.hibernate.annotations.DynamicUpdate;
-import org.hibernate.validator.constraints.Length;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.Soo_Shinsa.constant.BrandStatus.APPLY;
-
 @Entity
-@DynamicInsert
-@DynamicUpdate
 @Getter
 @NoArgsConstructor
 public class Brand extends BaseTimeEntity {
@@ -28,18 +22,16 @@ public class Brand extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    @Length(min = 1, max = 50)
     private String registrationNum;
 
-    @Column(nullable = false)
-    @Length(min = 1, max = 255)
     private String name;
 
-    @Column(columnDefinition = "TEXT")
     private String context;
 
-    @Column(nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sub_category_id", nullable = false)
+    private SubCategory subCategory;
+
     @Enumerated(EnumType.STRING)
     private BrandStatus status;
 
@@ -54,24 +46,16 @@ public class Brand extends BaseTimeEntity {
     private Boolean isCouponLimited = false;
 
     @Builder
-    public Brand(String registrationNum, String name, String context, BrandStatus status, User user, List<CouponBrandRelation> couponBrandRelations, Integer couponCount, Boolean isCouponLimited) {
+    public Brand(String registrationNum, String name, String context, SubCategory subCategory, BrandStatus status, User user, List<CouponBrandRelation> couponBrandRelations, Integer couponCount, Boolean isCouponLimited) {
         this.registrationNum = registrationNum;
         this.name = name;
         this.context = context;
+        this.subCategory = subCategory;
         this.status = status;
         this.user = user;
         this.couponBrandRelations = couponBrandRelations;
         this.couponCount = couponCount;
         this.isCouponLimited = isCouponLimited;
-    }
-
-    public void refuseBrand(BrandStatus status, String context) {
-        this.status = status;
-        this.context = context;
-    }
-
-    public void apply(BrandStatus status) {
-        this.status = APPLY;
     }
 
     public void update(String registrationNum, String name, String context, BrandStatus status) {
