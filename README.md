@@ -64,25 +64,35 @@
     - StaticService 호출
 
 ## 🧨 TroubleShooting 
-- QeuryDsl TroubleShooting
-  - 동적 쿼리 작성시, 처음에 Service에 조회 기능에 동적쿼리를 작성했습니다. 하지만 이렇게 작성할 경우 Service에 Repository에 책임이 전가되어
-    책임이 불명확해 지는 현상이 발생해, CustomRepository라는 클래스를 따로 만들어 동적 쿼리 부분만 따로 작성했습니다
-  - Entity로 Parsing을 받아 작성했는데 Entity로 받아 오게 되면 불필요한 컬럼까지 조회하게 되는 현상이 있고, 레이어 구조 유지를 하기에 어려움이 있어 Projections.constructor(dto.class)라는 값으로 받도록 변경했습니다.
-  - Dto 필드 순서에 맞게 작성해야 하는데 순서에 맞게, 혹은 dto 값에 없을 경우 
-```
-com.querydsl.core.types.ExpressionException: No constructor found for class com.Soo_Shinsa.order.dto.OrderItemResponseDto with parameters: [class java.lang.Long, class java.lang.Integer, class java.lang.Long, class java.lang.String, class java.math.BigDecimal, class java.lang.Long]
-```       
-라는 오류가 발생해, dto 순서에 맞게 필드값을 하나하나 다시 확인해 수정 했습니다. 
+1. QueryDSL 문제 해결
+- 문제점
+동적 쿼리를 Service에서 작성했으나, Repository의 책임이 Service로 전가되는 문제 발생.
+Entity로 직접 데이터를 조회했더니 불필요한 컬럼까지 함께 조회되는 문제 발생.
+DTO 필드 순서를 맞추지 않으면 다음과 같은 오류 발생:
+```com.querydsl.core.types.ExpressionException: No constructor found for class com.Soo_Shinsa.order.dto.OrderItemResponseDto```
 
-- Coupon
-  - CouponTest 도중 DeadLock 발생
-   - 테스트에서는 동시에 4000개의 요청이 쿠폰 발급을 시도, 쿠폰 발급 개수는 10개로 제한, 여러 스레드가 동시에 같은 쿠폰을 가져와 발급하려고 하면 경합 상태 발생, issuedCount(발급된 개수)를 체크하고 증가시키는 로직이 안전하게 처리되지 않으면, 여러 스레드가 동시에 같은 쿠폰을 발급하려고 경쟁하여 데이터 정합성이 깨질 수 있음. 그래서 비관적 락을 사용해 트랜잭션이 종료될 때 까지 특정 데이터 변경을 차단.
-  - 쿠폰 제고 문제
-   - 쿠폰을 사용하면 수량은 감소되었지만, 다른 사용자가 동일한 쿠폰을 사용하려고 하면 `NOT_FOUND_COUPON` 예외가 발생함
-     기존 코드에서 `findUnusedCouponByCouponId(requestDto.getCouponId())`로 조회할 때, 특정 사용자의 `CouponUser`만 조회 했음
-     즉, 다른 사용자가 접근할 경우 새로운 쿠폰을 찾지 못함. 쿠폰의 재고(`maxCount`)가 남아 있어도, 새로운 `CouponUser`가 생성되지 않아서 발생한 문제.
-     재고(`maxCount`)가 남아 있다면 새로운 `CouponUser`를 생성하도록 수정, 기존 `findUnusedCouponByCouponId()`에서 쿠폰이 없을 경우, couponRepository.findById() 를 통해 쿠폰을 조회하고 새로운 `CouponUser`를 생성 후 저장하여 다른 사용자도 사용할 수 있도록 변경
-👍 최종 적용한 코드 
+- 해결방법
+
+✅ CustomRepository를 생성하여 동적 쿼리를 Service가 아닌 Repository에서 수행.  
+✅ DTO 반환 시 Projections.constructor(dto.class) 를 사용하여 필요한 컬럼만 조회하도록 변경.   
+✅ DTO 필드 순서를 맞추고, 필요한 필드만 포함하여 오류 방지.
+
+2. 쿠폰 관련 문제 해결
+문제 1 - Deadlock 발생
+- 현상
+4000개 요청이 동시에 쿠폰 발급을 시도, 그러나 발급 가능 개수는 10개로 제한.
+여러 스레드가 동시에 같은 쿠폰을 가져와 발급하려다 경합 상태 발생 → issuedCount 값이 꼬이는 문제 발생.
+- 해결방법
+
+✅ 비관적 락(Pessimistic Lock) 적용하여 트랜잭션 종료 전까지 데이터 변경 차단.
+
+문제 2 - 쿠폰 재고 문제
+- 현상
+쿠폰이 존재하지만 사용자가 접근할 경우 NOT_FOUND_COUPON 예외 발생.
+- 원인: 기존 코드에서 특정 사용자의 CouponUser만 조회하여, 다른 사용자가 접근할 경우 새로운 CouponUser를 찾지 못함.
+- 해결방법
+
+✅ 쿠폰 재고(maxCount)가 남아 있다면 새로운 CouponUser를 생성하도록 로직 변경.
 ```
 @Transactional
 public ApplyCouponCartResponseDto applyCoupon(Long cartId, ApplyCouponCartRequestDto requestDto, User user) {
@@ -149,19 +159,96 @@ public ApplyCouponCartResponseDto applyCoupon(Long cartId, ApplyCouponCartReques
     }
 }
 ```
+3. Order 결제 및 쿠폰 할인 적용 문제 해결
+4. 문제 1 - 결제 API 연동
+- 현상
+secretKey를 Base64.getEncoder()로 인코딩한 후, restTemplate을 통해 orderId 및 amount를 TossPayments API에 전달해야 했음.
+외부 결제 API 호출 경험이 부족하여 처리 흐름을 이해하는 데 어려움이 있었음.
 
-- Product
- - 상품 조회 시 파라미터 오류
-```
-2025-02-06T16:51:47.334+09:00 ERROR 17702 --- [Soo-Shinsa] [nio-8080-exec-5]
-org.springframework.dao.InvalidDataAccessApiUsageException: At least 2 parameter(s) provided but only 1 parameter(s) present in query
-java.lang.IllegalArgumentException: At least 2 parameter(s) provided but only 1 parameter(s) present in query
-```
-직접적인 원인은 찾지는 못했습니다만, 우회 방법으로 JPQL로 변경해 해당 오류를 해결했습니다. 
+- 해결방법
 
-- Image
-  - S3를 사용하기 때문에, S3만 구성한 Component로 만들어야 하나, 아니면, 이미지를 생성하고 저장할 수 있는 Image 서비스를 만들어야 하나라는 고민이 있었습니다. 하지만, S3를 직접 접근해서 이미지를 등록 하기 보다는 이를 따로 서비스화해, 유지 보수 하는데 적합하게 분리하는 것이 맞다고 판단이 들었습니다.
-  - image entity에 Image 생성자에 originName.split 해서 배열 인덱스 바로 접근하는데 확장자 없으면 OutOfIndex 오류 발생
+✅ TossPayments 개발자 센터 문서를 참고하여 결제 API 흐름을 학습.  
+✅ API 연동 후, 결제가 완료되면 paymentKey를 DB에 저장하도록 구현.  
+✅ 결제 취소 기능을 추가하여 paymentKey를 이용해 결제 취소 가능하도록 개선.
+
+```
+@Transactional
+public void approvePayment(String paymentKey, String orderId, Long amount, Model model) throws JsonProcessingException {
+    HttpHeaders headers = new HttpHeaders();
+    headers.set("Authorization", "Basic " + Base64.getEncoder().encodeToString((secretKey + ":").getBytes()));
+    headers.setContentType(MediaType.APPLICATION_JSON);
+
+    Payment findPayment = paymentRepository.findByOrderId(orderId);
+    findPayment.update(TossPayStatus.DONE, paymentKey);
+    paymentRepository.save(findPayment);
+
+    PayloadRequestDto payload = new PayloadRequestDto(orderId, String.valueOf(amount));
+    HttpEntity<String> request = new HttpEntity<>(objectMapper.writeValueAsString(payload), headers);
+    ResponseEntity<JsonNode> responseEntity = restTemplate.postForEntity(
+            "https://api.tosspayments.com/v1/payments/" + paymentKey, request, JsonNode.class);
+
+    Orders findOrder = ordersRepository.findByOrderId(orderId);
+    findOrder.updateStatus(PAYMENTCOMPLETED);
+    ordersRepository.save(findOrder);
+}
+
+```
+✅ 이점:
+
+결제 및 취소 프로세스를 안정적으로 구축하여 사용자 경험 향상.
+외부 결제 API 연동 경험을 쌓아 향후 확장 가능성 증가.
+
+4. 상품 할인 적용 문제 해결
+- 문제 : 주문 시 쿠폰 적용 후 할인 금액이 totalAmount에 반영되지 않는 현상
+- 현상
+할인 금액이 totalAmount에 반영되지 않아, 최종 결제 금액이 변경되지 않는 문제 발생.
+- 해결방법
+
+✅ 할인 금액이 적용되지 않는 기존 로직을 수정.  
+✅ OrderItems에 discountPrice 필드를 추가하여 할인된 가격을 반영하도록 개선.
+
+```
+// 총 결제 금액 계산
+public void calculateTotalPrice() {
+    this.totalPrice = orderItems.stream()
+            .map(item -> {
+                BigDecimal effectivePrice = (item.getDiscountPrice() != null && item.getDiscountPrice().compareTo(BigDecimal.ZERO) > 0)
+                        ? item.getDiscountPrice()
+                        : item.getProduct().getPrice();
+                return effectivePrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+            })
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+}
+
+```
+✅ 할인 금액이 정상적으로 반영되어 최종 결제 금액이 정확하게 계산됨.  
+✅ 쿠폰 적용 시에도 할인된 가격을 반영하여 정합성 유지.
+
+5. 상품 조회 시 파라미터 오류 해결
+문제점
+- 현상
+  상품 조회 시 다음과 같은 오류 발생
+  ```
+  org.springframework.dao.InvalidDataAccessApiUsageException: At least 2 parameter(s) provided but only 1       parameter(s) present in query java.lang.IllegalArgumentException: At least 2 parameter(s) provided but only 1 parameter(s) present in query
+  ```
+- 원인
+JPQL을 사용하는 과정에서 매개변수 개수가 일치하지 않아 발생한 문제.
+
+- 해결방법  
+✅ 기존 QueryDSL 사용 방식 대신 JPQL로 변경하여 오류 해결.  
+✅ 필요한 매개변수를 명확하게 지정하여 호출하도록 수정.
+
+6. 이미지 처리 문제 해결
+문제점
+- 현상
+S3를 사용하여 이미지를 업로드하는 과정에서 S3를 직접 접근하는 방식이 유지보수에 어려움을 초래.
+이미지 업로드 시 파일명이 없거나 확장자가 없을 경우 OutOfIndex 오류 발생.
+- 해결방법  
+✅ S3 접근 로직을 ImageService로 분리하여 유지보수 용이하도록 개선.  
+✅ 파일명을 FileUtils 유틸 클래스를 통해 안전하게 처리.  
+✅ 확장자가 없는 경우 예외 처리 추가.
+
+파일 확장자 및 MIME 타입 검증 코드 추가
 ```
 public enum FileType {
     JPG("jpg", "image/jpeg"),
@@ -177,21 +264,18 @@ public enum FileType {
         this.mimeType = mimeType;
     }
 
-
     /**
      * 확장자와 MIME 타입의 유효성을 검증
-     * @param extension 파일 확장자
-     * @param mimeType MIME 타입
-     * @return 유효한 경우 true
      */
     public static boolean isValid(String extension, String mimeType) {
         return Arrays.stream(values())
                 .anyMatch(fileType -> fileType.extension.equals(extension) && fileType.mimeType.equals(mimeType));
     }
 }
-```
-확장자 명을 생성했고, 
 
+```
+
+파일명 안전하게 처리하는 FileUtils 클래스 추가
 ```
 public class FileUtils {
 
@@ -200,43 +284,12 @@ public class FileUtils {
      *
      * @param originName 원본 파일명
      * @return 확장자 (소문자)
-     * @throws IllegalArgumentException
+     * @throws IllegalArgumentException 확장자가 없을 경우 예외 발생
      */
     public static String extractFileExtension(String originName) {
         int dotIndex = originName.lastIndexOf(".");
         if (dotIndex == -1 || dotIndex == originName.length() - 1) {
-            throw new InvalidInputException(NO_EXTENSION);
-        }
-        return originName.substring(dotIndex + 1).toLowerCase();
-    }
-
-    /**
-     * 파일 이름에서 확장자를 제외한 이름만 추출
-     *
-     * @param originName 원본 파일명
-     * @return 확장자를 제외한 파일명
-     */
-    public static String extractFileName(String originName) {
-        int dotIndex = originName.lastIndexOf(".");
-        if (dotIndex == -1) {
-            return originName; // 확장자가 없는 경우 전체 파일명 반환
-        }
-        return originName.substring(0, dotIndex); // 확장자 이전의 파일명 반환
-    }
-}
-public class FileUtils {
-
-    /**
-     * 파일 이름에서 확장자를 추출
-     *
-     * @param originName 원본 파일명
-     * @return 확장자 (소문자)
-     * @throws IllegalArgumentException
-     */
-    public static String extractFileExtension(String originName) {
-        int dotIndex = originName.lastIndexOf(".");
-        if (dotIndex == -1 || dotIndex == originName.length() - 1) {
-            throw new InvalidInputException(NO_EXTENSION);
+            throw new InvalidInputException(ErrorCode.NO_EXTENSION);
         }
         return originName.substring(dotIndex + 1).toLowerCase();
     }
@@ -257,85 +310,73 @@ public class FileUtils {
 }
 
 ```
-파일 유틸을 통해 해당 확장자값이 아니면 오류 처리를 따로 했습니다. 
-그후 
+Image 엔티티 생성자에서 파일명 안전하게 처리
 ```
-    public Image(String originName, TargetType targetType) {
-        // 안전한 확장자 추출
-        this.originName = FileUtils.extractFileName(Objects.requireNonNull(originName, "파일명은 필수입니다."));
-        this.extension = FileUtils.extractFileExtension(originName);
+public Image(String originName, TargetType targetType) {
+    // 안전한 확장자 추출
+    this.originName = FileUtils.extractFileName(Objects.requireNonNull(originName, "파일명은 필수입니다."));
+    this.extension = FileUtils.extractFileExtension(originName);
 
-        // 저장 파일명은 UUID로 생성
-        this.name = UUID.randomUUID().toString();
-        this.path = determinePath(targetType);
+    // 저장 파일명은 UUID로 생성
+    this.name = UUID.randomUUID().toString();
+    this.path = determinePath(targetType);
+}
+```
+✅ 확장자가 없는 경우 예외 발생하여 안전성 향상.  
+✅ UUID를 사용하여 저장 파일명을 생성함으로써 중복 문제 방지.  
+✅ S3 업로드 시 ImageService를 통해 로직을 분리하여 유지보수 용이.
+
+7. 카테고리 계층 구조 문제 해결
+문제점
+- 현상
+자식 카테고리 생성 시 부모 ID가 null로 저장되는 문제 발생.
+조회 시 부모-자식 관계를 명확하게 가져오지 못함.
+- 해결방법  
+✅ 재귀 함수 활용하여 계층 구조 유지  
+✅ 자식 카테고리 조회 시 부모 정보까지 포함하도록 개선
+
+```
+public class CategoryResponseDto {
+    private Long id;
+    private String name;
+    private CategoryResponseDto parent;
+
+    public CategoryResponseDto(Category category) {
+        this.id = category.getId();
+        this.name = category.getName();
+        // 부모 카테고리가 존재하면 재귀적으로 생성
+        this.parent = (category.getParent() != null) ? new CategoryResponseDto(category.getParent()) : null;
     }
 
-```
-엔티티 생성자 부분에 해당 FileUtil을 추가해 정해진 확장자가 아니면 이미지 생성시 오류가 발생하도록 진행했습니다. 
-
-- Category
-  - 계층형 데이터 생성 문제
-  - 원인 : 자식 카테고리 생성시 부모의 id가 null로 생성 되는 문제 발생
-  - 방안 : 부모의 정보를 가져오기 위해 responseDto를 다시 한번 호출해야 한다는 것을 알게 되었습니다
-  - 해결 방법
-    ```
-    this.parent = (category.getParent() != null) ? new CategoryResponseDto(category.getParent()) : null;
-     public static CategoryResponseDto toDto(Category category) {
+    public static CategoryResponseDto toDto(Category category) {
         return new CategoryResponseDto(category);
-        }
     }
-    ```
-    자식 카테고리의 경우 재귀 함수를 사용해서 부모의 정보를 가져오게 함
-- Docker
-  - 지금 배포는 AWS에서 demon을 형성해 직접 배포하는 방식입니다.
-    그래서 이를 Container화 하고, gitActions을 통해 자동화 배포를 구성하려고 했지만,
-    ```
-    Error starting ApplicationContext. To display the condition evaluation report re-run your application with       'debug' enabled.
-    2025-02-07T22:49:41.810+09:00 ERROR 35517 --- [Soo-Shinsa] [           main] o.s.boot.SpringApplication               : Application run failed
-    org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'cartItemController' defined in file [/Users/hwangsang-ik/IdeaProjects/sparta/soo-shinsa/build/classes/java/main/com/Soo_Shinsa/cartitem/controller/CartItemController.class]: Unsatisfied dependency expressed through constructor parameter 0: Error creating bean with name 'cartItemServiceImpl' defined in file [/Users/hwangsang-ik/IdeaProjects/sparta/soo-shinsa/build/classes/java/main/com/Soo_Shinsa/cartitem/service/CartItemServiceImpl.class]: Unsatisfied dependency expressed through constructor parameter 6: Error creating bean with name 'redissonClient' defined in class path resource [com/Soo_Shinsa/config/RedissonConfig.class]: Failed to instantiate [org.redisson.api.RedissonClient]: Factory method 'redissonClient' threw exception with message:
-    ```
-    이라는 오류가 발생했습니다. Redis port에서 문제가 생겼다는 것인데, 아직 Redis가 익숙하지 않아 이를 직접적으로 해결하지는 못했고, 추후 docker와 redis를 공부 한 후 적용해야 할 것 같습니다.
+}
 
-- Order
-    - 일단 secretKey를 Base64.getEncoder() 인코딩해서 restTemplate로 orderId와 amount를https://api.tosspayments.com/v1/payments/confirm 에 전달해줘야 했는데 HTTP 요청을 보내고 응답을 받는 걸 해본적이 없었고 또한 토스페이먼츠 외부 api의 결제 흐름을 파악해야했다. 일단 HTTP요청을 보내고 응답을 어떻게 해야할지 몰라 많이 어려웠음. 구글링 끝에 HTTP요청과 토스페이먼츠의 개발자센터에서 api흐름을 공부하고 에서 api를 다운받고 결제를 완료하면 paymentKey 값이 나오는데 이것을 결제가 끝날 때 db에 저장하고 취소기능을 만들 때 paymentKey값을 이용해서 값을 찾은 후 취소 결제 기능까지 다행히 구현. 
 ```
-@Transactional
-public void approvePayment(String paymentKey, String orderId, Long amount, Model model) throws JsonProcessingException {
-HttpHeaders headers = new HttpHeaders();
-headers.set("Authorization", "Basic " + Base64.getEncoder().encodeToString((secretKey + ":").getBytes()));
-headers.setContentType(MediaType.APPLICATION_JSON);
+✅ 부모 카테고리를 포함한 DTO 변환을 적용하여 계층 구조 유지  
+✅ 재귀 호출을 통해 부모-자식 관계를 명확하게 가져올 수 있도록 개선  
+✅ 조회 시 DB 불필요한 추가 호출을 최소화하여 성능 최적화
 
-Payment findPayment = paymentRepository.findByOrderId(orderId);
-findPayment.update(TossPayStatus.DONE, paymentKey);
-paymentRepository.save(findPayment);
-
-PayloadRequestDto payload = new PayloadRequestDto(orderId, String.valueOf(amount));
-HttpEntity<String> request = new HttpEntity<>(objectMapper.writeValueAsString(payload), headers);
-ResponseEntity<JsonNode> responseEntity = restTemplate.postForEntity(
-        "https://api.tosspayments.com/v1/payments/" + paymentKey, request, JsonNode.class);
-Orders findOrder = ordersRepository.findByOrderId(orderId);
-findOrder.updateStatus(PAYMENTCOMPLETED);
-ordersRepository.save(findOrder);
+8. Docker(도커) 관련 문제 해결
+문제점
+- 현상
+기존 AWS 환경에서 EC2 + Nginx + Spring Boot를 직접 배포하는 방식 사용 중.
+Docker를 활용하여 컨테이너 기반 배포를 하려 했으나 Redis 포트 문제 발생
 ```
-   - 주문시 쿠폰 적용후 할인 금액이 totalAmount에 들어가지 않는 상황
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2025-02-07T22:49:41.810+09:00 ERROR 35517 --- [Soo-Shinsa] [           main] o.s.boot.SpringApplication               : Application run failed
+org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'cartItemController'
+org.springframework.beans.factory.UnsatisfiedDependencyException: Failed to instantiate [org.redisson.api.RedissonClient]
 
-    ```
-        // 총 결제 금액 계산
-    public void calculateTotalPrice() {
-        this.totalPrice = orderItems.stream()
-                .map(item -> {
-                    BigDecimal effectivePrice = (item.getDiscountPrice() != null && item.getDiscountPrice().compareTo(BigDecimal.ZERO) > 0)
-                            ? item.getDiscountPrice()
-                            : item.getProduct().getPrice();
-                    return effectivePrice.multiply(BigDecimal.valueOf(item.getQuantity()));
-                })
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-    ```
+```
 
-  계산 로직에 DiscountPrice가 적용되지 않았었고, OrderItems에 discountPrice 필드가 적용되지 않았었다.
-  그래서 카트 아이템에서 쿠폰을 적용하더라도, 총 금액에 할인 율이 적용이 되지 않았음. 그래서 해당 코드를 위와 같이 변경 후
-  할인 금액이 적용 되었음. 
+- 원인
+Redis 컨테이너가 Docker Network에서 제대로 연결되지 않거나, 포트 충돌 발생.
+- 추후 해결방법  
+✅ docker-compose.yml을 사용하여 Redis 포함한 컨테이너 환경 구성.  
+✅ Redis 컨테이너가 실행되지 않는 경우 depends_on 옵션을 사용하여 의존성 해결.  
+✅ 환경 변수 설정을 통해 포트 충돌을 방지하고, RedissonClient 설정을 수정.
 
 ## 🫠 MVP2에서 해야 할 것들 
 1. Token 형성시 RefreshToken과 BlakcList에 대한 해당 기능 들이 없다. 로그아웃 시 해당 토큰을 삭제하는 것이 아닌 따로 관리 해줄 필요가 있다. 
@@ -344,3 +385,180 @@ ordersRepository.save(findOrder);
 3. 카테고리에 대한 depth가 너무 얕다. 그래서 depth를 추가적으로 적용할 예정
 4. 브랜드에 대한 카테고리 추가 생성필요
 5. docker 생성과 git actions을 통한 자동화 배포 진행 예정
+
+## MVP 2 
+## 🧨 Trouble Shooting 
+### 1️⃣ 연관 관계 변경
+변경된 관계:
+Category -> SubCategory -> Brand -> Product
+(기존: Brand -> Category -> SubCategory)
+
+🔍 문제점
+기존에는 Brand 안에 Category가 있고, 그 안에 SubCategory가 들어가는 구조.
+그러나 논리적으로 Category(대분류) -> SubCategory(소분류) -> Brand(브랜드) 순으로 배치하는 것이 더 적절함.
+
+🛠 해결 방법
+Brand가 아니라 Category에서부터 SubCategory를 연결.
+SubCategory 안에서 Brand가 연결되도록 수정.
+
+
+### 2️⃣ 쿠폰 AOP 적용 (분산 락 & 트랜잭션 관리 문제 해결)
+🔍 문제점
+기존 코드에서는 @Transactional 내부에서 분산 락을 처리하고 있었음.
+하지만 트랜잭션이 실패할 경우 락이 해제되지 않을 가능성이 있음.
+원인: 트랜잭션이 롤백되면 락도 반납되지 않을 수 있음 → DeadLock 발생 가능성이 증가.
+
+🛠 해결 방법  
+✅ AOP를 활용하여 락을 선 실행하고 이후 트랜잭션을 시작하도록 변경  
+✅ 트랜잭션 없이 락만 사용하는 읽기 작업도 가능하도록 설계
+
+```
+@Aspect
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class CouponLockAspect {
+    private final RedissonClient redissonClient;
+
+    @Around("@annotation(couponLock)")
+    public Object lock(ProceedingJoinPoint joinPoint, CouponLock couponLock) throws Throwable {
+        String lockKey = couponLock.key();
+        RLock lock = redissonClient.getLock(lockKey);
+
+        boolean acquired = false;
+        try {
+            acquired = lock.tryLock(couponLock.waitTime(), couponLock.leaseTime(), TimeUnit.SECONDS);
+            if (!acquired) {
+                throw new IllegalStateException("현재 쿠폰 발급 요청이 많아 잠시 후 다시 시도해주세요.");
+            }
+            return joinPoint.proceed();
+        } finally {
+            if (acquired && lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
+    }
+}
+```
+```
+@Target(ElementType.METHOD)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface CouponLock {
+    String key(); // 락 키
+    long waitTime() default 10; // 대기 시간
+    long leaseTime() default 10; // 락 유지 시간
+ }
+```
+
+### 3️⃣ BlackList & Refresh Token 적용
+(Security Stateless한 특성 활용)
+
+🔍 문제점
+기존에는 Security를 적용했지만 토큰만 사용하고 있어서 stateless한 장점을 살리지 못함.
+Access Token이 만료될 때마다 사용자가 로그인해야 하는 불편함 발생.
+Access Token이 탈취되었을 경우 보안 리스크 존재.
+
+🛠 해결 방법  
+✅ BlackList 적용 (Redis에 저장하여 무효화 처리)  
+✅ Refresh Token 활용하여 Access Token 재발급 시스템 도입
+
+###  로그인/회원가입 URL 필터 처리 오류 해결
+🔍 문제점
+```Invalid JWT token: 토큰이 비어 있습니다.```
+Spring Security 필터 순서 문제
+UsernamePasswordAuthenticationFilter보다 뒤에서 실행되어 JWT 검증이 먼저 발생.
+JwtAuthFilter에서 로그인/회원가입 URL이 필터 제외 대상에서 빠짐.
+로그인 & 회원가입 요청에서도 JWT 검증을 시도 → 토큰이 없으므로 Invalid JWT token 오류 발생.
+
+🛠 해결 방법  
+✅ Security 필터 순서를 UsernamePasswordAuthenticationFilter보다 앞으로 조정!  
+✅ 로그인 & 회원가입 API는 필터 예외 처리!
+
+```
+@Override
+protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+        throws ServletException, IOException {
+    
+    String requestURI = request.getRequestURI();
+    
+    // 로그인 & 회원가입 요청은 필터링 제외
+    if (requestURI.equals("/users/login") || requestURI.equals("/users/signin")) {
+        filterChain.doFilter(request, response);
+        return;
+    }
+
+    // 기존 JWT 인증 처리 로직 수행
+    this.authenticate(request);
+    filterChain.doFilter(request, response);
+}
+
+```
+
+### 4️⃣ SecurityContextHolder.getContext().getAuthentication()이 null이거나 올바른 객체가 아님
+🔍 문제 발생 상황  
+로그아웃을 시도했을 때, SecurityContextHolder.getContext().getAuthentication()이 null이거나 UserDetailsImp 객체가 아닌 것으로 인식됨.  
+결과적으로 "인증이 필요합니다. 로그인 후 이용해주세요." 메시지가 출력됨.
+
+🛠 해결 방법  
+JWT 필터에서 로그아웃 요청("/users/logout")을 그냥 통과시키고 있었음.  
+JwtAuthFilter에서 로그아웃 요청을 인증 없이 통과시키고 있었기 때문에, SecurityContextHolder에 인증 객체가 저장되지 않음.
+
+### 5️⃣ SecurityConfig에서 로그아웃 URL이 인증 없이 접근 가능하도록 되어 있었음
+🔍 문제 발생 상황  
+UrlConst라는 클래스 내부에 WhiteList라는 List 값 안에 users/logout 이라는 기능이 없었음. 
+
+🛠️ 해결 방법
+```public static final String[] WHITE_LIST = {"/", "/users/signin", "/users/refresh", "/users/logout", "/users/login", "/api/**", "/test","/stylesheets/**","/success"};```
+추가 
+
+### 6️⃣ 로그인 후 SecurityContext에 인증 정보가 저장되지 않음
+
+🔍 문제 발생 상황  
+로그인 후 SecurityContextHolder.getContext().setAuthentication(auth);이 실행되지 않거나, Redis에서 저장된 토큰이 없어서 인증이 초기화됨.
+
+🛠 해결 방법
+1. 로그인 시 SecurityContextHolder에 인증 정보 저장 확인
+```
+Authentication auth = authenticationManager.authenticate(
+        new UsernamePasswordAuthenticationToken(
+                dto.getEmail(),
+                dto.getPassword()
+        )
+);
+
+// ✅ SecurityContext에 인증 객체 저장
+SecurityContextHolder.getContext().setAuthentication(auth);
+log.info("로그인 성공: SecurityContextHolder에 인증 객체 저장됨. 사용자: {}", dto.getEmail());
+```
+2. Redis를 사용 하고 있기 때문에
+```
+String storedAccessToken = jwtAccessTokenService.getAccessToken(token);
+if (storedAccessToken == null) {
+    log.warn("Redis에서 AccessToken을 찾을 수 없음! username: {}", username);
+}
+
+```
+
+### 👨‍💻 Token을 Redis로 관리한 이유 
+1. 성능 향상 (Fast Authentication)
+    -  DB를 이용한 토큰 검증은 성능이 느림
+     -  JWT를 사용할 때, 일반적으로 사용자 정보를 검증하기 위해 DB에서 유저를 조회해야 함.
+     -  이는 매 요청마다 DB 조회가 발생하여 성능 저하를 유발.
+       
+🛠 Redis를 사용한 해결 방법
+- JWT와 사용자 정보를 Redis에 캐싱하여, DB 조회 없이 빠르게 인증 가능.
+
+📌 효과  
+✅ 매 요청마다 DB를 조회할 필요 없이 빠른 인증 처리  
+✅ DB 부하를 줄이고 서버 성능을 최적화
+
+2. 자동 로그아웃 처리 (Token Expiry Management)
+JWT 자체적으로 만료된 토큰을 자동으로 정리하지 않음.
+만약 로그아웃한 사용자의 Refresh Token을 명시적으로 삭제하지 않으면, 보안 리스크가 발생할 수 있음.
+
+🛠 Redis를 사용한 해결 방법  
+Redis의 EXPIRE 기능을 이용해, 자동으로 만료된 토큰을 제거.
+
+📌 효과  
+✅ 만료된 토큰을 자동으로 삭제하여 보안 강화  
+✅ 만료된 Refresh Token이 남아 있지 않도록 관리 가능
