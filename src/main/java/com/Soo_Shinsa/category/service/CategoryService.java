@@ -8,7 +8,7 @@ import com.Soo_Shinsa.user.model.User;
 import org.springframework.data.domain.Page;
 
 public interface CategoryService {
-    CategoryResponseDto create(Long brandId, User user, CategoryRequestDto categoryRequestDto);
+    CategoryResponseDto create(User user, CategoryRequestDto dto);
 
     CategoryResponseDto findById(Long categoryId);
 
