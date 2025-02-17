@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -19,6 +20,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -26,6 +28,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtProvider jwtProvider;
     private final JwtBlackListService jwtBlackListService;
     private final UserDetailsService userDetailsService;
+    private final JwtAccessTokenService jwtAccessTokenService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -37,28 +40,39 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         String token = getTokenFromRequest(request);
-        if (token != null && jwtBlackListService.isBlackListed(token)) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        if (token == null) {
+            log.warn("요청에 토큰이 포함되지 않음.");
+            filterChain.doFilter(request, response);
             return;
         }
 
         if (jwtBlackListService.isBlackListed(token)) {
+            log.warn("토큰이 블랙리스트에 있음: {}", token);
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
 
-        authenticate(request);
+        authenticate(request, token);
         filterChain.doFilter(request, response);
     }
 
-    private void authenticate(HttpServletRequest request) {
-        String token = getTokenFromRequest(request);
+    private void authenticate(HttpServletRequest request, String token) {
         if (!jwtProvider.validAccessToken(token)) {
             return;
         }
 
-        String username = jwtProvider.getUsername(token);
-        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+        String email = jwtProvider.getUsername(token);
+
+        String storedAccessToken = jwtAccessTokenService.getAccessToken(email);
+        if (storedAccessToken == null) {
+            log.warn("Redis에서 AccessToken을 찾을 수 없음! username: {}", email);
+        }
+
+        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+        if (userDetails == null) {
+            log.warn("UserDetails를 찾을 수 없음! username: {}", email);
+            return;
+        }
         setAuthentication(request, userDetails);
     }
 
