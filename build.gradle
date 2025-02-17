@@ -27,8 +27,11 @@ dependencies {
     //jpa
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
+    //redisson
     implementation 'org.redisson:redisson-spring-boot-starter:3.22.1'
 
+    //redis
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
     implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
     annotationProcessor "com.querydsl:querydsl-apt:5.0.0:jakarta"
