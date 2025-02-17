@@ -3,6 +3,8 @@ package com.Soo_Shinsa.brand.service;
 import com.Soo_Shinsa.brand.dto.*;
 import com.Soo_Shinsa.brand.model.Brand;
 import com.Soo_Shinsa.brand.repository.BrandRepository;
+import com.Soo_Shinsa.category.model.SubCategory;
+import com.Soo_Shinsa.category.repository.SubCategoryRepository;
 import com.Soo_Shinsa.constant.BrandStatus;
 import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.utils.EntityValidator;
@@ -20,13 +22,18 @@ import java.util.List;
 public class BrandServiceImpl implements BrandService {
 
     private final BrandRepository brandRepository;
+    private final SubCategoryRepository subCategoryRepository;
 
     @Transactional
     @Override
     public BrandResponseDto create(User user, BrandRequestDto dto) {
 
         EntityValidator.validateAdminOrVendorAccess(user);
+
+        SubCategory subCategory = subCategoryRepository.findByIdOrElseThrow(dto.getSubCategoryId());
+
         Brand savedBrand = Brand.builder()
+                .subCategory(subCategory)
                 .registrationNum(dto.getRegistrationNum())
                 .name(dto.getName())
                 .context(dto.getContext())
