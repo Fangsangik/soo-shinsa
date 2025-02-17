@@ -2,10 +2,7 @@ package com.Soo_Shinsa.auth;
 
 import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.user.repository.UserRepository;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.Getter;
@@ -55,13 +52,13 @@ public class JwtProvider {
         return claims.getSubject();
     }
 
-    private String generateTokenBy(String email, long expiration) throws EntityNotFoundException {
+    public String generateTokenBy(String email, long expiration) throws EntityNotFoundException {
         User user = userRepository.findByEmailOrElseThrow(email);
         Date currentDate = new Date();
         Date expireDate = new Date(currentDate.getTime() + expiration);
 
         return Jwts.builder()
-                .subject(email)
+                .subject(user.getEmail())
                 .issuedAt(currentDate)
                 .expiration(expireDate)
                 .claim("role", user.getRole())
@@ -77,14 +74,18 @@ public class JwtProvider {
         return validToken(token);
     }
 
-    public boolean validToken(String token) throws JwtException {
+    public boolean validToken(String token) {
         try {
             return !tokenExpired(token);
+        } catch (ExpiredJwtException e) {
+            log.error("JWT token is expired: {}", e.getMessage());
+            return false;
         } catch (JwtException e) {
             log.error("Invalid JWT token: {}", e.getMessage());
             return false;
         }
     }
+
 
     private Claims getClaims(String token) {
         if (!StringUtils.hasText(token)) {
@@ -99,7 +100,12 @@ public class JwtProvider {
     }
 
     private boolean tokenExpired(String token) {
-        return getExpirationDateFromToken(token).before(new Date());
+        try {
+            Date expiration = getExpirationDateFromToken(token);
+            return expiration.before(new Date());
+        } catch (ExpiredJwtException e) {
+            return true;
+        }
     }
 
     private Date getExpirationDateFromToken(String token) {

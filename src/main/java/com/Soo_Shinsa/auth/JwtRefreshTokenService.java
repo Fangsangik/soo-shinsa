@@ -13,16 +13,16 @@ public class JwtRefreshTokenService {
     private final RedisTemplate<String, String> redisTemplate;
     private static final String REFRESH_TOKEN_PREFIX = "refreshToken";
 
-    public void saveRefreshToken(String username, String token, long expiration) {
-        redisTemplate.opsForValue().set(REFRESH_TOKEN_PREFIX + username, token, expiration, TimeUnit.MILLISECONDS);
+    public void saveRefreshToken(String email, String token, long expiration) {
+        redisTemplate.opsForValue().set(REFRESH_TOKEN_PREFIX + email, token, expiration, TimeUnit.MILLISECONDS);
     }
 
 
-    public String getRefreshToken(String username) {
-        return redisTemplate.opsForValue().get(REFRESH_TOKEN_PREFIX + username);
+    public String getRefreshToken(String email) {
+        return redisTemplate.opsForValue().get(REFRESH_TOKEN_PREFIX + email);
     }
 
-    public void deleteRefreshToken(String username) {
-        redisTemplate.delete(REFRESH_TOKEN_PREFIX + username);
+    public void deleteRefreshToken(String email) {
+        redisTemplate.delete(REFRESH_TOKEN_PREFIX + email);
     }
 }

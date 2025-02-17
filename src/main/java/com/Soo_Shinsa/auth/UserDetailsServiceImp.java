@@ -1,7 +1,7 @@
 package com.Soo_Shinsa.auth;
 
-import com.Soo_Shinsa.user.repository.UserRepository;
 import com.Soo_Shinsa.user.model.User;
+import com.Soo_Shinsa.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -13,10 +13,8 @@ import org.springframework.stereotype.Service;
 public class UserDetailsServiceImp implements UserDetailsService {
     private final UserRepository userRepository;
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(username)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        User user = userRepository.findByEmailOrElseThrow(email);
         return new UserDetailsImp(user);
     }
 }
