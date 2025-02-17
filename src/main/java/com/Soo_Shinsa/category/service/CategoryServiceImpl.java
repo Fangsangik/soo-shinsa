@@ -1,7 +1,5 @@
 package com.Soo_Shinsa.category.service;
 
-import com.Soo_Shinsa.brand.model.Brand;
-import com.Soo_Shinsa.brand.repository.BrandRepository;
 import com.Soo_Shinsa.category.dto.CategoryRequestDto;
 import com.Soo_Shinsa.category.dto.CategoryResponseDto;
 import com.Soo_Shinsa.category.dto.CategoryUpdateRequestDto;
@@ -23,30 +21,23 @@ import org.springframework.transaction.annotation.Transactional;
 public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
-    private final BrandRepository brandRepository;
 
     @Transactional
     @Override
-    public CategoryResponseDto create(Long brandId, User user, CategoryRequestDto dto) {
+    public CategoryResponseDto create(User user, CategoryRequestDto dto) {
 
         EntityValidator.validateAdminAccess(user);
-        Brand findBrand = brandRepository.findByIdOrElseThrow(brandId);
 
-        Category parent = null;
-        if (dto.getParent() != null) {
-            parent = categoryRepository.findByIdOrElseThrow(dto.getParent());
-        }
-
-        Category saveCategory = Category.builder()
-                .brand(findBrand)
-                .parent(parent)
+        Category savedCategory = Category.builder()
                 .name(dto.getName())
                 .build();
 
-        categoryRepository.save(saveCategory);
+        Category newCategory = categoryRepository.save(savedCategory);
 
-        return CategoryResponseDto.toDto(saveCategory);
+        return CategoryResponseDto.toDto(newCategory);
+
     }
+
 
     @Override
     public CategoryResponseDto findById(Long categoryId) {
@@ -55,6 +46,7 @@ public class CategoryServiceImpl implements CategoryService {
 
         return CategoryResponseDto.toDto(findCategory);
     }
+
 
     @Override
     public Page<FindCategoryResponseDto> findAll(int page, int size) {
@@ -66,11 +58,7 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryResponseDto update(User user, CategoryUpdateRequestDto dto, Long categoryId) {
 
         Category findCategory = categoryRepository.findByIdOrElseThrow(categoryId);
-
         findCategory.update(dto.getName());
-
-        categoryRepository.save(findCategory);
-
         return CategoryResponseDto.toDto(findCategory);
     }
 }

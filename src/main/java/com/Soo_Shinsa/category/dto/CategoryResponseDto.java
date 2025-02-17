@@ -9,14 +9,10 @@ import lombok.RequiredArgsConstructor;
 public class CategoryResponseDto {
 
     private Long id;
-    private Long brand;
-    private CategoryResponseDto parent;
     private String name;
 
     public CategoryResponseDto(Category category) {
         this.id = category.getId();
-        this.brand = category.getBrand().getId();
-        this.parent = (category.getParent() != null) ? new CategoryResponseDto(category.getParent()) : null;
         this.name = category.getName();
     }
 

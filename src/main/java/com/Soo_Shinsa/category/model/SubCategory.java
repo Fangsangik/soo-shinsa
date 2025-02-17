@@ -1,6 +1,5 @@
 package com.Soo_Shinsa.category.model;
 
-import com.Soo_Shinsa.constant.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
@@ -9,21 +8,26 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor
-public class Category extends BaseTimeEntity {
-
+public class SubCategory {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
     private String name;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
+
     @Builder
-    public Category(String name) {
+    public SubCategory(String name, Category category) {
         this.name = name;
+        this.category = category;
     }
 
     public void update(String name) {
-        this.name = name;
+        if (name != null) {
+            this.name = name;
+        }
     }
 }

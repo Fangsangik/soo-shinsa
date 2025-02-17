@@ -25,13 +25,12 @@ public class CategoryController {
 
     private final CategoryService categoryService;
 
-    @PostMapping("brands/{brandId}")
+    @PostMapping
     public ResponseEntity<CommonResponse<CategoryResponseDto>> create(@AuthenticationPrincipal UserDetails userDetails,
-                                                                     @Valid @RequestBody CategoryRequestDto dto,
-                                                                     @PathVariable Long brandId
+                                                                     @Valid @RequestBody CategoryRequestDto dto
     ) {
         User user = UserUtils.getUser(userDetails);
-        CategoryResponseDto saved = categoryService.create(brandId, user, dto);
+        CategoryResponseDto saved = categoryService.create(user, dto);
 
         CommonResponse<CategoryResponseDto> response = new CommonResponse<>(ResponseMessage.CATEGORY_CREATE_SUCCESS,saved);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
