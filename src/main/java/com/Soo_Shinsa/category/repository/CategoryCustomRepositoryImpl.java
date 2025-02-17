@@ -25,8 +25,6 @@ public class CategoryCustomRepositoryImpl implements CategoryCustomRepository {
         List<FindCategoryResponseDto> content = queryFactory
                 .select(Projections.constructor(FindCategoryResponseDto.class,
                         category.id,
-                        category.brand.id, // 브랜드 ID를 매핑
-                        category.parent.id,
                         category.name,
                         Expressions.numberTemplate(Long.class, "COUNT(*) OVER()") // totalCount
                 ))
