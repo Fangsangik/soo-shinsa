@@ -71,8 +71,7 @@ Entity로 직접 데이터를 조회했더니 불필요한 컬럼까지 함께 �
 DTO 필드 순서를 맞추지 않으면 다음과 같은 오류 발생:
 ```com.querydsl.core.types.ExpressionException: No constructor found for class com.Soo_Shinsa.order.dto.OrderItemResponseDto```
 
-- 해결방법
-
+- 해결방법  
 ✅ CustomRepository를 생성하여 동적 쿼리를 Service가 아닌 Repository에서 수행.  
 ✅ DTO 반환 시 Projections.constructor(dto.class) 를 사용하여 필요한 컬럼만 조회하도록 변경.   
 ✅ DTO 필드 순서를 맞추고, 필요한 필드만 포함하여 오류 방지.
@@ -82,17 +81,16 @@ DTO 필드 순서를 맞추지 않으면 다음과 같은 오류 발생:
 - 현상
 4000개 요청이 동시에 쿠폰 발급을 시도, 그러나 발급 가능 개수는 10개로 제한.
 여러 스레드가 동시에 같은 쿠폰을 가져와 발급하려다 경합 상태 발생 → issuedCount 값이 꼬이는 문제 발생.
-- 해결방법
-
+- 해결방법  
 ✅ 비관적 락(Pessimistic Lock) 적용하여 트랜잭션 종료 전까지 데이터 변경 차단.
 
 문제 2 - 쿠폰 재고 문제
 - 현상
 쿠폰이 존재하지만 사용자가 접근할 경우 NOT_FOUND_COUPON 예외 발생.
 - 원인: 기존 코드에서 특정 사용자의 CouponUser만 조회하여, 다른 사용자가 접근할 경우 새로운 CouponUser를 찾지 못함.
-- 해결방법
-
+- 해결방법  
 ✅ 쿠폰 재고(maxCount)가 남아 있다면 새로운 CouponUser를 생성하도록 로직 변경.
+
 ```
 @Transactional
 public ApplyCouponCartResponseDto applyCoupon(Long cartId, ApplyCouponCartRequestDto requestDto, User user) {
@@ -165,8 +163,7 @@ public ApplyCouponCartResponseDto applyCoupon(Long cartId, ApplyCouponCartReques
 secretKey를 Base64.getEncoder()로 인코딩한 후, restTemplate을 통해 orderId 및 amount를 TossPayments API에 전달해야 했음.
 외부 결제 API 호출 경험이 부족하여 처리 흐름을 이해하는 데 어려움이 있었음.
 
-- 해결방법
-
+- 해결방법  
 ✅ TossPayments 개발자 센터 문서를 참고하여 결제 API 흐름을 학습.  
 ✅ API 연동 후, 결제가 완료되면 paymentKey를 DB에 저장하도록 구현.  
 ✅ 결제 취소 기능을 추가하여 paymentKey를 이용해 결제 취소 가능하도록 개선.
@@ -193,8 +190,7 @@ public void approvePayment(String paymentKey, String orderId, Long amount, Model
 }
 
 ```
-✅ 이점:
-
+✅ 이점:   
 결제 및 취소 프로세스를 안정적으로 구축하여 사용자 경험 향상.
 외부 결제 API 연동 경험을 쌓아 향후 확장 가능성 증가.
 
@@ -202,8 +198,7 @@ public void approvePayment(String paymentKey, String orderId, Long amount, Model
 - 문제 : 주문 시 쿠폰 적용 후 할인 금액이 totalAmount에 반영되지 않는 현상
 - 현상
 할인 금액이 totalAmount에 반영되지 않아, 최종 결제 금액이 변경되지 않는 문제 발생.
-- 해결방법
-
+- 해결방법  
 ✅ 할인 금액이 적용되지 않는 기존 로직을 수정.  
 ✅ OrderItems에 discountPrice 필드를 추가하여 할인된 가격을 반영하도록 개선.
 
