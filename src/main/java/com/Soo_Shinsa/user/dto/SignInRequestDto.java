@@ -5,6 +5,7 @@ import com.Soo_Shinsa.constant.Role;
 import com.Soo_Shinsa.constant.UserStatus;
 import com.Soo_Shinsa.user.model.User;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,7 +27,7 @@ public class SignInRequestDto {
     @NotBlank(message = "이름을 입력해주세요.")
     private String name;
 
-    @NotBlank(message = "역할을 입력해주세요.")
+    @NotNull(message = "역할을 입력해주세요.")
     private Role role;
 
 
