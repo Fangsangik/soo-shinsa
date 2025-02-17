@@ -2,6 +2,10 @@ package com.Soo_Shinsa.coupon.service;
 
 import com.Soo_Shinsa.brand.model.Brand;
 import com.Soo_Shinsa.brand.repository.BrandRepository;
+import com.Soo_Shinsa.category.model.Category;
+import com.Soo_Shinsa.category.model.SubCategory;
+import com.Soo_Shinsa.category.repository.CategoryRepository;
+import com.Soo_Shinsa.category.repository.SubCategoryRepository;
 import com.Soo_Shinsa.constant.Role;
 import com.Soo_Shinsa.constant.UserStatus;
 import com.Soo_Shinsa.coupon.dto.CouponBrandRelationDto;
@@ -10,8 +14,8 @@ import com.Soo_Shinsa.coupon.model.Coupon;
 import com.Soo_Shinsa.coupon.model.CouponBrandRelation;
 import com.Soo_Shinsa.coupon.repository.CouponRepository;
 import com.Soo_Shinsa.coupon.repository.CouponUserRepository;
-import com.Soo_Shinsa.user.repository.UserRepository;
 import com.Soo_Shinsa.user.model.User;
+import com.Soo_Shinsa.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,12 +47,20 @@ class CouponServiceImplTest {
     private BrandRepository brandRepository;
 
     @Autowired
+    private CategoryRepository categoryRepository;
+
+    @Autowired
+    private SubCategoryRepository subCategoryRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
     private Coupon coupon;
     private User testUser;
     private CouponRequestDto couponRequestDto;
     private Brand brand;
+    private SubCategory subCategory;
+    private Category category;
 
     @BeforeEach
     void setUp() {
@@ -62,12 +74,25 @@ class CouponServiceImplTest {
                 .build();
         userRepository.save(testUser);
 
+        category = Category.builder()
+                .name("테스트 카테고리")
+                .build();
+        categoryRepository.save(category);
+
+        subCategory = SubCategory.builder()
+                .name("테스트 서브 카테고리")
+                .category(category)
+                .build();
+        subCategoryRepository.save(subCategory);
+
+
         brand = Brand.builder()
                 .user(testUser)
                 .name("테스트 브랜드")
                 .registrationNum("123456789")
                 .isCouponLimited(false)
                 .couponCount(100)
+                .subCategory(subCategory)
                 .build();
         brandRepository.save(brand);
 
