@@ -2,8 +2,6 @@ package com.Soo_Shinsa.product.service;
 
 import com.Soo_Shinsa.brand.model.Brand;
 import com.Soo_Shinsa.brand.repository.BrandRepository;
-import com.Soo_Shinsa.category.model.Category;
-import com.Soo_Shinsa.category.repository.CategoryRepository;
 import com.Soo_Shinsa.constant.TargetType;
 import com.Soo_Shinsa.image.Image;
 import com.Soo_Shinsa.image.ImageService;
@@ -18,7 +16,6 @@ import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.user.repository.UserRepository;
 import com.Soo_Shinsa.utils.EntityValidator;
 import lombok.RequiredArgsConstructor;
-import org.redisson.api.RedissonClient;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -37,10 +34,8 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final ImageService imageService;
     private final ProductOptionRepository productOptionRepository;
-    private final CategoryRepository categoryRepository;
     private final ReviewRepository reviewRepository;
     private final OrderItemRepository orderItemRepository;
-    private final RedissonClient redissonClient;
 
 
     @Transactional
@@ -49,7 +44,6 @@ public class ProductServiceImpl implements ProductService {
 
         User userById = userRepository.findByIdOrElseThrow(user.getUserId());
         Brand brand = brandRepository.findByIdOrElseThrow(brandId);
-        Category category = categoryRepository.findByIdOrElseThrow(dto.getCategoryId());
 
         EntityValidator.validateAdminOrVendorAccess(userById);
 
@@ -64,7 +58,6 @@ public class ProductServiceImpl implements ProductService {
                 .name(dto.getName())
                 .productStatus(dto.getStatus())
                 .brand(brand)
-                .category(category)
                 .imageUrl(imageUrl)
                 .build();
 
