@@ -1,14 +1,13 @@
 package com.Soo_Shinsa.user.service;
 
-import com.Soo_Shinsa.auth.JwtProvider;
+import com.Soo_Shinsa.auth.*;
 import com.Soo_Shinsa.auth.dto.JwtAuthResponseDto;
+import com.Soo_Shinsa.auth.dto.RefreshTokenRequestDto;
 import com.Soo_Shinsa.constant.AuthenticationScheme;
 import com.Soo_Shinsa.constant.GradeType;
 import com.Soo_Shinsa.constant.Role;
 import com.Soo_Shinsa.constant.UserStatus;
-import com.Soo_Shinsa.exception.DuplicatedException;
-import com.Soo_Shinsa.exception.NoAuthorizedException;
-import com.Soo_Shinsa.exception.NotFoundException;
+import com.Soo_Shinsa.exception.*;
 import com.Soo_Shinsa.user.dto.*;
 import com.Soo_Shinsa.user.model.Grade;
 import com.Soo_Shinsa.user.model.User;
@@ -16,17 +15,23 @@ import com.Soo_Shinsa.user.model.UserGrade;
 import com.Soo_Shinsa.user.repository.GradeRepository;
 import com.Soo_Shinsa.user.repository.UserGradeRepository;
 import com.Soo_Shinsa.user.repository.UserRepository;
+import com.Soo_Shinsa.utils.ResponseMessage;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import static com.Soo_Shinsa.exception.ErrorCode.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -37,13 +42,17 @@ public class UserServiceImpl implements UserService {
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
+    private final JwtAccessTokenService jwtAccessTokenService;
+    private final JwtRefreshTokenService jwtRefreshTokenService;
+    private final UserDetailsServiceImp userDetailsService;
+    private final JwtBlackListService jwtBlackListService;
 
     @Transactional
     @Override
     public UserResponseDto create(SignInRequestDto dto) {
         //검증
         //중복체크
-        if(userRepository.existsByEmail(dto.getEmail())){
+        if (userRepository.existsByEmail(dto.getEmail())) {
             throw new NoAuthorizedException(EMAIL_EXIST);
         }
 
@@ -61,7 +70,7 @@ public class UserServiceImpl implements UserService {
         return new UserResponseDto(user);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     @Override
     public JwtAuthResponseDto login(LoginRequestDto dto) {
         //사용자 확인
@@ -85,14 +94,21 @@ public class UserServiceImpl implements UserService {
         );
 
         //security context에 저장
-        SecurityContextHolder.getContext().setAuthentication(auth);
+
+        UserDetailsImp userDetails = (UserDetailsImp) auth.getPrincipal();
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
 
         //토큰 생성
-        String accessToken = jwtProvider.generateToken(auth);
+        String accessToken = jwtProvider.generateToken(authentication);
         String refreshToken = jwtProvider.generateRefreshToken(user.getEmail());
         Long refreshTokenExpiration = jwtProvider.getRefreshExpiryMillis();
 
-        return new JwtAuthResponseDto(AuthenticationScheme.BEARER.getName(), refreshToken, refreshTokenExpiration, accessToken, user.getName());
+        jwtAccessTokenService.saveAccessToken(accessToken, user.getEmail(), jwtProvider.getExpiryMillis());
+
+        return new JwtAuthResponseDto(AuthenticationScheme.BEARER.getName(), refreshToken, refreshTokenExpiration, accessToken, user.getEmail());
     }
 
     @Override
@@ -115,6 +131,73 @@ public class UserServiceImpl implements UserService {
 
         return new UserDetailResponseDto(userById);
 
+    }
+
+
+    @Transactional
+    public void logout(HttpServletRequest request) {
+        // SecurityContextHolder에서 인증 정보 가져오기
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserDetailsImp)) {
+            log.warn("로그아웃 실패: 인증 정보 없음");
+            throw new RuntimeException(ResponseMessage.AUTHENTICATION_REQUIRED);
+        }
+
+        UserDetailsImp userDetailsImp = (UserDetailsImp) authentication.getPrincipal();
+        log.info("로그아웃 요청: 사용자 이메일 = {}", userDetailsImp.getUsername());
+
+        // 헤더에서 Authorization 토큰 가져오기
+        String token = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (token == null || !token.startsWith("Bearer ")) {
+            log.warn("로그아웃 실패: 유효하지 않은 토큰");
+            throw new RuntimeException(ResponseMessage.INVALID_TOKEN);
+        }
+
+        token = token.substring(7).trim(); // "Bearer " 제거
+        log.info("로그아웃 요청 처리 중: 토큰 = {}", token);
+
+        // 블랙리스트 추가 및 토큰 삭제
+        jwtBlackListService.addBlackList(token, jwtProvider.getExpiryMillis());
+        jwtAccessTokenService.deleteAccessToken(token);
+        jwtRefreshTokenService.deleteRefreshToken(userDetailsImp.getUsername());
+
+        log.info("사용자 로그아웃 성공: {}", userDetailsImp.getUsername());
+    }
+
+    @Transactional
+    @Override
+    public JwtAuthResponseDto refreshAccessToken(RefreshTokenRequestDto requestDto) {
+        String refreshToken = requestDto.getRefreshToken();
+        String email = jwtProvider.getUsername(refreshToken);  // username 대신 email 사용
+        String storedRefreshToken = jwtRefreshTokenService.getRefreshToken(email);
+
+        if (!refreshToken.equals(storedRefreshToken)) {
+            throw new InvalidInputException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
+        // 새로운 Access Token 생성
+        String newAccessToken = jwtProvider.generateTokenBy(email, jwtProvider.getExpiryMillis());
+
+        // Redis에 Access Token 저장
+        jwtAccessTokenService.saveAccessToken(newAccessToken, email, jwtProvider.getExpiryMillis());
+
+        // SecurityContext에 새로운 인증 정보 반영
+        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities()
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        // 새 Access Token 포함한 응답 생성
+        return JwtAuthResponseDto.builder()
+                .tokenAuthScheme(AuthenticationScheme.BEARER.getName())
+                .refreshToken(refreshToken)
+                .refreshTokenExpiration(jwtProvider.getRefreshExpiryMillis())
+                .accessToken(newAccessToken)
+                .email(email)
+                .build();
     }
 
     @Transactional
