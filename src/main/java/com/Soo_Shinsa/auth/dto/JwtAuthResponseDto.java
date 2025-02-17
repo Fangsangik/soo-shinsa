@@ -11,7 +11,8 @@ import lombok.NoArgsConstructor;
 public class JwtAuthResponseDto {
 
   private String tokenAuthScheme;
-
+  private String refreshToken;
+  private Long refreshTokenExpiration;
   private String accessToken;
-
+  private String username;
 }

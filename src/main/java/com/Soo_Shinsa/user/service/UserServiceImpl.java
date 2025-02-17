@@ -1,5 +1,6 @@
 package com.Soo_Shinsa.user.service;
 
+import com.Soo_Shinsa.auth.JwtProvider;
 import com.Soo_Shinsa.auth.dto.JwtAuthResponseDto;
 import com.Soo_Shinsa.constant.AuthenticationScheme;
 import com.Soo_Shinsa.constant.GradeType;
@@ -15,7 +16,6 @@ import com.Soo_Shinsa.user.model.UserGrade;
 import com.Soo_Shinsa.user.repository.GradeRepository;
 import com.Soo_Shinsa.user.repository.UserGradeRepository;
 import com.Soo_Shinsa.user.repository.UserRepository;
-import com.Soo_Shinsa.utils.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -30,11 +30,10 @@ import static com.Soo_Shinsa.exception.ErrorCode.*;
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
-    private final UserRepository userRepository;
 
+    private final UserRepository userRepository;
     private final GradeRepository gradeRepository;
     private final UserGradeRepository userGradeRepository;
-
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
@@ -77,7 +76,6 @@ public class UserServiceImpl implements UserService {
             throw new NoAuthorizedException(WRONG_PASSWORD);
         }
 
-
         //인증 객체를 저장
         Authentication auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -91,8 +89,10 @@ public class UserServiceImpl implements UserService {
 
         //토큰 생성
         String accessToken = jwtProvider.generateToken(auth);
+        String refreshToken = jwtProvider.generateRefreshToken(user.getEmail());
+        Long refreshTokenExpiration = jwtProvider.getRefreshExpiryMillis();
 
-        return new JwtAuthResponseDto(AuthenticationScheme.BEARER.getName(), accessToken);
+        return new JwtAuthResponseDto(AuthenticationScheme.BEARER.getName(), refreshToken, refreshTokenExpiration, accessToken, user.getName());
     }
 
     @Override
@@ -129,9 +129,6 @@ public class UserServiceImpl implements UserService {
         user.delete();
         userRepository.save(user);
     }
-
-
-
 
     private UserGrade createNewUserGrade() {
         // Grade 검증
