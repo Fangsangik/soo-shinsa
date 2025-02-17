@@ -22,4 +22,7 @@ public class BrandRequestDto {
     @NotNull(message = "브랜드 상태는 필수입니다.")
     private BrandStatus status;
 
+    @NotNull(message = "카테고리 번호는 필수입니다.")
+    private Long subCategoryId;
+
 }
