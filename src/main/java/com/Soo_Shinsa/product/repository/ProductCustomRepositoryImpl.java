@@ -1,6 +1,6 @@
 package com.Soo_Shinsa.product.repository;
 
-import com.Soo_Shinsa.category.model.QCategory;
+import com.Soo_Shinsa.category.model.QSubCategory;
 import com.Soo_Shinsa.product.dto.FindProductRequestDto;
 import com.Soo_Shinsa.product.dto.ProductResponseDto;
 import com.Soo_Shinsa.product.model.QProduct;
@@ -21,7 +21,7 @@ public class ProductCustomRepositoryImpl implements ProductCustomRepository {
     @Override
     public Page<ProductResponseDto> findAllProduct(Long brandId, FindProductRequestDto requestDto, Pageable pageable) {
         QProduct product = QProduct.product;
-        QCategory category = QCategory.category;
+        QSubCategory subCategory = QSubCategory.subCategory;
 
         BooleanBuilder builder = new BooleanBuilder();
         builder.and(product.brand.id.eq(brandId));
@@ -47,11 +47,11 @@ public class ProductCustomRepositoryImpl implements ProductCustomRepository {
                                 product.imageUrl,
                                 product.productStatus,
                                 product.brand.id,
-                                product.category.id,
+                                product.brand.subCategory.id,
                                 Expressions.numberTemplate(Long.class, "COUNT(*) OVER()")
                         ))
                         .from(product)
-                        .leftJoin(category).on(product.category.id.eq(category.id))
+                        .leftJoin(subCategory).on(product.brand.subCategory.id.eq(subCategory.id))
                         .where(builder)
                         .orderBy(product.price.desc())
                         .offset(pageable.getOffset())

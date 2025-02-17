@@ -19,18 +19,18 @@ public class ProductResponseDto {
     private String imageUrl; // 추가된 필드
     private ProductStatus status;
     private Long brandId;
-    private Long categoryId;
+    private Long subCategoryId;
     private Long count; // 추가된 필드
 
     @Builder
-    public ProductResponseDto(Long id, String name, BigDecimal price, String imageUrl, ProductStatus status, Long brandId, Long categoryId, Long count) {
+    public ProductResponseDto(Long id, String name, BigDecimal price, String imageUrl, ProductStatus status, Long brandId, Long subCategoryId, Long count) {
         this.id = id;
         this.name = name;
         this.price = price;
         this.imageUrl = imageUrl; // 추가된 필드 초기화
         this.status = status;
         this.brandId = brandId;
-        this.categoryId = categoryId;
+        this.subCategoryId = subCategoryId;
         this.count = count; // 추가된 필드 초기화
     }
 
@@ -42,7 +42,7 @@ public class ProductResponseDto {
                 .price(product.getPrice())
                 .status(product.getProductStatus())
                 .brandId(product.getBrand().getId())
-                .categoryId(product.getCategory().getId())
+                .subCategoryId(product.getBrand().getSubCategory().getId())
                 .build();
     }
 }

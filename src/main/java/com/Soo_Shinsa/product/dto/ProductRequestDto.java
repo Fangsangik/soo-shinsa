@@ -19,16 +19,16 @@ public class ProductRequestDto {
     @NotNull(message = "가격은 필수 입니다.")
     private BigDecimal price;
 
-    @NotNull(message = "카테고리 아이디는 필수 값 입니다.")
-    private Long categoryId;
+    @NotNull(message = "브랜드 아이디는 필수값 입니다.")
+    private Long brandId;
 
     private ProductStatus status;
 
     @Builder
-    public ProductRequestDto(String name, BigDecimal price, Long categoryId, ProductStatus status) {
+    public ProductRequestDto(String name, BigDecimal price, Long brandId, ProductStatus status) {
         this.name = name;
         this.price = price;
-        this.categoryId = categoryId;
+        this.brandId = brandId;
         this.status = status;
     }
 }
