@@ -63,7 +63,9 @@ public enum ErrorCode {
     COUPON_OUT_OF_STOCK("더이상 쿠폰이 존재하지 않습니다.", HttpStatus.BAD_REQUEST),
     NOT_FOUND_COUPON("쿠폰을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
     ONLY_BEFORE_PAYMENT("결제 전 상태만 이용할 수 있습니다.", HttpStatus.BAD_REQUEST),
-    NOT_FOUND_SUB_CATEGORY("해당 카테고리를 찾을 수 없습니다.", HttpStatus.NOT_FOUND);
+    NOT_FOUND_SUB_CATEGORY("해당 카테고리를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    INVALID_REFRESH_TOKEN("유효하지 않은 토큰 입니다.", HttpStatus.BAD_REQUEST),
+    ACCESS_TOKEN_VALID("아직 AccessToken이 유효 합니다.", HttpStatus.MULTI_STATUS);
 
 
     private final String message;
