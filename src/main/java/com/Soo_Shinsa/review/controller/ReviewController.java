@@ -10,6 +10,8 @@ import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.utils.CommonResponse;
 import com.Soo_Shinsa.utils.ResponseMessage;
 import com.Soo_Shinsa.utils.UserUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,10 +24,12 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/reviews")
 @RequiredArgsConstructor
+@Tag(name = "리뷰 API", description = "리뷰 관련 기능을 제공합니다.")
 public class ReviewController {
 
     private final ReviewService reviewService;
 
+    @Operation(summary = "리뷰 생성", description = "주문한 상품에 대한 리뷰를 작성합니다.")
     @PostMapping("/order-item/{orderItemId}")
     public ResponseEntity<CommonResponse<ReviewResponseDto>> createReview(@PathVariable Long orderItemId,
                                                                           @Valid @RequestPart ReviewRequestDto requestDto,
@@ -37,6 +41,7 @@ public class ReviewController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @Operation(summary = "리뷰 상세 조회", description = "특정 리뷰의 상세 정보를 가져옵니다.")
     @GetMapping("/{reviewId}")
     public ResponseEntity<CommonResponse<ReviewResponseDto>> getReview(@PathVariable Long reviewId) {
 
@@ -45,6 +50,7 @@ public class ReviewController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @Operation(summary = "리뷰 수정", description = "작성한 리뷰를 수정합니다.")
     @PatchMapping("/{reviewId}")
     public ResponseEntity<CommonResponse<ReviewUpdateDto>> updateReview(@PathVariable Long reviewId,
                                                                         @Valid @RequestPart ReviewUpdateDto updateDto,
@@ -56,6 +62,7 @@ public class ReviewController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @Operation(summary = "상품별 리뷰 조회", description = "특정 상품의 리뷰 목록을 조회합니다.")
     @GetMapping("/products/{productId}")
     public ResponseEntity<CommonResponse<Page<ReviewResponseDto>>> getAllReviewByProductId(@PathVariable Long productId,
                                                                                            @Valid @RequestBody(required = false) ReviewRateDto reviewRateDto,
@@ -66,6 +73,7 @@ public class ReviewController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @Operation(summary = "리뷰 삭제", description = "특정 리뷰를 삭제합니다.")
     @DeleteMapping("/{reviewId}")
     public ResponseEntity<Void> deleteReview(@PathVariable Long reviewId,
                                              @AuthenticationPrincipal UserDetailsImp userDetails) {

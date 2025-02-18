@@ -10,6 +10,8 @@ import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.utils.CommonResponse;
 import com.Soo_Shinsa.utils.ResponseMessage;
 import com.Soo_Shinsa.utils.UserUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,11 +24,13 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/orders")
+@Tag(name = "Orders API", description = "주문 관련 API")
 public class OrdersController {
     private final OrdersService ordersService;
 
     //특정유저의 특정 오더 읽기
     @GetMapping("/{orderId}")
+    @Operation(summary = "특정 주문 조회", description = "특정 사용자의 주문 정보를 조회합니다.")
     public ResponseEntity<CommonResponse<OrdersResponseDto>> getOrderById(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long orderId) {
@@ -38,6 +42,7 @@ public class OrdersController {
 
     //특정유저의 모든 오더 읽기
     @GetMapping("/users")
+    @Operation(summary = "사용자 전체 주문 조회", description = "특정 사용자의 모든 주문을 조회합니다.")
     public ResponseEntity<CommonResponse<Page<OrdersResponseDto>>> getOrderByAll(@AuthenticationPrincipal UserDetails userDetails,
                                                                  @RequestBody OrderDateRequestDto dateRequestDto,
                                                                  @RequestParam (defaultValue = "0") int page,
@@ -50,6 +55,7 @@ public class OrdersController {
 
     //    단품 구매 생성
     @PostMapping("/single")
+    @Operation(summary = "단품 구매 생성", description = "단일 상품을 구매하는 주문을 생성합니다.")
     public ResponseEntity<CommonResponse<OrdersResponseDto>> createSingleProductOrder(@AuthenticationPrincipal UserDetails userDetails,
                                                                       @Valid @RequestBody SingleProductOrderRequestDto requestDto) {
         User user = UserUtils.getUser(userDetails);
@@ -60,6 +66,7 @@ public class OrdersController {
 
     //카트에 담음 물건을 구매 생성
     @PostMapping("/carts")
+    @Operation(summary = "장바구니 전체 주문 생성", description = "장바구니에 담긴 모든 상품을 주문합니다.")
     public ResponseEntity<CommonResponse<OrdersResponseDto>> createAllOrderFromCart(@AuthenticationPrincipal UserDetails userDetails) {
         User user = UserUtils.getUser(userDetails);
         OrdersResponseDto responseDto = ordersService.createAllOrderFromCart(user);
@@ -69,6 +76,7 @@ public class OrdersController {
 
     //오더 단일 생성
     @PostMapping
+    @Operation(summary = "주문 생성", description = "새로운 주문을 생성합니다.")
     public ResponseEntity<CommonResponse<OrdersResponseDto>> createOrder(@AuthenticationPrincipal UserDetails userDetails) {
         User user = UserUtils.getUser(userDetails);
         OrdersResponseDto responseDto = ordersService.createOrder(user);
@@ -78,6 +86,7 @@ public class OrdersController {
 
     //오더 수정
     @PatchMapping
+    @Operation(summary = "주문 수정", description = "주문의 상태를 수정합니다.")
     public ResponseEntity<CommonResponse<OrdersResponseDto>> updateOrder(@AuthenticationPrincipal UserDetails userDetails,
                                                          @Valid @RequestBody OrdersUpdateRequestDto requestDto) {
         User user = UserUtils.getUser(userDetails);
@@ -87,6 +96,7 @@ public class OrdersController {
     }
 
     @PostMapping("/carts/{cartId}")
+    @Operation(summary = "장바구니 개별 주문 생성", description = "장바구니에 담긴 특정 상품을 주문합니다.")
     public ResponseEntity<CommonResponse<OrdersResponseDto>> createOrderFromCart(@AuthenticationPrincipal UserDetails userDetails,
                                                                                  @PathVariable Long cartId) {
         User user = UserUtils.getUser(userDetails);

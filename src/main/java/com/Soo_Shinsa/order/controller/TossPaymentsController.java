@@ -9,6 +9,8 @@ import com.Soo_Shinsa.order.service.TossPaymentsService;
 import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.utils.UserUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +26,7 @@ import java.math.BigDecimal;
 
 @RequestMapping("/api")
 @Controller
+@Tag(name = "Payments API", description = "토스 결제 관련 API")
 @RequiredArgsConstructor
 public class TossPaymentsController {
     private final TossPaymentsService tossPaymentsService;
@@ -35,29 +38,29 @@ public class TossPaymentsController {
 
     // 결제 생성
     @PostMapping("/create")
-    public ResponseEntity<PaymentResponseDto> createPayment(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @Valid
-            @RequestBody PaymentRequestDto requestDto) {
+    @Operation(summary = "결제 생성", description = "새로운 결제를 생성합니다.")
+    public ResponseEntity<PaymentResponseDto> createPayment(@AuthenticationPrincipal UserDetails userDetails,
+                                                            @Valid
+                                                            @RequestBody PaymentRequestDto requestDto) {
         User user = UserUtils.getUser(userDetails);
-        PaymentResponseDto responseDto = tossPaymentsService.createPayment(requestDto,user);
+        PaymentResponseDto responseDto = tossPaymentsService.createPayment(requestDto, user);
         return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
     }
 
     @RequestMapping("/success")
-    public String approvePayment (
-            @RequestParam String paymentKey, @RequestParam String orderId, @RequestParam Long amount,
-            Model model) throws JsonProcessingException {
-        tossPaymentsService.approvePayment(paymentKey,orderId,amount,model);
+    @Operation(summary = "결제 승인", description = "결제 완료 후 승인 처리합니다.")
+    public String approvePayment(@RequestParam String paymentKey, @RequestParam String orderId, @RequestParam Long amount,
+                                 Model model) throws JsonProcessingException {
+        tossPaymentsService.approvePayment(paymentKey, orderId, amount, model);
 
         return "success";
     }
 
     @RequestMapping("/home/users/{userId}/orders/{orderId}")
-    public String home(
-            @PathVariable Long userId,
-            @PathVariable Long orderId,
-            Model model){
+    @Operation(summary = "결제 상세 조회", description = "특정 주문의 결제 정보를 조회합니다.")
+    public String home(@PathVariable Long userId,
+                       @PathVariable Long orderId,
+                       Model model) {
         UserOrderDTO item = tossPaymentsService.findItem(userId, orderId);
         BigDecimal totalPrice = item.getOrder().getTotalPrice();
 
@@ -73,9 +76,9 @@ public class TossPaymentsController {
     }
 
     @PostMapping("/cancel")
-    public String cancelPayment (
-            @RequestBody PaymentCancelDto dto,
-            @RequestParam String cancelReason
+    @Operation(summary = "결제 취소", description = "진행 중인 결제를 취소합니다.")
+    public String cancelPayment(@RequestBody PaymentCancelDto dto,
+                                @RequestParam String cancelReason
     ) throws JsonProcessingException {
         tossPaymentsService.cancelPayment(dto.getPaymentKey(), cancelReason);
         return "cancel";
