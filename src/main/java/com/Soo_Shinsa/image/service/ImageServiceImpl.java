@@ -1,7 +1,9 @@
-package com.Soo_Shinsa.image;
+package com.Soo_Shinsa.image.service;
 
 import com.Soo_Shinsa.constant.TargetType;
 import com.Soo_Shinsa.exception.InvalidInputException;
+import com.Soo_Shinsa.image.model.Image;
+import com.Soo_Shinsa.image.repository.ImageRepository;
 import com.Soo_Shinsa.utils.S3Uploader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

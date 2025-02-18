@@ -18,6 +18,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 
 
 @Slf4j
@@ -29,12 +30,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtBlackListService jwtBlackListService;
     private final UserDetailsService userDetailsService;
     private final JwtAccessTokenService jwtAccessTokenService;
+    private final List<String> WHITE_LIST = List.of("/users/login", "/users/signin", "/kakao/login", "/kakao/logout", "/kakao/token", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/kakao/callback");
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
         String requestURI = request.getRequestURI();
-        if (requestURI.equals("/users/login") || requestURI.equals("/users/signin")) {
+        if (isWhiteListed(requestURI)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -90,5 +92,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return bearerToken.substring(headerPrefix.length()).trim();
         }
         return null;
+    }
+
+    private boolean isWhiteListed(String requestURI) {
+        return WHITE_LIST.stream().anyMatch(uri -> uri.equals(requestURI) || requestURI.matches(uri.replace("**", ".*")));
     }
 }

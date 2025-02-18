@@ -1,4 +1,4 @@
-package com.Soo_Shinsa.image;
+package com.Soo_Shinsa.image.model;
 
 import com.Soo_Shinsa.constant.BaseTimeEntity;
 import com.Soo_Shinsa.constant.FilePath;
