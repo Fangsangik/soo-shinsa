@@ -1,6 +1,7 @@
-package com.Soo_Shinsa.image;
+package com.Soo_Shinsa.image.service;
 
 import com.Soo_Shinsa.constant.TargetType;
+import com.Soo_Shinsa.image.model.Image;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface ImageService {
