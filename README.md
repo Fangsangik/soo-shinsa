@@ -562,3 +562,15 @@ Redis의 EXPIRE 기능을 이용해, 자동으로 만료된 토큰을 제거.
 📌 효과  
 ✅ 만료된 토큰을 자동으로 삭제하여 보안 강화  
 ✅ 만료된 Refresh Token이 남아 있지 않도록 관리 가능
+
+### 카카오톡 OAuth2 요청시 state 제거  
+🔍 문제 상황  
+카카오 OAuth2를 이용하여 액세스 토큰을 요청할 때, state 값이 포함된 code 값을 전송하면 API 요청이 실패하는 문제가 발생함.  
+Swagger UI에서 code 값을 직접 요청하여 토큰을 가져오려 하면 400 Bad Request 오류 발생  
+같은 code 값을 브라우저에서 복사하여 요청하면 정상적으로 액세스 토큰을 받을 수 있음  
+Swagger UI에서 받아온 code 값이 state 값을 포함하고 있음  
+state 값을 제거하면 정상적으로 토큰 요청이 수행됨
+
+🛠️ 해결 방법  
+Spring Boot에서 WebClient를 이용하여 카카오 API에 요청하는 로직을 수정하여 code 값에서 state 값을 자동으로 제거하도록 설정함.  
+
