@@ -7,6 +7,8 @@ import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.utils.CommonResponse;
 import com.Soo_Shinsa.utils.ResponseMessage;
 import com.Soo_Shinsa.utils.UserUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,12 +21,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/coupons")
+@Tag(name = "Coupon API", description = "쿠폰 관련 API")
 @RequiredArgsConstructor
 public class CouponController {
 
     private final CouponService couponService;
 
     @PostMapping
+    @Operation(summary = "쿠폰 생성", description = "새로운 쿠폰을 생성합니다.")
     public ResponseEntity<CommonResponse<CouponResponseDto>> createCoupon(@RequestBody CouponRequestDto requestDto,
                                                                           @AuthenticationPrincipal UserDetails userDetails) {
         User user = UserUtils.getUser(userDetails);

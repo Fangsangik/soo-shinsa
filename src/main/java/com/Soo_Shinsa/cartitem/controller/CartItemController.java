@@ -7,6 +7,8 @@ import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.utils.CommonResponse;
 import com.Soo_Shinsa.utils.ResponseMessage;
 import com.Soo_Shinsa.utils.UserUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,10 +22,12 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/carts")
+@Tag(name = "Cart API", description = "장바구니 관련 API")
 public class CartItemController {
     private final CartItemService cartItemService;
 
     @PostMapping
+    @Operation(summary = "장바구니 추가", description = "사용자의 장바구니에 상품을 추가합니다.")
     public ResponseEntity<CommonResponse<CartItemResponseDto>> createCart(@AuthenticationPrincipal UserDetails userDetails,
                                                                           @Valid @RequestBody CartItemRequestDto dto) {
         User user = UserUtils.getUser(userDetails);
@@ -34,6 +38,7 @@ public class CartItemController {
 
 
     @GetMapping("/{cartId}")
+    @Operation(summary = "장바구니 조회", description = "특정 장바구니 상품을 조회합니다.")
     public ResponseEntity<CommonResponse<CartItemResponseDto>> findById(@AuthenticationPrincipal UserDetails userDetails,
                                                                         @PathVariable Long cartId) {
         User user = UserUtils.getUser(userDetails);
@@ -45,6 +50,7 @@ public class CartItemController {
 
     //유저의 카트들을 모두 검색
     @GetMapping("/users")
+    @Operation(summary = "사용자 장바구니 조회", description = "사용자의 모든 장바구니 상품을 조회합니다.")
     public ResponseEntity<CommonResponse<Page<CartItemResponseDto>>> findByIdAll(@AuthenticationPrincipal UserDetails userDetails,
                                                                                  @RequestBody CartItemDateRequestDto requestDto,
                                                                                  @RequestParam(defaultValue = "0") int page,
@@ -58,6 +64,7 @@ public class CartItemController {
 
 
     @PatchMapping("/{cartId}")
+    @Operation(summary = "장바구니 수정", description = "장바구니 상품의 수량을 수정합니다.")
     public ResponseEntity<CommonResponse<CartItemResponseDto>> update(@AuthenticationPrincipal UserDetails userDetails,
                                                                       @PathVariable Long cartId,
                                                                       @Valid @RequestBody CartItemRequestDto dto) {
@@ -68,6 +75,7 @@ public class CartItemController {
     }
 
     @DeleteMapping("/{cartId}")
+    @Operation(summary = "장바구니 삭제", description = "장바구니 상품을 삭제합니다.")
     public ResponseEntity<Void> delete(@AuthenticationPrincipal UserDetails userDetails,
                                        @PathVariable Long cartId) {
         User user = UserUtils.getUser(userDetails);
@@ -76,6 +84,7 @@ public class CartItemController {
     }
 
     @PostMapping("{cartId}/apply-coupon")
+    @Operation(summary = "쿠폰 적용", description = "장바구니에 쿠폰을 적용합니다.")
     public ResponseEntity<CommonResponse<ApplyCouponCartResponseDto>> applyCoupon(@AuthenticationPrincipal UserDetails userDetails,
                                                                                   @PathVariable Long cartId,
                                                                                   @RequestBody ApplyCouponCartRequestDto requestDto) {

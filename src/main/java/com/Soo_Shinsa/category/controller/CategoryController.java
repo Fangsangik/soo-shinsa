@@ -9,6 +9,8 @@ import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.utils.CommonResponse;
 import com.Soo_Shinsa.utils.ResponseMessage;
 import com.Soo_Shinsa.utils.UserUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,11 +23,13 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/categories")
+@Tag(name = "Category API", description = "카테고리 관련 API")
 public class CategoryController {
 
     private final CategoryService categoryService;
 
     @PostMapping
+    @Operation(summary = "카테고리 생성", description = "새로운 카테고리를 생성합니다.")
     public ResponseEntity<CommonResponse<CategoryResponseDto>> create(@AuthenticationPrincipal UserDetails userDetails,
                                                                      @Valid @RequestBody CategoryRequestDto dto
     ) {
@@ -37,6 +41,7 @@ public class CategoryController {
     }
 
     @GetMapping("/{categoryId}")
+    @Operation(summary = "카테고리 조회", description = "특정 카테고리를 조회합니다.")
     public ResponseEntity<CommonResponse<CategoryResponseDto>> findById(@PathVariable Long categoryId) {
         CategoryResponseDto findCategory = categoryService.findById(categoryId);
         CommonResponse<CategoryResponseDto> response = new CommonResponse<>(ResponseMessage.CATEGORY_SELECT_SUCCESS,findCategory);
@@ -44,6 +49,7 @@ public class CategoryController {
     }
 
     @GetMapping
+    @Operation(summary = "전체 카테고리 조회", description = "모든 카테고리를 페이징하여 조회합니다.")
     public ResponseEntity<CommonResponse<Page<FindCategoryResponseDto>>> findAll(@RequestParam(defaultValue = "0") int page,
                                                                  @RequestParam(defaultValue = "10") int size) {
         Page<FindCategoryResponseDto> findAll = categoryService.findAll(page, size);
@@ -52,6 +58,7 @@ public class CategoryController {
     }
 
     @PatchMapping("/{categoryId}")
+    @Operation(summary = "카테고리 수정", description = "카테고리를 수정합니다.")
     public ResponseEntity<CommonResponse<CategoryResponseDto>> update(@AuthenticationPrincipal UserDetails userDetails,
                                                       @Valid @RequestBody CategoryUpdateRequestDto dto,
                                                       @PathVariable Long categoryId
