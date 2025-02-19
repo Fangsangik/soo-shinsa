@@ -1,6 +1,8 @@
 # 無shinsa
 ## 🛠️ Tools : <img src="https://img.shields.io/badge/mysql-4479A1?style=for-the-badge&logo=mysql&logoColor=white"> <img src="https://img.shields.io/badge/spring-6DB33F?style=for-the-badge&logo=github&logoColor=Green"> <img alt="Java" src ="https://img.shields.io/badge/Java-007396.svg?&style=for-the-badge&logo=Java&logoColor=white"/>  <img alt="Java" src ="https://img.shields.io/badge/intellijidea-000000.svg?&style=for-the-badge&logo=intellijidea&logoColor=white"/> <img src="https://img.shields.io/badge/AmazonAWS-FF0000?style=flat-square&logo=Adobe&logoColor=white">
-## 🚩 Period : 2024/01/02 ~ 2024/02/10
+## 🚩 Period :  
+MVP 1 :2025/01/02 ~ 2025/02/10  
+MVP 2 : 2025/02/17 ~ 2025/02/25
 ## 👨‍💻 ERD  
 <a-href>https://www.erdcloud.com/d/vHWtykYujZaDJdLpc</a-href>
 ## 👨‍💻 API
@@ -579,7 +581,7 @@ state 값을 제거하면 정상적으로 토큰 요청이 수행됨
 Spring Boot에서 WebClient를 이용하여 카카오 API에 요청하는 로직을 수정하여 code 값에서 state 값을 자동으로 제거하도록 설정함.  
 
 ### Chatting 기능 구현 
-<a-href>https://velog.io/@ik0605/%EC%B1%84%ED%8C%85-%EA%B5%AC%ED%98%84-%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%A8</a-href>
+<a-href>https://velog.io/@ik0605/%EC%B1%84%ED%8C%85-%EA%B5%AC%ED%98%84-%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%A8</a-href>  
 1️⃣ 브라우저에서 WebSocket 차단 (Content Security Policy 오류)  
 ```
 Refused to connect to 'ws://localhost:8080/ws/chat/123' because it violates the following Content Security Policy directive: "connect-src 'self'".
