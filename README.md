@@ -3,7 +3,7 @@
 ## 🚩 Period : 2024/01/02 ~ 2024/02/10
 ## 👨‍💻 ERD <a=href>https://www.erdcloud.com/d/vHWtykYujZaDJdLpc</a=href>
 ## 👨‍💻 API
-<a=href>https://identity.getpostman.com/handover/multifactor?user=41769599&handover_token=3a869f52-d810-4426-b93a-9e4ae97357cd</a=href>
+<a-href>https://identity.getpostman.com/handover/multifactor?user=41769599&handover_token=3a869f52-d810-4426-b93a-9e4ae97357cd</a-href>
 ## 👨‍💻 Role 
 이해욱 : Order, Toss
   
@@ -573,4 +573,49 @@ state 값을 제거하면 정상적으로 토큰 요청이 수행됨
 
 🛠️ 해결 방법  
 Spring Boot에서 WebClient를 이용하여 카카오 API에 요청하는 로직을 수정하여 code 값에서 state 값을 자동으로 제거하도록 설정함.  
+
+### Chatting 기능 구현 
+<a-href>https://velog.io/@ik0605/%EC%B1%84%ED%8C%85-%EA%B5%AC%ED%98%84-%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%A8</a-href>
+1️⃣ 브라우저에서 WebSocket 차단 (Content Security Policy 오류)  
+```
+Refused to connect to 'ws://localhost:8080/ws/chat/123' because it violates the following Content Security Policy directive: "connect-src 'self'".
+```  
+- 브라우저에서 WebSocket 요청 차단됨.  
+🛠️ 해결방법 
+```
+.headers(headers -> headers
+        .contentSecurityPolicy(csp -> csp.policyDirectives(
+                "default-src 'self'; " +
+                "connect-src 'self' ws://localhost:8080 ws://127.0.0.1:8080; " +
+                "script-src 'self' 'unsafe-inline'; " +
+                "style-src 'self' 'unsafe-inline';"
+        ))
+)
+
+```  
+2️⃣ WebSocket 연결 직후 바로 끊기는 문제 (EOFException 발생)  
+🚨 문제  
+```
+java.io.EOFException: null
+at org.apache.tomcat.websocket.server.WsFrameServer.onDataAvailable(WsFrameServer.java:74)
+```   
+- WebSocket이 연결된 직후 EOFException 발생 -> 종료
+- WebSocket은 연결된 로그는 찍히지만 곧바로 WebSocket 연결 종료  
+🛠 해결 방법  
+```
+@Override
+public void afterConnectionEstablished(WebSocketSession session) {
+    log.info("✅ WebSocket 연결됨: 세션 ID: {}", session.getId());
+    try {
+        session.sendMessage(new TextMessage("ping"));
+    } catch (IOException e) {
+        log.error("🚨 WebSocket 초기 메시지 전송 실패", e);
+    }
+}
+
+```
+
+
+
+
 
