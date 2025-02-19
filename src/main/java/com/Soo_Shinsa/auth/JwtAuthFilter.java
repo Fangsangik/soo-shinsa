@@ -30,7 +30,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtBlackListService jwtBlackListService;
     private final UserDetailsService userDetailsService;
     private final JwtAccessTokenService jwtAccessTokenService;
-    private final List<String> WHITE_LIST = List.of("/users/login", "/users/signin", "/kakao/login", "/kakao/logout", "/kakao/token", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/kakao/callback");
+    private final List<String> WHITE_LIST = List.of("/users/login", "/users/signin", "/kakao/login", "/kakao/logout", "/kakao/token",
+            "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/api/chat/**", "/kakao/callback");
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {

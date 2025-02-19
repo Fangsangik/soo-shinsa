@@ -1,8 +1,8 @@
 package com.Soo_Shinsa.review.service;
 
 import com.Soo_Shinsa.constant.TargetType;
-import com.Soo_Shinsa.image.Image;
-import com.Soo_Shinsa.image.ImageService;
+import com.Soo_Shinsa.image.model.Image;
+import com.Soo_Shinsa.image.service.ImageService;
 import com.Soo_Shinsa.order.model.OrderItem;
 import com.Soo_Shinsa.order.repository.OrderItemRepository;
 import com.Soo_Shinsa.product.model.Product;
@@ -16,7 +16,6 @@ import com.Soo_Shinsa.review.repository.ReviewRepository;
 import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.utils.EntityValidator;
 import lombok.RequiredArgsConstructor;
-import org.redisson.api.RedissonClient;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -35,8 +34,6 @@ public class ReviewServiceImpl implements ReviewService {
     private final OrderItemRepository orderItemRepository;
     private final ImageService imageService;
     private final ProductRepository productRepository;
-    private final RedissonClient redissonClient;
-
     /**
      * 리뷰 생성
      *

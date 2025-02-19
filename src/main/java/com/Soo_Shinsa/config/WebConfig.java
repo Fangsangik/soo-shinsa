@@ -33,11 +33,20 @@ public class WebConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .headers(headers -> headers
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(
+                                "default-src 'self'; " +
+                                        "connect-src * ws://localhost:8080 ws://127.0.0.1:8080 ws://0.0.0.0:8080 ws://[::1]:8080; " +
+                                        "script-src 'self' 'unsafe-inline'; " +
+                                        "style-src 'self' 'unsafe-inline';"
+                        ))
+                )
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth->
                         auth.requestMatchers(WHITE_LIST).permitAll()
+                                .requestMatchers("/ws/**").permitAll()
                                 // static 리소스 경로
                                 .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
                                 // 일부 dispatch 타입
@@ -70,5 +79,4 @@ public class WebConfig {
                         ROLE_ADMIN > ROLE_USER
                         """);
     }
-
 }
