@@ -19,6 +19,12 @@ public class ChatMessageListener implements MessageListener {
 
     private static final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
 
+    /**
+     * MessageListener 인터페이스를 통해 Redis PUB/SUB 메시지 수신
+     * Redis에서 메시지 수신하면 onMessage 메서드 호출
+     * @param message
+     * @param pattern
+     */
     @Override
     public void onMessage(Message message, byte[] pattern) {
         String receivedMessage = new String(message.getBody());

@@ -20,6 +20,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final ChatMessagePublisher chatMessagePublisher;
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
 
+    /**
+     * WebSocket 연결시 해당 세션을 저장
+     * @param session
+     */
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         String sessionId = session.getId();
@@ -27,6 +31,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         log.info("✅ WebSocket 연결됨: 세션 ID: {}", sessionId);
     }
 
+    /**
+     * 클라이언트가 메시지를 보내면 로그를 남김
+     * @param session
+     * @param message
+     * @throws IOException
+     */
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
         log.info("📩 메시지 수신: {}", message.getPayload());
@@ -41,6 +51,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         chatMessagePublisher.publish("chat", payload);
     }
 
+    /**
+     * 해당 WebSocket 종료시 해당 세션을 삭제
+     * @param session
+     * @param status
+     */
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         sessions.remove(session.getId());
