@@ -1,5 +1,5 @@
 # 無shinsa
-## 🛠️ Tools : <img src="https://img.shields.io/badge/mysql-4479A1?style=for-the-badge&logo=mysql&logoColor=white"> <img src="https://img.shields.io/badge/spring-6DB33F?style=for-the-badge&logo=github&logoColor=Green"> <img alt="Java" src ="https://img.shields.io/badge/Java-007396.svg?&style=for-the-badge&logo=Java&logoColor=white"/>  <img alt="Java" src ="https://img.shields.io/badge/intellijidea-000000.svg?&style=for-the-badge&logo=intellijidea&logoColor=white"/>, <img src="https://img.shields.io/badge/AmazonAWS-FF0000?style=flat-square&logo=Adobe&logoColor=white">
+## 🛠️ Tools : <img src="https://img.shields.io/badge/mysql-4479A1?style=for-the-badge&logo=mysql&logoColor=white"> <img src="https://img.shields.io/badge/spring-6DB33F?style=for-the-badge&logo=github&logoColor=Green"> <img alt="Java" src ="https://img.shields.io/badge/Java-007396.svg?&style=for-the-badge&logo=Java&logoColor=white"/>  <img alt="Java" src ="https://img.shields.io/badge/intellijidea-000000.svg?&style=for-the-badge&logo=intellijidea&logoColor=white"/> <img src="https://img.shields.io/badge/AmazonAWS-FF0000?style=flat-square&logo=Adobe&logoColor=white">
 ## 🚩 Period : 2024/01/02 ~ 2024/02/10
 ## 👨‍💻 ERD  
 <a-href>https://www.erdcloud.com/d/vHWtykYujZaDJdLpc</a-href>
