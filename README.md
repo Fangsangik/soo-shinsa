@@ -68,10 +68,10 @@
 
 ## 🧨 TroubleShooting 
 1. QueryDSL 문제 해결
-- 문제점
+- 문제점  
 동적 쿼리를 Service에서 작성했으나, Repository의 책임이 Service로 전가되는 문제 발생.
 Entity로 직접 데이터를 조회했더니 불필요한 컬럼까지 함께 조회되는 문제 발생.
-DTO 필드 순서를 맞추지 않으면 다음과 같은 오류 발생:
+DTO 필드 순서를 맞추지 않으면 다음과 같은 오류 발생:  
 ```com.querydsl.core.types.ExpressionException: No constructor found for class com.Soo_Shinsa.order.dto.OrderItemResponseDto```
 
 - 해결방법
