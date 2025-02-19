@@ -1,9 +1,11 @@
 # 無shinsa
 ## 🛠️ Tools : <img src="https://img.shields.io/badge/mysql-4479A1?style=for-the-badge&logo=mysql&logoColor=white"> <img src="https://img.shields.io/badge/spring-6DB33F?style=for-the-badge&logo=github&logoColor=Green"> <img alt="Java" src ="https://img.shields.io/badge/Java-007396.svg?&style=for-the-badge&logo=Java&logoColor=white"/>  <img alt="Java" src ="https://img.shields.io/badge/intellijidea-000000.svg?&style=for-the-badge&logo=intellijidea&logoColor=white"/>, <img src="https://img.shields.io/badge/AmazonAWS-FF0000?style=flat-square&logo=Adobe&logoColor=white">
 ## 🚩 Period : 2024/01/02 ~ 2024/02/10
-## 👨‍💻 ERD <a-href>https://www.erdcloud.com/d/vHWtykYujZaDJdLpc</a-href>
+## 👨‍💻 ERD  
+<a-href>https://www.erdcloud.com/d/vHWtykYujZaDJdLpc</a-href>
 ## 👨‍💻 API
 <a-href>https://identity.getpostman.com/handover/multifactor?user=41769599&handover_token=3a869f52-d810-4426-b93a-9e4ae97357cd</a-href>
+
 ## 👨‍💻 Role 
 이해욱 : Order, Toss
   
@@ -11,7 +13,8 @@
 
 김민경 : User, 통계
  
-황상익 : Image, Report, Product, ProductOptions, CartItem, Coupon, Review, Cateogry Refactoring, Brand Refactoring, AWS, Order 일부 Refactoring, 각 기능 동적 쿼리 작성 
+황상익 : Image, Report, Product, ProductOptions, CartItem, Coupon, Review, Cateogry Refactoring, Brand Refactoring, AWS, Order 일부 Refactoring, 각 기능 동적 쿼리 작성
+ 
 ## 👨‍💻 About Project 
 - 쿠팡, 무신사 이커머스를 모티브로 無신사라는 쇼핑몰 이커머스 입니다. 회원가입과 백 오피스 기능이 갖춰져 있고, 회원별 등급에 따라 상품 적립 포인트가 적립이 되어 그에 맞는 할인 및 포인트 사용이 가능하게 할 수 있으며, 관리자와 점주는 판매 현황 및 자신의 매장의 매출 현황을 분석해, 보다 영업을 효율적으로 할 수 있는 기능이 구성되어 있으며, 소비자는 브랜드별 카테고리에 상품들이 구성되어 구매가 가능합니다. 또한 쿠폰 지급을 통해 소비자는 상품을 구매할 때 보다 할인되어 있는 상품을 통해 구매가 가능합니다. 상품 구매 후 후기 작성이 가능 하며, 상품 구매 직전 다른 사람의 후기가 궁금할 경우, 별점에 따라 조회가 가능합니다.
 악성 리뷰나, 잘못된 상품이 있을 경우에는 신고기능을 통해, 해당 개시물 혹은 상품을 신고 할 수 있으며, 신고가 접수되면, Admin 측에서 적절한 조치가 이뤄질 수 있도록 했습니다. 
