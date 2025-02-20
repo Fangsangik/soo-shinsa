@@ -13,13 +13,21 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @OpenAPIDefinition(
         info = @Info(title = "Soo_Shinsa API", version = "1.0", description = "Soo_Shinsa 프로젝트 API 명세서"),
-        security = {
+        security = {  // ✅ BearerAuth도 여기에 추가!
+                @SecurityRequirement(name = "BearerAuth"),
                 @SecurityRequirement(name = "KakaoOAuth2"),
                 @SecurityRequirement(name = "KakaoClientCredentials")
         }
 )
 @SecurityScheme(
-        name = "KakaoOAuth2",
+        name = "BearerAuth",  // ✅ JWT 인증 추가
+        type = SecuritySchemeType.HTTP,
+        scheme = "bearer",
+        bearerFormat = "JWT",
+        in = SecuritySchemeIn.HEADER
+)
+@SecurityScheme(
+        name = "KakaoOAuth2",  // ✅ Kakao OAuth2 설정 유지
         type = SecuritySchemeType.OAUTH2,
         in = SecuritySchemeIn.HEADER,
         bearerFormat = "JWT",
@@ -30,6 +38,5 @@ import org.springframework.context.annotation.Configuration;
                 )
         )
 )
-
 public class OpenAPIConfig {
 }
