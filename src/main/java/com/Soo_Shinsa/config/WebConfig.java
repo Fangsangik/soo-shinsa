@@ -56,7 +56,7 @@ public class WebConfig {
                                 .requestMatchers(ADMIN_INTERCEPTOR_LIST).hasRole("ADMIN")
                                 .requestMatchers(VENDOR_INTERCEPTOR_LIST).hasRole("VENDOR")
                                 .requestMatchers(CUSTOMER_INTERCEPTOR_LIST).hasRole("CUSTOMER")
-                                .requestMatchers(HttpMethod.GET,CUSTOMER__DENY_INTERCEPTOR_LIST).hasRole("CUSTOMER")
+                                .requestMatchers(HttpMethod.GET,CUSTOMER_DENY_INTERCEPTOR_LIST).hasRole("CUSTOMER")
                                 .anyRequest().authenticated()
                 )
                 // Spring Security 예외에 대한 처리를 핸들러에 위임.

@@ -26,12 +26,12 @@ public class ProductController {
 
     private final ProductService productService;
 
-    @PostMapping("/vendor/brands/{brandId}")
+    @PostMapping("/brands/{brandId}")
     @Operation(summary = "상품 생성", description = "새로운 상품을 생성합니다.")
     public ResponseEntity<CommonResponse<ProductResponseDto>> createProduct(@AuthenticationPrincipal UserDetails userDetails,
-                                                                           @Valid @RequestPart ProductRequestDto productRequestDto,
-                                                                           @RequestPart(required = false) MultipartFile imageFile,
-                                                                           @PathVariable Long brandId) {
+                                                                            @Valid @RequestPart ProductRequestDto productRequestDto,
+                                                                            @RequestPart(required = false) MultipartFile imageFile,
+                                                                            @PathVariable Long brandId) {
 
         User user = UserUtils.getUser(userDetails);
         ProductResponseDto product = productService.createProduct(user, productRequestDto, brandId, imageFile);
@@ -39,12 +39,12 @@ public class ProductController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PatchMapping("/vendor/{productId}")
+    @PatchMapping("/{productId}")
     @Operation(summary = "상품 수정", description = "기존 상품을 수정합니다.")
     public ResponseEntity<CommonResponse<ProductUpdateDto>> updateProduct(@AuthenticationPrincipal UserDetails userDetails,
-                                                          @RequestPart ProductUpdateDto productUpdateDto,
-                                                          @RequestPart(required = false) MultipartFile imageFile,
-                                                          @PathVariable Long productId) {
+                                                                          @RequestPart ProductUpdateDto productUpdateDto,
+                                                                          @RequestPart(required = false) MultipartFile imageFile,
+                                                                          @PathVariable Long productId) {
         User user = UserUtils.getUser(userDetails);
         ProductUpdateDto productResponseDto = productService.updateProduct(user, productUpdateDto, productId, imageFile);
         CommonResponse<ProductUpdateDto> response = new CommonResponse<>(ResponseMessage.PRODUCT_UPDATE_SUCCESS, productResponseDto);
@@ -55,22 +55,22 @@ public class ProductController {
     @Operation(summary = "상품 조회", description = "특정 상품을 조회합니다.")
     public ResponseEntity<CommonResponse<FindProductResponseDto>> findProduct(@PathVariable Long productId) {
         FindProductResponseDto productResponseDto = productService.findProduct(productId);
-        CommonResponse<FindProductResponseDto> response =  new CommonResponse<>(ResponseMessage.PRODUCT_SELECT_SUCCESS, productResponseDto);
+        CommonResponse<FindProductResponseDto> response = new CommonResponse<>(ResponseMessage.PRODUCT_SELECT_SUCCESS, productResponseDto);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
     @GetMapping("/brands/{brandId}")
     @Operation(summary = "브랜드별 상품 리스트 조회", description = "브랜드 ID로 해당 브랜드의 모든 상품을 조회합니다.")
     public ResponseEntity<CommonResponse<Page<ProductResponseDto>>> findAllProductList(@RequestParam(defaultValue = "0") int page,
-                                                                       @RequestParam(defaultValue = "10") int size,
-                                                                       @RequestBody FindProductRequestDto requestDto,
-                                                                       @PathVariable Long brandId) {
+                                                                                       @RequestParam(defaultValue = "10") int size,
+                                                                                       @RequestBody FindProductRequestDto requestDto,
+                                                                                       @PathVariable Long brandId) {
         Page<ProductResponseDto> productResponseDto = productService.findAllProduct(brandId, requestDto, page, size);
         CommonResponse<Page<ProductResponseDto>> response = new CommonResponse<>(ResponseMessage.PRODUCT_SELECT_SUCCESS, productResponseDto);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
-    @DeleteMapping("/vendor/{productId}")
+    @DeleteMapping("/{productId}")
     @Operation(summary = "상품 삭제", description = "특정 상품을 삭제합니다.")
     public ResponseEntity<Void> deleteProduct(@AuthenticationPrincipal UserDetails userDetails,
                                               @PathVariable Long productId) {

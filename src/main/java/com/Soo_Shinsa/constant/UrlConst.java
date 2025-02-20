@@ -20,6 +20,6 @@ public class UrlConst {
     //손님 인터셉터 리스트
     public static final String[] CUSTOMER_INTERCEPTOR_LIST = {"/users", "/users/**"};
 
-    public static final String[] CUSTOMER__DENY_INTERCEPTOR_LIST = {"/brands","/brands/**","/categories","/categories/**","/products","/products/**","/sub-categories","/sub-categories/**"};
+    public static final String[] CUSTOMER_DENY_INTERCEPTOR_LIST = {"/brands","/brands/**","/categories","/categories/**","/products","/products/**","/sub-categories","/sub-categories/**"};
 
 }
