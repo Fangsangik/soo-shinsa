@@ -60,10 +60,6 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<CommonResponse<JwtAuthResponseDto>> login(@RequestBody LoginRequestDto dto) {
         JwtAuthResponseDto login = userService.login(dto);
-
-        jwtAccessTokenService.saveAccessToken(login.getAccessToken(), login.getEmail(), jwtProvider.getExpiryMillis());
-        jwtRefreshTokenService.saveRefreshToken(login.getEmail(), login.getRefreshToken(), login.getRefreshTokenExpiration());
-
         return ResponseEntity.ok(new CommonResponse<>(ResponseMessage.USER_LOG_IN_SUCCESS, login));
     }
 
