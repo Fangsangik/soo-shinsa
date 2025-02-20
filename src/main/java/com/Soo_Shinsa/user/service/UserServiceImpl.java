@@ -13,6 +13,7 @@ import com.Soo_Shinsa.user.model.Grade;
 import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.user.model.UserGrade;
 import com.Soo_Shinsa.user.repository.GradeRepository;
+import com.Soo_Shinsa.user.repository.KakaoUserRepository;
 import com.Soo_Shinsa.user.repository.UserGradeRepository;
 import com.Soo_Shinsa.user.repository.UserRepository;
 import com.Soo_Shinsa.utils.ResponseMessage;
@@ -46,6 +47,7 @@ public class UserServiceImpl implements UserService {
     private final JwtRefreshTokenService jwtRefreshTokenService;
     private final UserDetailsServiceImp userDetailsService;
     private final JwtBlackListService jwtBlackListService;
+    private final KakaoUserRepository kakaoUserRepository;
 
     @Transactional
     @Override
@@ -72,7 +74,38 @@ public class UserServiceImpl implements UserService {
 
     @Transactional
     @Override
+    public UserResponseDto findOrCreateKakaoUser(KakaoUserInfoResponseDto kakaoUserInfo) {
+        return userRepository.findByEmail(kakaoUserInfo.getKakaoAccount().getEmail())
+                .map(UserResponseDto::new) // 이미 존재하는 유저는 그대로 반환
+                .orElseGet(() -> {
+                    UserCreateRequestDto userDto = UserCreateRequestDto.builder()
+                            .email(kakaoUserInfo.getKakaoAccount().getEmail())
+                            .password(passwordEncoder.encode("KAKAO_DEFAULT_PASSWORD")) // 기본 패스워드 설정
+                            .name(kakaoUserInfo.getKakaoAccount().getProfile().getNickname())
+                            .phoneNum("010-1234-5678") // 기본값
+                            .role(Role.CUSTOMER)
+                            .build();
+
+                    User savedUser = userRepository.save(userDto.toEntity());
+
+                    KakaoUserCreateRequestDto kakaoUserDto = KakaoUserCreateRequestDto.builder()
+                            .kakaoId(kakaoUserInfo.getId())
+                            .email(kakaoUserInfo.getKakaoAccount().getEmail())
+                            .nickname(kakaoUserInfo.getKakaoAccount().getProfile().getNickname())
+                            .user(savedUser)
+                            .build();
+
+                    kakaoUserRepository.save(kakaoUserDto.toEntity());
+
+                    return new UserResponseDto(savedUser);
+                });
+    }
+
+    @Transactional
+    @Override
     public JwtAuthResponseDto login(LoginRequestDto dto) {
+        log.info("🟢 login 메서드 실행됨: {}", dto.getEmail());
+
         //사용자 확인
         User user = userRepository.findByEmailOrElseThrow(dto.getEmail());
 
@@ -86,29 +119,23 @@ public class UserServiceImpl implements UserService {
         }
 
         //인증 객체를 저장
-        Authentication auth = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        dto.getEmail(),
-                        dto.getPassword()
-                )
-        );
+        UserDetails userDetails = new UserDetailsImp(user);
+        Authentication auth = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
 
         //security context에 저장
-
-        UserDetailsImp userDetails = (UserDetailsImp) auth.getPrincipal();
-        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-
+        SecurityContextHolder.getContext().setAuthentication(auth);
 
         //토큰 생성
-        String accessToken = jwtProvider.generateToken(authentication);
-        String refreshToken = jwtProvider.generateRefreshToken(user.getEmail());
-        Long refreshTokenExpiration = jwtProvider.getRefreshExpiryMillis();
+        String accessToken = jwtProvider.generateTokenBy(user.getEmail(), jwtProvider.getExpiryMillis());
+        String refreshToken = jwtProvider.generateTokenBy(user.getEmail(), jwtProvider.getRefreshExpiryMillis());
+
+        log.info("🟢 AccessToken 생성 완료: {}", accessToken);
 
         jwtAccessTokenService.saveAccessToken(accessToken, user.getEmail(), jwtProvider.getExpiryMillis());
 
-        return new JwtAuthResponseDto(AuthenticationScheme.BEARER.getName(), refreshToken, refreshTokenExpiration, accessToken, user.getEmail());
+        return new JwtAuthResponseDto(AuthenticationScheme.BEARER.getName(), refreshToken, jwtProvider.getRefreshExpiryMillis(), accessToken, user.getEmail());
     }
 
     @Override

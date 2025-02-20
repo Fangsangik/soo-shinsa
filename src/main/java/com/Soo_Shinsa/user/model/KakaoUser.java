@@ -29,4 +29,12 @@ public class KakaoUser {
         this.kakaoId = kakaoId;
         this.user = user;
     }
+
+    public void assignUser(User user) {
+        this.user = user;
+
+        if (user.getKakaoUser() != this) {
+            user.assignKakaoUser(this);
+        }
+    }
 }
