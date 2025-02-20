@@ -75,7 +75,7 @@ public class WebConfig {
     public RoleHierarchy roleHierarchy() {
         return RoleHierarchyImpl.fromHierarchy(
                 """
-                        ROLE_ADMIN > ROLE_OWNER
+                        ROLE_ADMIN > ROLE_VENDOR
                         ROLE_ADMIN > ROLE_USER
                         """);
     }

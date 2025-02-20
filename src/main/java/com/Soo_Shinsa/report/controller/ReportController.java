@@ -33,7 +33,7 @@ public class ReportController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PatchMapping("/{reportId}/status")
+    @PatchMapping("/admin/{reportId}/status")
     public ResponseEntity<Void> reportProcess (@PathVariable Long reportId,
                                                @Valid @RequestBody ReportProcessDto processDto,
                                                @AuthenticationPrincipal UserDetailsImp userDetails) {
@@ -42,7 +42,7 @@ public class ReportController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/{reportId}")
+    @GetMapping("/admin/{reportId}")
     public ResponseEntity<CommonResponse<ReportResponseDto>> getReport(@PathVariable Long reportId,
                                                        @AuthenticationPrincipal UserDetailsImp userDetails) {
         User user = UserUtils.getUser(userDetails);
@@ -51,7 +51,7 @@ public class ReportController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
-    @DeleteMapping("/{reportId}")
+    @DeleteMapping("/admin/{reportId}")
     public ResponseEntity<Void> deleteReport(@PathVariable Long reportId,
                                              @AuthenticationPrincipal UserDetailsImp userDetails) {
         User user = UserUtils.getUser(userDetails);
@@ -59,7 +59,7 @@ public class ReportController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping
+    @GetMapping("/admin")
     public ResponseEntity<CommonResponse<?>> getAllReports(@AuthenticationPrincipal UserDetailsImp userDetails,
                                            @RequestParam(defaultValue = "0") int page,
                                            @RequestParam(defaultValue = "10") int size) {

@@ -26,7 +26,7 @@ public class BrandController {
 
     private final BrandService brandService;
 
-    @PostMapping
+    @PostMapping("/vendor")
     @Operation(summary = "브랜드 생성", description = "새로운 브랜드를 생성합니다.")
     public ResponseEntity<CommonResponse<BrandResponseDto>> createBrand(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -60,7 +60,7 @@ public class BrandController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
-    @GetMapping("/owners")
+    @GetMapping("/vendor")
     @Operation(summary = "사용자 브랜드 조회", description = "사용자가 소유한 브랜드를 조회합니다.")
     public ResponseEntity<CommonResponse<List<BrandResponseDto>>> getAllBrandByUserId(@AuthenticationPrincipal UserDetails userDetails) {
         List<BrandResponseDto> getAllBrand = brandService.getAllByUserId(UserUtils.getUser(userDetails));

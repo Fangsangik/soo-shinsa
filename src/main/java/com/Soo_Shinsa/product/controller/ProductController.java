@@ -26,7 +26,7 @@ public class ProductController {
 
     private final ProductService productService;
 
-    @PostMapping("/brands/{brandId}")
+    @PostMapping("/vendor/brands/{brandId}")
     @Operation(summary = "상품 생성", description = "새로운 상품을 생성합니다.")
     public ResponseEntity<CommonResponse<ProductResponseDto>> createProduct(@AuthenticationPrincipal UserDetails userDetails,
                                                                            @Valid @RequestPart ProductRequestDto productRequestDto,
@@ -39,7 +39,7 @@ public class ProductController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PatchMapping("/{productId}")
+    @PatchMapping("/vendor/{productId}")
     @Operation(summary = "상품 수정", description = "기존 상품을 수정합니다.")
     public ResponseEntity<CommonResponse<ProductUpdateDto>> updateProduct(@AuthenticationPrincipal UserDetails userDetails,
                                                           @RequestPart ProductUpdateDto productUpdateDto,
@@ -70,7 +70,7 @@ public class ProductController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
-    @DeleteMapping("/{productId}")
+    @DeleteMapping("/vendor/{productId}")
     @Operation(summary = "상품 삭제", description = "특정 상품을 삭제합니다.")
     public ResponseEntity<Void> deleteProduct(@AuthenticationPrincipal UserDetails userDetails,
                                               @PathVariable Long productId) {
