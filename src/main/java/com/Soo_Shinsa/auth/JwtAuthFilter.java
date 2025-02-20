@@ -30,7 +30,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtBlackListService jwtBlackListService;
     private final UserDetailsService userDetailsService;
     private final JwtAccessTokenService jwtAccessTokenService;
-    private final List<String> WHITE_LIST = List.of("/users/login", "/users/signin", "/kakao/login", "/kakao/logout", "/kakao/token",
+    private final List<String> WHITE_LIST = List.of("/users/login", "/users/signin", "users/logout","/kakao/login", "/kakao/logout", "/kakao/token",
             "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/api/chat/**", "/kakao/callback");
 
     @Override
@@ -43,18 +43,30 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         String token = getTokenFromRequest(request);
-        if (token == null) {
-            log.warn("요청에 토큰이 포함되지 않음.");
-            filterChain.doFilter(request, response);
-            return;
-        }
+        if (token != null && jwtProvider.validToken(token)) {
+            // ✅ 로그아웃된 JWT인지 확인
+            if (jwtBlackListService.isBlackListed(token)) {
+                log.warn("🚨 블랙리스트된 JWT 사용 시도 감지: {}", token);
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "로그아웃된 토큰입니다.");
+                return;
+            }
 
-        if (jwtBlackListService.isBlackListed(token)) {
-            log.warn("토큰이 블랙리스트에 있음: {}", token);
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-            return;
-        }
+            String email = jwtProvider.getUsername(token);
+            log.info("🔍 JwtAuthFilter - JWT에서 추출한 이메일: {}", email);
 
+            if (SecurityContextHolder.getContext().getAuthentication() == null) {
+                log.info("🔍 JwtAuthFilter - SecurityContext에 인증 정보 없음. 사용자 인증 진행");
+
+                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+                log.info("✅ JwtAuthFilter - SecurityContext 인증 완료: {}", email);
+            } else {
+                log.info("✅ JwtAuthFilter - 이미 인증된 사용자: {}", email);
+            }
+        }
         authenticate(request, token);
         filterChain.doFilter(request, response);
     }

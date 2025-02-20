@@ -159,10 +159,11 @@ public class UserServiceImpl implements UserService {
 
         // 블랙리스트 추가 및 토큰 삭제
         jwtBlackListService.addBlackList(token, jwtProvider.getExpiryMillis());
-        jwtAccessTokenService.deleteAccessToken(token);
+        jwtAccessTokenService.deleteAllAccessTokens();
         jwtRefreshTokenService.deleteRefreshToken(userDetailsImp.getUsername());
 
         log.info("사용자 로그아웃 성공: {}", userDetailsImp.getUsername());
+        SecurityContextHolder.clearContext();
     }
 
     @Transactional
