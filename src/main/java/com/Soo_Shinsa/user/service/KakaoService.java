@@ -1,6 +1,5 @@
 package com.Soo_Shinsa.user.service;
 
-import com.Soo_Shinsa.auth.JwtProvider;
 import com.Soo_Shinsa.user.dto.KakaoTokenResponseDto;
 import com.Soo_Shinsa.user.dto.KakaoUserInfoResponseDto;
 import lombok.RequiredArgsConstructor;
@@ -15,15 +14,10 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
-import java.util.HashMap;
-import java.util.Map;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class KakaoService {
-
-    private final JwtProvider jwtProvider;
 
     @Value("${kakao.user_info_uri}")
     private String userInfoUri;
@@ -63,32 +57,6 @@ public class KakaoService {
                 .block();
 
         return response;
-    }
-
-    public Map<String, String> createJwtFromKakaoUser(KakaoUserInfoResponseDto kakaoUser) {
-        String email = kakaoUser.getKakaoAccount().getEmail();
-
-        // JWT 생성
-        String accessToken = jwtProvider.generateTokenBy(email, jwtProvider.getExpiryMillis());
-        String refreshToken = jwtProvider.generateRefreshToken(email);
-
-        // JWT 정보를 Map에 담아 반환
-        Map<String, String> jwtMap = new HashMap<>();
-        jwtMap.put("accessToken", accessToken);
-        jwtMap.put("refreshToken", refreshToken);
-
-        return jwtMap;
-    }
-
-    public void logoutKakapUser(String accessToken) {
-        // 카카오 로그아웃
-        WebClient.create()
-                .post()
-                .uri("https://kapi.kakao.com/v1/user/logout")
-                .headers(headers -> headers.setBearerAuth(accessToken))
-                .retrieve()
-                .bodyToMono(Void.class)
-                .block();
     }
 
     private String cleanCode(String code) {

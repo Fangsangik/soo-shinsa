@@ -10,6 +10,8 @@ import jakarta.servlet.http.HttpServletRequest;
 public interface UserService {
     UserResponseDto create(SignInRequestDto dto);
 
+    UserResponseDto findOrCreateKakaoUser(KakaoUserInfoResponseDto kakaoUserInfo);
+
     JwtAuthResponseDto login(LoginRequestDto dto);
 
     void logout(HttpServletRequest request);

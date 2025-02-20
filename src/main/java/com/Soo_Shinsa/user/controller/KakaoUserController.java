@@ -1,6 +1,7 @@
 package com.Soo_Shinsa.user.controller;
 
 import com.Soo_Shinsa.user.dto.KakaoTokenResponseDto;
+import com.Soo_Shinsa.user.service.KakaoAuthService;
 import com.Soo_Shinsa.user.service.KakaoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -21,6 +22,7 @@ import java.util.Map;
 public class KakaoUserController {
 
     private final KakaoService kakaoService;
+    private final KakaoAuthService kakaoAuthService;
 
     @Operation(summary = "카카오 액세스 토큰 요청",
             description = "카카오 OAuth2를 이용해 액세스 토큰을 요청합니다.")
@@ -41,8 +43,7 @@ public class KakaoUserController {
     @Operation(summary = "카카오 로그인", description = "카카오 OAuth2를 이용하여 로그인을 진행합니다.",
             security = @SecurityRequirement(name = "KakaoOAuth2"))
     public ResponseEntity<Map<String, String>> login(@RequestHeader("Authorization") String kakaoAccessToken) {
-        var userInfo = kakaoService.getUserInfo(kakaoAccessToken.replace("Bearer ", ""));
-        Map<String, String> jwtTokens = kakaoService.createJwtFromKakaoUser(userInfo);
+        Map<String, String> jwtTokens = kakaoAuthService.kakaoLogin(kakaoAccessToken);
         return ResponseEntity.ok(jwtTokens);
     }
 
@@ -50,7 +51,7 @@ public class KakaoUserController {
     @Operation(summary = "카카오 로그아웃", description = "카카오 계정 로그아웃을 처리합니다.",
             security = @SecurityRequirement(name = "KakaoOAuth2"))
     public ResponseEntity<Void> logout(@RequestHeader("Authorization") String kakaoAccessToken) {
-        kakaoService.logoutKakapUser(kakaoAccessToken.replace("Bearer ", ""));
+        kakaoAuthService.logoutKakapUser(kakaoAccessToken.replace("Bearer ", ""));
         return ResponseEntity.noContent().build();
     }
 }

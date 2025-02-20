@@ -38,12 +38,15 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_grade_id")
     private UserGrade userGrade;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private KakaoUser kakaoUser;
+
     @Builder
-    public User(String email, String password, String name, String phoneNum, UserStatus status, Role role, UserGrade userGrade) {
+    public User(String email, String password, String name, String phoneNum, UserStatus status, Role role, UserGrade userGrade, KakaoUser kakaoUser) {
         this.email = email;
         this.password = password;
         this.name = name;
@@ -51,6 +54,7 @@ public class User {
         this.status = status;
         this.role = role;
         this.userGrade = userGrade;
+        this.kakaoUser = kakaoUser;
     }
 
     public void updateUserGrade(UserGrade userGrade) {
@@ -80,5 +84,10 @@ public class User {
 
     public boolean isAdminOrVendor() {
         return isAdmin() || isVendor();
+    }
+
+    public void assignKakaoUser(KakaoUser kakaoUser) {
+        this.kakaoUser = kakaoUser;
+        kakaoUser.assignUser(this);
     }
 }
