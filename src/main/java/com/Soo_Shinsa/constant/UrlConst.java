@@ -15,7 +15,7 @@ public class UrlConst {
     public static final String[] ADMIN_INTERCEPTOR_LIST = {"/admin", "/admin/**"};
 
     //사장 인터셉터 리스트
-    public static final String[] VENDOR_INTERCEPTOR_LIST = {"/owner", "/owner/**"};
+    public static final String[] VENDOR_INTERCEPTOR_LIST = {"/vendor", "/vendor/**"};
 
     //손님 인터셉터 리스트
     public static final String[] CUSTOMER_INTERCEPTOR_LIST = {"/users", "/users/**"};
