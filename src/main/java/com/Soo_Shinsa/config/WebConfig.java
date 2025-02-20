@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -55,6 +56,7 @@ public class WebConfig {
                                 .requestMatchers(ADMIN_INTERCEPTOR_LIST).hasRole("ADMIN")
                                 .requestMatchers(VENDOR_INTERCEPTOR_LIST).hasRole("VENDOR")
                                 .requestMatchers(CUSTOMER_INTERCEPTOR_LIST).hasRole("CUSTOMER")
+                                .requestMatchers(HttpMethod.GET,CUSTOMER__DENY_INTERCEPTOR_LIST).hasRole("CUSTOMER")
                                 .anyRequest().authenticated()
                 )
                 // Spring Security 예외에 대한 처리를 핸들러에 위임.
@@ -76,7 +78,7 @@ public class WebConfig {
         return RoleHierarchyImpl.fromHierarchy(
                 """
                         ROLE_ADMIN > ROLE_VENDOR
-                        ROLE_ADMIN > ROLE_USER
+                        ROLE_ADMIN > ROLE_CUSTOMER
                         """);
     }
 }
