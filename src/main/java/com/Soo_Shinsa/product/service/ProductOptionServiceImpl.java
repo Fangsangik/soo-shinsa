@@ -39,7 +39,7 @@ public class ProductOptionServiceImpl implements ProductOptionService {
                 .size(dto.getSize())
                 .color(dto.getColor())
                 .productStatus(dto.getStatus())
-                .product(findProduct)
+                .quantity(dto.getQuantity())
                 .build();
 
         ProductOption savedOption = productOptionRepository.save(option);

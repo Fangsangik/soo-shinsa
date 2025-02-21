@@ -21,10 +21,15 @@ public class ProductOptionRequestDto {
     @NotNull(message = "상태는 필수 값 입니다.")
     private ProductStatus status;
 
-    public ProductOptionRequestDto(String size, String color, ProductStatus status) {
+    @NotNull(message = "수량은 필수 값 입니다.")
+    private Integer quantity;
+
+
+    public ProductOptionRequestDto(String size, String color, ProductStatus status, Integer quantity) {
         this.size = size;
         this.color = color;
         this.status = status;
+        this.quantity = quantity;
     }
 
     public ProductOption toEntity(Product findProduct) {
@@ -33,6 +38,7 @@ public class ProductOptionRequestDto {
                 .color(color)
                 .productStatus(status)
                 .product(findProduct)
+                .quantity(quantity)
                 .build();
     }
 }
