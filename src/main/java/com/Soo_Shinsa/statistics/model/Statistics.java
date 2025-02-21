@@ -1,11 +1,7 @@
 package com.Soo_Shinsa.statistics.model;
 
-import com.Soo_Shinsa.constant.OrdersStatus;
 import com.Soo_Shinsa.statistics.dto.OrderHistoryForStatistic;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -17,30 +13,35 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class Statistics {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    private String brandName;
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    @Column(name = "statistics_id")
+    private Long statisticsId;
+
+    //제품 관련 정보
     private String productName;
-    private BigDecimal price;
-    private int quantity;
+    private BigDecimal totalPrice;
+    private String categoryName;
+    private String brandName;
+
+    private Integer quantity;
+
+    //주문 관련 정보
     private LocalDate orderDate;
+    private String orderStatus;
 
-    // 기존 생성자가 있다면 유지
+    //구매자 관련 정보
 
 
-    public Statistics(String brandName, String productName, BigDecimal price, int quantity, LocalDate orderDate, OrdersStatus ordersStatus) {
-        this.brandName = brandName;
-        this.productName = productName;
-        this.price = price;
-        this.quantity = quantity;
-        this.orderDate = orderDate;
+    public Statistics(OrderHistoryForStatistic orderHistory) {
+        this.productName = orderHistory.getProductName();
+        this.totalPrice = orderHistory.getPrice();
+        this.categoryName = null;
+        this.brandName = orderHistory.getBrandName();
+
+        this.quantity = orderHistory.getQuantity();
+        this.orderDate = orderHistory.getOrderDate().toLocalDateTime().toLocalDate();
+        this.orderStatus = orderHistory.getOrderStatus();
     }
 
-    public Statistics(OrderHistoryForStatistic orderHistoryForStatistic) {
-        this.brandName = orderHistoryForStatistic.getBrandName();
-        this.productName = orderHistoryForStatistic.getProductName();
-        this.price = orderHistoryForStatistic.getPrice();
-        this.quantity = orderHistoryForStatistic.getQuantity();
-        this.orderDate = orderHistoryForStatistic.getOrderDate();
-    }
+
 }

@@ -1,25 +1,26 @@
 package com.Soo_Shinsa.statistics.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.sql.Timestamp;
 
-@Getter
 @NoArgsConstructor
+@Getter
+@AllArgsConstructor
 public class OrderHistoryForStatistic {
-    private LocalDate orderDate;
-    private int quantity;
+
+    private String orderStatus;
+    private Timestamp orderDate;
+
+    private Integer quantity;
     private BigDecimal price;
+
     private String productName;
+    private String categoryName;
     private String brandName;
 
-    public OrderHistoryForStatistic(LocalDate orderDate, int quantity, BigDecimal price, String productName, String brandName) {
-        this.orderDate = orderDate;
-        this.quantity = quantity;
-        this.price = price;
-        this.productName = productName;
-        this.brandName = brandName;
-    }
+
 }

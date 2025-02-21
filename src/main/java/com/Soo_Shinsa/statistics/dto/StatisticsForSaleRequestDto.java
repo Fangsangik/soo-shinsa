@@ -1,37 +1,50 @@
 package com.Soo_Shinsa.statistics.dto;
 
-import lombok.Builder;
+import com.Soo_Shinsa.constant.PeriodType;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 
-import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.List;
 
 @Getter
+@AllArgsConstructor
 @NoArgsConstructor
 public class StatisticsForSaleRequestDto {
-    private String startDate;
-    private String endDate;
+
+    //출력 종류
+    //연간/월간/주간/일간
+    @NotNull(message = "기간 타입은 필수 입력 값입니다.")
+    private PeriodType periodType;
+
+    //검색 조건
     private List<String> categoryList;
     private List<String> brandList;
 
-    @Builder
-    public StatisticsForSaleRequestDto(String startDate, String endDate, List<String> categoryList, List<String> brandList, String orderStatus) {
-        this.startDate = startDate;
-        this.endDate = endDate;
-        this.categoryList = categoryList;
-        this.brandList = brandList;
-    }
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    private String startDate;
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    private String endDate;
 
-    /**
-     * `StatisticsForSaleRequestDto` 객체를 `StatisticsRequestDto`로 변환
-     */
-    public StatisticsRequestDto toStatisticsRequestDto() {
-        return StatisticsRequestDto.builder()
-                .startDate(LocalDate.parse(this.startDate))
-                .endDate(LocalDate.parse(this.endDate))
-                .categoryList(this.categoryList)
-                .brandList(this.brandList)
-                .build();
+    private String orderStatus;
+
+    //검색 조건
+    private BigDecimal startPrice;
+    private BigDecimal endPrice;
+
+    public StatisticsForSaleRequestDto(BigDecimal startPrice, BigDecimal endPrice, PeriodType periodType, List<String> categoryList, List<String> brandList, String startDate, String endDate) {
+        this.startPrice = startPrice;
+        this.endPrice = endPrice;
+        this.periodType=periodType;
+        this.categoryList=categoryList;
+        this.brandList=brandList;
+        this.startDate= startDate;
+        this.endDate= endDate;
+    }
+    public StatisticsRequestDto toStatisticsRequestDto(){
+        return new StatisticsRequestDto(periodType, categoryList, brandList, startDate, endDate);
     }
 }
