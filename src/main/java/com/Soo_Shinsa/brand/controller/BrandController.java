@@ -26,7 +26,7 @@ public class BrandController {
 
     private final BrandService brandService;
 
-    @PostMapping("/vendor")
+    @PostMapping
     @Operation(summary = "브랜드 생성", description = "새로운 브랜드를 생성합니다.")
     public ResponseEntity<CommonResponse<BrandResponseDto>> createBrand(
             @AuthenticationPrincipal UserDetails userDetails,
