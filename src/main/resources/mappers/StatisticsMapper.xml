@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTO Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.Soo_Shinsa.statistics.repository.StatisticsMybatisRepository">
+
+    <select id="getBrandList" parameterType="com.Soo_Shinsa.statistics.dto.StatisticsRequestDto" resultType="string">
+        select distinct brand_name
+        from statistics
+        where 1=1
+        and date_format(order_date,#{periodType.dateFormat}) between date_format(#{startDate},#{periodType.dateFormat})
+        and date_format(#{endDate},
+        #{periodType.dateFormat})
+
+        <if test="categoryList != null and categoryList.size!=0">
+            and category_name in
+            <foreach collection='categoryList' item='category' open='(' separator=',' close=')'>
+                #{category}
+            </foreach>
+        </if>
+
+
+        <if test="brandList != null and brandList.size()!=0">
+            and brand_name in
+            <foreach collection='brandList' item='brand' open='(' separator=',' close=')'>
+                #{brand}
+            </foreach>
+        </if>
+        <if test="orderStatus != null">
+            and order_status = #{orderStatus}
+        </if>
+
+        order by 1;
+    </select>
+    <select id="getDateList" parameterType="com.Soo_Shinsa.statistics.dto.StatisticsRequestDto" resultType="string">
+        select distinct date_format(order_date,#{periodType.dateFormat})
+        from statistics
+        where 1=1
+        and date_format(order_date,#{periodType.dateFormat}) between date_format(#{startDate},#{periodType.dateFormat})
+        and date_format(#{endDate},
+        #{periodType.dateFormat})
+
+        <if test="categoryList != null and categoryList.size!=0">
+            and category_name in
+            <foreach collection='categoryList' item='category' open='(' separator=',' close=')'>
+                #{category}
+            </foreach>
+
+        </if>
+        <if test="brandList != null and brandList.size!=0">
+            and brand_name in
+            <foreach collection='brandList' item='brand' open='(' separator=',' close=')'>
+                #{brand}
+            </foreach>
+        </if>
+        <if test="orderStatus != null">
+            and order_status = #{orderStatus}
+        </if>
+
+        order by 1;
+    </select>
+
+    <select id="getBodyDataListForSales" parameterType="map" resultType="decimal">
+        select cast(sum(if(total_price is null, 0, total_price)) as decimal ) as total_price
+        from (select total_price, brand_name, order_date
+        from statistics
+        where order_date between #{dto.startDate} and #{dto.endDate}
+        <if test="brand != null">
+            and brand_name = #{brand}
+        </if>) t
+        right outer join
+        (select distinct date_format(order_date, #{dto.periodType.dateFormat}) as order_date
+        from statistics) d
+        on date_format(t.order_date, #{dto.periodType.dateFormat}) = d.order_date
+
+        <if test="dto.categoryList != null and dto.categoryList.size!=0">
+            and category_name in
+            <foreach collection='categoryList' item='category' open='(' separator=',' close=')'>
+                #{category}
+            </foreach>
+        </if>
+        <if test="dto.orderStatus != null">
+            and order_status = #{dto.orderStatus}
+        </if>
+
+        group by d.order_date
+        order by d.order_date
+
+    </select>
+
+    <select id="getBodyDataListForCount" parameterType="map" resultType="string">
+        select cast(sum(if(quantity is null, 0, quantity)) as char ) as quantity
+        from (select quantity, brand_name, order_date
+        from statistics
+        where order_date between #{dto.startDate} and #{dto.endDate}
+        <if test="brand != null">
+            and brand_name = #{brand}
+        </if>) t
+        right outer join
+        (select distinct date_format(order_date, #{dto.periodType.dateFormat}) as order_date
+        from statistics) d
+        on date_format(t.order_date, #{dto.periodType.dateFormat}) = d.order_date
+
+        <if test="dto.categoryList != null and dto.categoryList.size!=0">
+            and category_name in
+            <foreach collection='categoryList' item='category' open='(' separator=',' close=')'>
+                #{category}
+            </foreach>
+        </if>
+
+
+        <if test="dto.orderStatus != null">
+            and order_status = #{dto.orderStatus}
+        </if>
+
+        group by d.order_date
+        order by d.order_date
+
+    </select>
+</mapper>
