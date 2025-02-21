@@ -28,13 +28,18 @@ public class ProductOption extends BaseTimeEntity {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
+    private Integer quantity;
     @Builder
-    public ProductOption(String size, String color, ProductStatus productStatus, Product product) {
+    public ProductOption(String size, String color, ProductStatus productStatus, Product product, Integer quantity) {
         this.size = size;
         this.color = color;
         this.productStatus = productStatus;
         this.product = product;
+        this.quantity = quantity;
     }
+
+
+
 
     public void update(String size, String color, ProductStatus productStatus) {
 
@@ -49,5 +54,12 @@ public class ProductOption extends BaseTimeEntity {
         if (productStatus != null) {
             this.productStatus = productStatus;
         }
+    }
+
+    public void updateQuantity(int change) {
+        if (this.quantity + change < 0) {
+            throw new IllegalArgumentException("재고 수량이 부족합니다.");
+        }
+        this.quantity += change;
     }
 }
