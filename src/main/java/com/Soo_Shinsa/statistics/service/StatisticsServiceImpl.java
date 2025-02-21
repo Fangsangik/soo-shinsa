@@ -1,59 +1,84 @@
 package com.Soo_Shinsa.statistics.service;
 
+import com.Soo_Shinsa.constant.StatisticsEnum;
 import com.Soo_Shinsa.statistics.dto.StatisticsForSaleRequestDto;
 import com.Soo_Shinsa.statistics.dto.StatisticsHeaderResponseDto;
+import com.Soo_Shinsa.statistics.dto.StatisticsRequestDto;
 import com.Soo_Shinsa.statistics.dto.StatisticsResponseDto;
-import com.Soo_Shinsa.statistics.repository.StatisticsRepository;
+import com.Soo_Shinsa.statistics.repository.StatisticsMybatisRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class StatisticsServiceImpl implements StatisticsService {
-    private final StatisticsRepository repository;
+    private final StatisticsMybatisRepository repository;
 
 
-    /**
-     * 판매 통계
-     * @param requestDto
-     * @return
-     */
     @Override
     public StatisticsResponseDto getStatisticsOfSales(StatisticsForSaleRequestDto requestDto) {
-        /**
-         * startDate, endDate, categoryList, brandList, orderStatus을 기준으로 데이터를 필터링.
-         */
-        List<Object[]> statisticsList = repository.findSalesByCriteriaAsList(
-                LocalDate.parse(requestDto.getStartDate()),
-                LocalDate.parse(requestDto.getEndDate()),
-                requestDto.getCategoryList(),
-                requestDto.getBrandList()
-        );
-
-        /**
-         * 조회된 데이터(List<Object[]>)를 Map<String, BigDecimal> 형태로 변환.
-         */
-        Map<String, BigDecimal> statistics = statisticsList.stream()
-                .collect(Collectors.toMap(row -> (String) row[0], row -> (BigDecimal) row[1]));
-
-        /**
-         * StatisticsResponseDto 객체를 생성하여 응답을 준비.
-         * StatisticsHeaderResponseDto를 생성하여 헤더 정보(브랜드명 리스트) 추가.
-         */
-        // DTO 변환
         StatisticsResponseDto dto = new StatisticsResponseDto();
-        StatisticsHeaderResponseDto headerDto = new StatisticsHeaderResponseDto(
-                statistics.keySet().stream().toList(), statistics.keySet().stream().toList()
-        );
 
-        dto.addHeaderData(headerDto);
-        dto.addBodyData(statistics.values().stream().map(BigDecimal::toString).toList());
+        StatisticsRequestDto statisticsRequestDto = requestDto.toStatisticsRequestDto();
+
+        List<String> dateList = repository.getDateList(statisticsRequestDto);
+        List<String> brandList = repository.getBrandList(statisticsRequestDto);
+        StatisticsHeaderResponseDto statisticsHeaderResponseDto = new StatisticsHeaderResponseDto(dateList, brandList);
+
+        for (String brand : brandList) {
+            List<String> dataList = repository.getBodyDataListForSales(statisticsRequestDto, brand)
+                    .stream()
+                    .map(data -> {
+                        if (requestDto.getStartPrice() != null && requestDto.getEndPrice() != null) {
+                            return data.compareTo(requestDto.getStartPrice()) > 0 && data.compareTo(requestDto.getEndPrice()) < 0 ? data : BigDecimal.ZERO;
+                        } else if (requestDto.getStartPrice() != null) {
+                            return data.compareTo(requestDto.getStartPrice()) > 0 ? data : BigDecimal.ZERO;
+                        } else if (requestDto.getEndPrice() != null ) {
+                            return data.compareTo(requestDto.getEndPrice()) < 0 ? data : BigDecimal.ZERO;
+                        }else {
+                            return data;
+                        }
+                    })
+                    .map(BigDecimal::toString)
+                    .toList();
+            dto.addBodyData(dataList);
+        }
+
+        //총합 추가
+        brandList.add(StatisticsEnum.TOTAL.getName());
+        dto.addHeaderData(statisticsHeaderResponseDto);
+        dto.addBodyData(repository.getBodyDataListForSales(statisticsRequestDto, null)
+                .stream()
+                .map(BigDecimal::toString)
+                .toList());
+
+        return dto;
+
+    }
+
+    @Override
+    public StatisticsResponseDto getStatisticsOfCount(StatisticsRequestDto requestDto) {
+
+        StatisticsResponseDto dto = new StatisticsResponseDto();
+
+        List<String> dateList = repository.getDateList(requestDto);
+        List<String> brandList = repository.getBrandList(requestDto);
+
+        StatisticsHeaderResponseDto statisticsHeaderResponseDto = new StatisticsHeaderResponseDto(dateList, brandList);
+
+        for (String brand : brandList) {
+            dto.addBodyData(repository.getBodyDataListForCount(requestDto, brand));
+
+
+        }
+
+        //총합 추가
+        brandList.add(StatisticsEnum.TOTAL.getName());
+        dto.addHeaderData(statisticsHeaderResponseDto);
+        dto.addBodyData(repository.getBodyDataListForCount(requestDto, null));
 
         return dto;
     }

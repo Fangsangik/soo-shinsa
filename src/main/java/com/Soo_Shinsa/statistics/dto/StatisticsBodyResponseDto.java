@@ -7,7 +7,6 @@ import java.util.List;
 
 @AllArgsConstructor
 @Getter
-public class StatisticsHeaderResponseDto {
-    List<String> rowList;
-    List<String> columnList;
+public class StatisticsBodyResponseDto {
+    List<String> dataList;
 }
