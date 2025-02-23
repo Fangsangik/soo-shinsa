@@ -368,6 +368,16 @@ log.error("🚨 WebSocket 초기 메시지 전송 실패", e);
 - **N + 1 문제의 경우 ⇒ Join Fetch로 해결**
 - `authenticationManager.authenticate()`**를 사용하지 않고, 직접 SecurityContext에 인증 정보 설정**
 
+## **🚀 쿠폰 동시성 처리 - CartItemServiceImpl에서 OrderServiceImpl로 이동**
+### **🔍 문제점**  
+장바구니(CartItemServiceImpl)에서 쿠폰을 적용할 때 동시성 문제가 발생  
+- 기존 로직에서는 쿠폰을 장바구니에서 적용 => maxCount 감소  
+- 장바구니에 쿠폰을 적용한 후 주문을 하지 않았음에도 재고가 소진
+
+### ** 🛠️해결방법**
+- 쿠폰을 적용하는 것과 사용하는 개념은 다름.  
+-> 적용은 장바구니에서, 사용은 주문단계에서 이뤄짐 
+- 쿠폰 동시성 처리를 OrderServiceImpl에서 수행 
 
 
 
