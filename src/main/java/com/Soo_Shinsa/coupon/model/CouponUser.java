@@ -40,11 +40,10 @@ public class CouponUser {
     }
 
     public void markAsUsed() {
+        if (this.isUsed) {
+            throw new IllegalStateException("이미 사용된 쿠폰입니다.");
+        }
         this.isUsed = true;
         this.usedAt = LocalDate.now();
-    }
-
-    public boolean isUsed() {
-        return isUsed;
     }
 }
