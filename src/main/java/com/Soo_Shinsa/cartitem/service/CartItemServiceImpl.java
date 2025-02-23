@@ -4,7 +4,6 @@ import com.Soo_Shinsa.cartitem.dto.*;
 import com.Soo_Shinsa.cartitem.model.CartItem;
 import com.Soo_Shinsa.cartitem.repository.CartItemRepository;
 import com.Soo_Shinsa.constant.ProductStatus;
-import com.Soo_Shinsa.coupon.aop.CouponLock;
 import com.Soo_Shinsa.coupon.calculate.DiscountCouponCalculator;
 import com.Soo_Shinsa.coupon.calculate.PercentageDiscountCalculator;
 import com.Soo_Shinsa.coupon.model.Coupon;
@@ -106,7 +105,6 @@ public class CartItemServiceImpl implements CartItemService {
         return CartItemResponseDto.toDto(cartItem, productOptions);
     }
 
-    @CouponLock(key = "'lock:coupon:' + #couponRequestDto.couponId")
     @Transactional
     public ApplyCouponCartResponseDto applyCoupon(Long cartId, ApplyCouponCartRequestDto requestDto, User user) {
         CartItem cartItem = cartItemRepository.findByIdOrElseThrow(cartId);
@@ -152,18 +150,22 @@ public class CartItemServiceImpl implements CartItemService {
             throw new InvalidInputException(ErrorCode.EXPIRED_COUPON);
         }
 
+        Long brandId = cartItem.getProduct().getBrand().getId();
+        if (!coupon.isCouponApplicableToBrand(brandId)) {
+            throw new InvalidInputException(ErrorCode.NOT_APPLICABLE_COUPON);
+        }
+
         // 할인 가격 계산
         DiscountCouponCalculator discountCouponCalculator = new PercentageDiscountCalculator();
         BigDecimal discountPrice = discountCouponCalculator.calculateDiscountedPrice(cartItem.getProduct().getPrice(), coupon.getDiscountRate());
 
+        if (discountPrice == null || discountPrice.compareTo(BigDecimal.ZERO) <=0) {
+            discountPrice = cartItem.getProduct().getPrice();
+        }
+
         // 장바구니 아이템에 쿠폰 적용
         cartItem.applyCoupon(coupon, discountPrice);
         cartItemRepository.save(cartItem);
-
-        // 쿠폰 사용 처리
-        couponUser.markAsUsed();
-        coupon.decreaseMaxCount(1);  // 재고 감소
-        couponUserRepository.save(couponUser);
 
         // 응답 DTO 반환
         List<ProductOption> productOptions = productOptionRepository.findProductOptionByProductId(cartItem.getProduct().getId());
