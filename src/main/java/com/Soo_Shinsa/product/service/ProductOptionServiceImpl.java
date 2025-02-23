@@ -61,7 +61,7 @@ public class ProductOptionServiceImpl implements ProductOptionService {
             throw new NotFoundException(ErrorCode.NOT_FOUND_PRODUCT);
         }
 
-        findOption.update(dto.getSize(), dto.getColor(), dto.getStatus());
+        findOption.update(dto.getSize(), dto.getColor(), dto.getStatus(), dto.getQuantity());
 
 
         return ProductOptionResponseDto.toDto(findOption);
