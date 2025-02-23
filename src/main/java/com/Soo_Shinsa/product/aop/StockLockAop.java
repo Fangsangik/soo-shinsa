@@ -1,0 +1,39 @@
+package com.Soo_Shinsa.product.aop;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.stereotype.Component;
+
+import java.util.concurrent.TimeUnit;
+
+@Aspect
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class StockLockAop {
+    private final RedissonClient redissonClient;
+
+    @Around("@annotation(stockLock)")
+    public Object lock(ProceedingJoinPoint joinPoint, StockLock stockLock) throws Throwable {
+        String lockKey = stockLock.key();
+        RLock lock = redissonClient.getLock(lockKey);
+
+        boolean acquired = false;
+        try {
+            acquired = lock.tryLock(5,10, TimeUnit.SECONDS);
+            if (!acquired) {
+                throw new IllegalStateException("현재 상품 재고가 부족하거나 동시에 처리 중입니다. 잠시 후 다시 시도해주세요.");
+            }
+            return joinPoint.proceed();
+        } finally {
+            if (acquired && lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
+    }
+}

@@ -38,10 +38,7 @@ public class ProductOption extends BaseTimeEntity {
         this.quantity = quantity;
     }
 
-
-
-
-    public void update(String size, String color, ProductStatus productStatus) {
+    public void update(String size, String color, ProductStatus productStatus, int quantity) {
 
         if (size != null) {
             this.size = size;
@@ -54,6 +51,10 @@ public class ProductOption extends BaseTimeEntity {
         if (productStatus != null) {
             this.productStatus = productStatus;
         }
+
+        if (quantity != 0) {
+            this.quantity = quantity;
+        }
     }
 
     public void updateQuantity(int change) {
@@ -61,5 +62,12 @@ public class ProductOption extends BaseTimeEntity {
             throw new IllegalArgumentException("재고 수량이 부족합니다.");
         }
         this.quantity += change;
+    }
+
+    public void decreaseQuantity(int quantity) {
+        if (this.quantity < quantity) {
+            throw new IllegalArgumentException("재고 수량이 부족합니다.");
+        }
+        this.quantity -= quantity;
     }
 }

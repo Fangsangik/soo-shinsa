@@ -66,7 +66,8 @@ public enum ErrorCode {
     NOT_FOUND_SUB_CATEGORY("해당 카테고리를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     INVALID_REFRESH_TOKEN("유효하지 않은 토큰 입니다.", HttpStatus.BAD_REQUEST),
     ACCESS_TOKEN_VALID("아직 AccessToken이 유효 합니다.", HttpStatus.MULTI_STATUS),
-    DUPLICATED_KAKAO_ACCOUNT("이미 계정이 존재 합니다", HttpStatus.BAD_REQUEST);
+    DUPLICATED_KAKAO_ACCOUNT("이미 계정이 존재 합니다", HttpStatus.BAD_REQUEST),
+    NOT_APPLICABLE_COUPON("적합하지 않은 쿠폰 입니다.", HttpStatus.BAD_REQUEST);
 
 
     private final String message;

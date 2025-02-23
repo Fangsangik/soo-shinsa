@@ -4,16 +4,23 @@ import com.Soo_Shinsa.cartitem.model.CartItem;
 import com.Soo_Shinsa.cartitem.repository.CartItemRepository;
 import com.Soo_Shinsa.constant.OrdersStatus;
 import com.Soo_Shinsa.constant.ProductStatus;
+import com.Soo_Shinsa.coupon.aop.CouponLock;
+import com.Soo_Shinsa.coupon.model.Coupon;
+import com.Soo_Shinsa.coupon.model.CouponUser;
+import com.Soo_Shinsa.coupon.repository.CouponUserRepository;
 import com.Soo_Shinsa.exception.ErrorCode;
 import com.Soo_Shinsa.exception.InternalServerException;
+import com.Soo_Shinsa.exception.InvalidInputException;
 import com.Soo_Shinsa.exception.NotFoundException;
 import com.Soo_Shinsa.order.dto.OrderDateRequestDto;
 import com.Soo_Shinsa.order.dto.OrdersResponseDto;
 import com.Soo_Shinsa.order.model.OrderItem;
 import com.Soo_Shinsa.order.model.Orders;
 import com.Soo_Shinsa.order.repository.OrdersRepository;
+import com.Soo_Shinsa.product.aop.StockLock;
 import com.Soo_Shinsa.product.model.Product;
-import com.Soo_Shinsa.product.repository.ProductRepository;
+import com.Soo_Shinsa.product.model.ProductOption;
+import com.Soo_Shinsa.product.repository.ProductOptionRepository;
 import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.user.repository.UserRepository;
 import com.Soo_Shinsa.utils.EntityValidator;
@@ -32,10 +39,11 @@ import static com.Soo_Shinsa.exception.ErrorCode.NOT_FOUND_CART;
 @Service
 @RequiredArgsConstructor
 public class OrdersServiceImpl implements OrdersService {
-    private final ProductRepository productRepository;
     private final OrdersRepository ordersRepository;
     private final CartItemRepository cartItemRepository;
     private final UserRepository userRepository;
+    private final CouponUserRepository couponUserRepository;
+    private final ProductOptionRepository productOptionRepository;
 
 
     @Override
@@ -58,19 +66,30 @@ public class OrdersServiceImpl implements OrdersService {
 
 
     //    단일 상품 구매
-//    상품을 찾아와서 주문번호를 생성 후 주문을 만들고 거기에 주문아이템에 물건을 담음
+    //    상품을 찾아와서 주문번호를 생성 후 주문을 만들고 거기에 주문아이템에 물건을 담음
+    @StockLock(key = "'lock:productOption:' + #productOption.Id")
     @Transactional
     @Override
-    public OrdersResponseDto createSingleProductOrder(User user, Long productId, Integer quantity) {
+    public OrdersResponseDto createSingleProductOrder(User user, Long productOptionId, Integer quantity) {
 
-        Product product = productRepository.findByIdOrElseThrow(productId);
+        ProductOption productOption = productOptionRepository.findByIdOrElseThrow(productOptionId);
+        Product product = productOption.getProduct();
         if (product.getProductStatus().equals(ProductStatus.SOLD_OUT) || product.getProductStatus().equals(ProductStatus.UNAVAILABLE)) {
             throw new InternalServerException(ErrorCode.CAN_NOT_USE_PRODUCT);
         }
 
+        if (productOption.getQuantity() < quantity) {
+            throw new InvalidInputException(ErrorCode.CAN_NOT_USE_PRODUCT);
+        }
+
+        productOption.decreaseQuantity(quantity);
+
+        BigDecimal totalPrice = productOption.getProduct().getPrice().multiply(BigDecimal.valueOf(quantity));
+
+
         Orders order = Orders.builder()
                 .user(user)
-                .totalPrice(product.getPrice().multiply(BigDecimal.valueOf(quantity)))
+                .totalPrice(totalPrice)
                 .status(OrdersStatus.BEFOREPAYMENT)
                 .build();
 
@@ -78,6 +97,8 @@ public class OrdersServiceImpl implements OrdersService {
         OrderItem orderItem = OrderItem.builder()
                 .order(order)
                 .product(product)
+                .productOption(productOption)
+                .price(productOption.getProduct().getPrice())
                 .quantity(quantity)
                 .build();
 
@@ -88,22 +109,27 @@ public class OrdersServiceImpl implements OrdersService {
         return OrdersResponseDto.toDto(order);
     }
 
+    @StockLock(key = "'lock:productOption:' + #productOption.id")
     @Transactional
     @Override
     public OrdersResponseDto createSingleOrderCartItem (User user, Long cartItemId) {
         CartItem cartItem = cartItemRepository.findByIdOrElseThrow(cartItemId);
-
+        ProductOption productOption = cartItem.getProductOption();
         Product product = cartItem.getProductOption().getProduct();
 
         if (product.getProductStatus().equals(ProductStatus.SOLD_OUT) || product.getProductStatus().equals(ProductStatus.UNAVAILABLE)) {
             throw new InternalServerException(ErrorCode.CAN_NOT_USE_PRODUCT);
         }
 
-        // 카트 아이템의 최종 금액 (쿠폰 적용된 금액) 사용
-        BigDecimal discountedPrice = cartItem.getDiscountedPrice();
-        if (discountedPrice == null || discountedPrice.compareTo(BigDecimal.ZERO) <= 0) {
-            discountedPrice = product.getPrice();
+        Integer quantity = cartItem.getQuantity();
+
+        if (productOption.getQuantity() < quantity) {
+            throw new InternalServerException(ErrorCode.CAN_NOT_USE_PRODUCT);
         }
+
+        productOption.decreaseQuantity(quantity);
+
+        isUsedCoupon(user, cartItem);
 
         Orders order = Orders.builder()
                 .user(user)
@@ -121,11 +147,12 @@ public class OrdersServiceImpl implements OrdersService {
         order.addOrderItem(orderItem);
         ordersRepository.save(order);
 
-        cartItemRepository.deleteAll();
+        cartItemRepository.delete(cartItem);
 
         return OrdersResponseDto.toDto(order);
     }
 
+    @CouponLock(key = "'lock:coupon :' + #user.userId")
     @Transactional
     @Override
     public OrdersResponseDto createAllOrderFromCart(User user) {
@@ -142,18 +169,24 @@ public class OrdersServiceImpl implements OrdersService {
 
         // CartItem 데이터를 기반으로 OrderItem 생성 및 추가
         for (CartItem cartItem : cartItems) {
-            Product product = cartItem.getProductOption().getProduct();
+            ProductOption productOption = cartItem.getProductOption();
             Integer quantity = cartItem.getQuantity();
 
+            if (productOption.getQuantity() < quantity) {
+                throw new InternalServerException(ErrorCode.CAN_NOT_USE_PRODUCT);
+            }
+
+            isUsedCoupon(user, cartItem);
 
             BigDecimal discountedPrice = cartItem.getDiscountedPrice() != null ?
-                    cartItem.getDiscountedPrice() : product.getPrice();
+                    cartItem.getDiscountedPrice() : productOption.getProduct().getPrice();
 
             OrderItem orderItem = OrderItem.builder()
                     .order(order)
-                    .price(product.getPrice())
+                    .price(productOption.getProduct().getPrice())
                     .discountPrice(discountedPrice)
-                    .product(product)
+                    .product(productOption.getProduct())
+                    .productOption(productOption)
                     .quantity(quantity)
                     .build();
 
@@ -197,4 +230,19 @@ public class OrdersServiceImpl implements OrdersService {
         return OrdersResponseDto.toDto(savedOrder);
     }
 
+    private void isUsedCoupon(User user, CartItem cartItem) {
+        Coupon coupon = cartItem.getCoupon();
+        if (coupon != null) {
+            if (coupon.getMaxCount() <= 0) {
+                throw new InvalidInputException(ErrorCode.COUPON_OUT_OF_STOCK);
+            }
+
+            coupon.decreaseMaxCount(1);
+            CouponUser couponUser = couponUserRepository.findByCouponIdAndUserUserId(coupon.getId(), user.getUserId())
+                    .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_COUPON));
+
+            couponUser.markAsUsed();
+            couponUserRepository.save(couponUser);
+        }
+    }
 }

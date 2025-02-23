@@ -2,6 +2,7 @@ package com.Soo_Shinsa.order.model;
 
 import com.Soo_Shinsa.constant.BaseTimeEntity;
 import com.Soo_Shinsa.product.model.Product;
+import com.Soo_Shinsa.product.model.ProductOption;
 import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
@@ -29,15 +30,20 @@ public class OrderItem extends BaseTimeEntity {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_option_id", nullable = false)
+    private ProductOption productOption;
+
     private BigDecimal price;
 
     private BigDecimal discountPrice;
 
     @Builder
-    public OrderItem(Integer quantity, Orders order, Product product, BigDecimal price, BigDecimal discountPrice) {
+    public OrderItem(Integer quantity, Orders order, Product product, ProductOption productOption, BigDecimal price, BigDecimal discountPrice) {
         this.quantity = quantity;
         this.order = order;
         this.product = product;
+        this.productOption = productOption;
         this.price = price;
         this.discountPrice = discountPrice;
     }
