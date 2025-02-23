@@ -84,4 +84,10 @@ public class Coupon {
         }
         this.issuedCount++;
     }
+
+    public boolean isCouponApplicableToBrand(Long brandId) {
+        return couponBrandRelations.stream()
+                .anyMatch(relation -> relation.getBrand().getId().equals(brandId));
+    }
+
 }
