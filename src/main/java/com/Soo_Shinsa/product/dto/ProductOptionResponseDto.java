@@ -18,13 +18,13 @@ public class ProductOptionResponseDto {
     private Integer quantity;
 
     @Builder
-    public ProductOptionResponseDto(Long id, String size, String color, ProductStatus status, Long product,Integer quantity) {
+    public ProductOptionResponseDto(Long id, String size, String color, ProductStatus status, Long product, Integer quantity) {
         this.id = id;
         this.size = size;
         this.color = color;
         this.status = status;
         this.product = product;
-        this.quantity=quantity;
+        this.quantity = quantity;
     }
 
     public static ProductOptionResponseDto toDto(ProductOption savedOption) {
