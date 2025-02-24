@@ -8,6 +8,7 @@ import com.Soo_Shinsa.coupon.calculate.DiscountCouponCalculator;
 import com.Soo_Shinsa.coupon.calculate.PercentageDiscountCalculator;
 import com.Soo_Shinsa.coupon.model.Coupon;
 import com.Soo_Shinsa.coupon.model.CouponUser;
+import com.Soo_Shinsa.coupon.repository.CouponBrandRelationRepository;
 import com.Soo_Shinsa.coupon.repository.CouponRepository;
 import com.Soo_Shinsa.coupon.repository.CouponUserRepository;
 import com.Soo_Shinsa.exception.ErrorCode;
@@ -21,6 +22,7 @@ import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.user.repository.UserRepository;
 import com.Soo_Shinsa.utils.EntityValidator;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +33,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CartItemServiceImpl implements CartItemService {
@@ -41,6 +44,7 @@ public class CartItemServiceImpl implements CartItemService {
     private final ProductRepository productRepository;
     private final CouponUserRepository couponUserRepository;
     private final CouponRepository couponRepository;
+    private final CouponBrandRelationRepository couponBrandRelationRepository;
 
     @Transactional
     @Override
@@ -142,7 +146,7 @@ public class CartItemServiceImpl implements CartItemService {
                     .usedAt(null)
                     .build();
 
-            couponUserRepository.save(couponUser);
+            couponUserRepository.saveAndFlush(couponUser);
         }
 
         // 쿠폰이 만료되었는지 확인
@@ -151,9 +155,13 @@ public class CartItemServiceImpl implements CartItemService {
         }
 
         Long brandId = cartItem.getProduct().getBrand().getId();
-        if (!coupon.isCouponApplicableToBrand(brandId)) {
+        boolean isApplicable = couponBrandRelationRepository.existsByCouponAndBrand(coupon, cartItem.getProduct().getBrand());
+
+        if (!isApplicable) {
+            log.error("❌ 쿠폰 적용 실패: 브랜드가 일치하지 않습니다. 브랜드 ID: {}, 쿠폰 ID: {}", brandId, coupon.getId());
             throw new InvalidInputException(ErrorCode.NOT_APPLICABLE_COUPON);
         }
+
 
         // 할인 가격 계산
         DiscountCouponCalculator discountCouponCalculator = new PercentageDiscountCalculator();
@@ -165,7 +173,7 @@ public class CartItemServiceImpl implements CartItemService {
 
         // 장바구니 아이템에 쿠폰 적용
         cartItem.applyCoupon(coupon, discountPrice);
-        cartItemRepository.save(cartItem);
+        cartItemRepository.saveAndFlush(cartItem);
 
         // 응답 DTO 반환
         List<ProductOption> productOptions = productOptionRepository.findProductOptionByProductId(cartItem.getProduct().getId());
