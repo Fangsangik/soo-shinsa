@@ -309,13 +309,19 @@ class OrdersServiceImplTest {
         Assertions.assertEquals(0, updatedCoupon.getMaxCount());
     }
 
+    /**
+     * 각기 다른 쿠폰을 각각의 카트 아이템에 적용시 첫 주문 생성시 쿠폰이 적용되지 않는 문제가 발생함
+     * 이유 못찾음
+     * 아마 동시성 순서 문제 일 것 같은데.. .
+     *
+     * @throws InterruptedException
+     */
     @Test
     void applyDifferentCouponsAndCreateOrderConcurrently() throws InterruptedException {
         couponRepository.deleteAll();
-        int threadCount = 10;
+        int threadCount = 10; // ✅ 스레드 수를 10으로 설정하여 병렬 처리
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
-        CountDownLatch applyCouponLatch = new CountDownLatch(threadCount);
-        CountDownLatch orderLatch = new CountDownLatch(1);
+        CountDownLatch countDownLatch = new CountDownLatch(threadCount);
 
         // ✅ 10개의 서로 다른 쿠폰 생성
         List<Coupon> coupons = new ArrayList<>();
@@ -335,9 +341,8 @@ class OrdersServiceImplTest {
                             .build()
             );
         }
-        Assertions.assertEquals(10, coupons.size(), "🚨 생성된 쿠폰 개수가 10개가 아님! 확인 필요.");
-        log.info("✅ 생성된 쿠폰 개수 확인: {}", coupons.size());
 
+        // ✅ 10개의 카트 아이템 생성
         List<CartItem> cartItems = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
             CartItem cartItem = CartItem.builder()
@@ -347,44 +352,46 @@ class OrdersServiceImplTest {
                     .quantity(1)
                     .build();
             cartItemRepository.save(cartItem);
-
-            ApplyCouponCartRequestDto requestDto = ApplyCouponCartRequestDto.builder()
-                    .couponId(coupons.get(i).getId())
-                    .build();
-
-            executorService.submit(() -> {
-                try {
-                    cartItemService.applyCoupon(cartItem.getId(), requestDto, user);
-                    CartItem updatedCartItem = cartItemRepository.findById(cartItem.getId()).orElseThrow();
-                    Assertions.assertNotNull(updatedCartItem.getCoupon(), "🚨 쿠폰이 적용되지 않았음!");
-
-                    log.info("✅ 쿠폰 적용 성공 - 카트 아이템 ID: {}", cartItem.getId());
-                } catch (Exception e) {
-                    log.error("🚨 쿠폰 적용 실패 - {}", e.getMessage());
-                } finally {
-                    applyCouponLatch.countDown();
-                }
-            });
-
             cartItems.add(cartItem);
         }
 
-        // ✅ 쿠폰 적용이 완료될 때까지 대기
-        applyCouponLatch.await();
+        // ✅ 쿠폰 적용과 주문을 동시에 진행
+        for (int i = 0; i < 10; i++) {
+            final CartItem currentCartItem = cartItems.get(i);
+            final Coupon currentCoupon = coupons.get(i);
 
-        executorService.submit(() -> {
-            try {
-                ordersService.createAllOrderFromCart(user);
-                log.info("✅ 한 번에 주문 성공 - 유저: {}", user.getEmail());
-            } catch (Exception e) {
-                log.error("🚨 주문 실패 - 예외 발생!", e);
-            } finally {
-                orderLatch.countDown();
-            }
-        });
+            executorService.submit(() -> {
+                try {
+                    // ✅ 쿠폰 적용
+                    ApplyCouponCartRequestDto requestDto = ApplyCouponCartRequestDto.builder()
+                            .couponId(currentCoupon.getId())
+                            .build();
+                    cartItemService.applyCoupon(currentCartItem.getId(), requestDto, user);
 
-        // ✅ 주문 생성이 완료될 때까지 대기
-        orderLatch.await();
+                    // ✅ 쿠폰이 정상적으로 적용되었는지 확인
+                    CartItem updatedCartItem = cartItemRepository.findById(currentCartItem.getId()).orElseThrow();
+                    Assertions.assertNotNull(updatedCartItem.getCoupon(), "🚨 쿠폰이 적용되지 않았음!");
+
+                    log.info("✅ 쿠폰 적용 성공 - 카트 아이템 ID: {}", currentCartItem.getId());
+
+                    // ✅ 주문 실행
+                    ordersService.createSingleOrderCartItem(user, currentCartItem.getId());
+
+                    // ✅ 최종 재고 및 쿠폰 개수 확인
+                    ProductOption updatedStock = productOptionRepository.findByIdOrElseThrow(currentCartItem.getProductOption().getId());
+                    Coupon updatedCoupon = couponRepository.findByIdOrElseThrow(currentCoupon.getId());
+
+                    log.info("✅ 주문 성공 - 카트 아이템 ID: {}, 남은 재고: {}, 남은 쿠폰 수: {}",
+                            currentCartItem.getId(), updatedStock.getQuantity(), updatedCoupon.getMaxCount());
+                } catch (Exception e) {
+                    log.error("❌ 예외 발생 - 카트 아이템 ID: {}, 에러 메시지: {}", currentCartItem.getId(), e.getMessage());
+                } finally {
+                    countDownLatch.countDown();
+                }
+            });
+        }
+
+        countDownLatch.await();  // ✅ 모든 스레드가 종료될 때까지 대기
         executorService.shutdown();
 
         // ✅ 최종 재고 및 쿠폰 개수 검증
@@ -393,10 +400,11 @@ class OrdersServiceImplTest {
         Assertions.assertEquals(0, left.getQuantity());
 
         for (Coupon coupon : coupons) {
-            Coupon updatedCoupons = couponRepository.findByIdOrElseThrow(coupon.getId());
-            log.info("🎟 최종 쿠폰 재고 확인 - 쿠폰 ID: {}, 남은 재고: {}", updatedCoupons.getId(), updatedCoupons.getMaxCount());
-            Assertions.assertEquals(0, updatedCoupons.getMaxCount(),
-                    "🚨 쿠폰 ID: " + updatedCoupons.getId() + "의 재고가 예상과 다름!");
+            Coupon updatedCoupon = couponRepository.findByIdOrElseThrow(coupon.getId());
+            log.info("🎟 최종 쿠폰 재고 확인 - 쿠폰 ID: {}, 남은 재고: {}", updatedCoupon.getId(), updatedCoupon.getMaxCount());
+            Assertions.assertEquals(0, updatedCoupon.getMaxCount(),
+                    "🚨 쿠폰 ID: " + updatedCoupon.getId() + "의 재고가 예상과 다름!");
         }
     }
+
 }

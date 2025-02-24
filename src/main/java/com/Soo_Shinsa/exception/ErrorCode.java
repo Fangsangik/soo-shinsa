@@ -69,7 +69,8 @@ public enum ErrorCode {
     DUPLICATED_KAKAO_ACCOUNT("이미 계정이 존재 합니다", HttpStatus.BAD_REQUEST),
     NOT_APPLICABLE_COUPON("적합하지 않은 쿠폰 입니다.", HttpStatus.BAD_REQUEST),
     ORDER_CREATION_FAILED("주문 생성 실패", HttpStatus.BAD_REQUEST),
-    COUPON_NOT_APPLIED("쿠폰이 적용되지 않았습니다.", HttpStatus.BAD_REQUEST);
+    COUPON_NOT_APPLIED("쿠폰이 적용되지 않았습니다.", HttpStatus.BAD_REQUEST),
+    COUPON_DISCOUNT_PRICE_MISSING("쿠폰 할인 금액이 적용되지 않았습니다.", HttpStatus.BAD_REQUEST);
 
 
     private final String message;

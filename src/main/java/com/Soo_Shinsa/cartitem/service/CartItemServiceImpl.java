@@ -119,18 +119,14 @@ public class CartItemServiceImpl implements CartItemService {
         }
 
         // 사용되지 않은 쿠폰이 있는지 확인
-
         Coupon coupon;
         CouponUser couponUser;
 
         Optional<CouponUser> optionalCouponUser = couponUserRepository.findUnusedCouponByCouponId(requestDto.getCouponId());
         if (optionalCouponUser.isPresent()) {
-            // 기존에 사용하지 않은 쿠폰이 있으면 그대로 사용
             couponUser = optionalCouponUser.get();
             coupon = couponUser.getCoupon();
-
         } else {
-            // 기존 쿠폰이 없지만 maxCount가 남아 있다면 새로운 CouponUser 생성
             coupon = couponRepository.findById(requestDto.getCouponId())
                     .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_COUPON));
 
@@ -138,7 +134,6 @@ public class CartItemServiceImpl implements CartItemService {
                 throw new InvalidInputException(ErrorCode.COUPON_OUT_OF_STOCK);
             }
 
-            // 새로운 CouponUser 발급
             couponUser = CouponUser.builder()
                     .coupon(coupon)
                     .user(user)
@@ -149,7 +144,6 @@ public class CartItemServiceImpl implements CartItemService {
             couponUserRepository.saveAndFlush(couponUser);
         }
 
-        // 쿠폰이 만료되었는지 확인
         if (coupon.isExpired()) {
             throw new InvalidInputException(ErrorCode.EXPIRED_COUPON);
         }
@@ -162,20 +156,16 @@ public class CartItemServiceImpl implements CartItemService {
             throw new InvalidInputException(ErrorCode.NOT_APPLICABLE_COUPON);
         }
 
-
-        // 할인 가격 계산
         DiscountCouponCalculator discountCouponCalculator = new PercentageDiscountCalculator();
         BigDecimal discountPrice = discountCouponCalculator.calculateDiscountedPrice(cartItem.getProduct().getPrice(), coupon.getDiscountRate());
 
-        if (discountPrice == null || discountPrice.compareTo(BigDecimal.ZERO) <=0) {
+        if (discountPrice == null || discountPrice.compareTo(BigDecimal.ZERO) <= 0) {
             discountPrice = cartItem.getProduct().getPrice();
         }
 
-        // 장바구니 아이템에 쿠폰 적용
         cartItem.applyCoupon(coupon, discountPrice);
         cartItemRepository.saveAndFlush(cartItem);
 
-        // 응답 DTO 반환
         List<ProductOption> productOptions = productOptionRepository.findProductOptionByProductId(cartItem.getProduct().getId());
         return ApplyCouponCartResponseDto.toDto(cartItem, productOptions);
     }
