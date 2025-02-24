@@ -9,4 +9,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface StockLock {
     String key();
+    long waitTime() default 10; // 대기 시간
+    long leaseTime() default 10; // 락 유지 시간
 }

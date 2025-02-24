@@ -25,9 +25,9 @@ public class StockLockAop {
 
         boolean acquired = false;
         try {
-            acquired = lock.tryLock(5,10, TimeUnit.SECONDS);
+            acquired = lock.tryLock(stockLock.waitTime(), stockLock.leaseTime(), TimeUnit.SECONDS);
             if (!acquired) {
-                throw new IllegalStateException("현재 상품 재고가 부족하거나 동시에 처리 중입니다. 잠시 후 다시 시도해주세요.");
+                throw new IllegalStateException("현재 상품 재고 요청이 많아 잠시 후 다시 시도해주세요.");
             }
             return joinPoint.proceed();
         } finally {

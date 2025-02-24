@@ -42,6 +42,7 @@ public class CartItem extends BaseTimeEntity {
 
     private BigDecimal discountedPrice;
 
+
     @Builder
     public CartItem(Integer quantity, User user, ProductOption productOption, Product product, Coupon coupon, BigDecimal discountedPrice) {
         this.quantity = quantity;
@@ -63,5 +64,9 @@ public class CartItem extends BaseTimeEntity {
     public void applyCoupon(Coupon coupon, BigDecimal discountedPrice) {
         this.coupon = coupon; // 쿠폰 정보 저장
         this.discountedPrice = discountedPrice; // 할인된 가격 저장
+    }
+
+    public void applyCoupon(Coupon coupon) {
+        this.coupon = coupon; // 쿠폰 정보 저장
     }
 }

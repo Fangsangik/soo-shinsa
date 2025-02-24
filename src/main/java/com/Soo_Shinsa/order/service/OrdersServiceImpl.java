@@ -4,7 +4,6 @@ import com.Soo_Shinsa.cartitem.model.CartItem;
 import com.Soo_Shinsa.cartitem.repository.CartItemRepository;
 import com.Soo_Shinsa.constant.OrdersStatus;
 import com.Soo_Shinsa.constant.ProductStatus;
-import com.Soo_Shinsa.coupon.aop.CouponLock;
 import com.Soo_Shinsa.coupon.model.Coupon;
 import com.Soo_Shinsa.coupon.model.CouponUser;
 import com.Soo_Shinsa.coupon.repository.CouponRepository;
@@ -169,9 +168,9 @@ public class OrdersServiceImpl implements OrdersService {
         return OrdersResponseDto.toDto(order);
     }
 
-    @CouponLock(key = "'lock:coupon:' + #user.userId")
-    @StockLock(key = "'lock:productOption:' + #user.userId")
-    @Transactional
+    //TODO : 모든 상품 주문시 전체 가격 계산
+    @StockLock(key = "'lock:productOption:' + #productOption.id")
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     @Override
     public OrdersResponseDto createAllOrderFromCart(User user) {
         List<CartItem> cartItems = cartItemRepository.findByUserUserIdWithLock(user.getUserId());
@@ -186,34 +185,24 @@ public class OrdersServiceImpl implements OrdersService {
                 .build();
 
         for (CartItem cartItem : cartItems) {
-            ProductOption productOption = cartItem.getProductOption();
+            log.info("🔍 주문 처리 중 - 카트 아이템 ID: {}, 쿠폰 적용 여부: {}", cartItem.getId(), cartItem.getCoupon() != null);
+
+            ProductOption productOption = productOptionRepository.findByIdWithLock(cartItem.getProductOption().getId())
+                    .orElseThrow(() -> new NotFoundException(ErrorCode.NOT_FOUND_PRODUCT_OPTION));
+
             Integer quantity = cartItem.getQuantity();
 
-            log.info("🔍 주문 처리 시작 - 상품 ID: {}, 현재 재고: {}", productOption.getId(), productOption.getQuantity());
+            // ✅ (1) 재고 먼저 감소 (비관적 락 활용)
+            decreaseProductQuantity(productOption.getId(), quantity);
 
-            // ✅ 쿠폰 적용을 먼저 수행하여 할인 가격이 올바르게 반영되도록 함
+            // ✅ (2) 이후 쿠폰 적용 (첫 번째 아이템에서 적용 안 되는 원인 확인)
+            log.info("🎟 쿠폰 적용 시도 - 카트 아이템 ID: {}", cartItem.getId());
             isUsedCoupon(user, cartItem);
 
-            // ✅ 재고 확인 후 감소
-            if (productOption.getQuantity() < quantity) {
-                log.error("❌ 주문 실패 - 재고 부족 (상품 ID: {})", productOption.getId());
-
-                if (cartItem.getCoupon() != null) {
-                    log.warn("🚨 재고 부족으로 인해 쿠폰이 사용되지 않음 - 쿠폰 ID: {}", cartItem.getCoupon().getId());
-                }
-                continue;
-            }
-
-            // ✅ 재고 감소
-            productOption.decreaseQuantity(quantity);
-            productOptionRepository.saveAndFlush(productOption);
-
-            // ✅ 할인된 가격이 있으면 할인된 가격 적용, 없으면 원래 가격 적용
             BigDecimal discountPrice = cartItem.getDiscountedPrice() != null
                     ? cartItem.getDiscountedPrice()
                     : productOption.getProduct().getPrice().multiply(BigDecimal.valueOf(quantity));
 
-            // ✅ 주문 아이템 생성
             OrderItem orderItem = OrderItem.builder()
                     .order(order)
                     .price(productOption.getProduct().getPrice())
@@ -232,6 +221,65 @@ public class OrdersServiceImpl implements OrdersService {
 
         log.info("✅ 전체 주문 완료 - 최종 재고 확인");
         return OrdersResponseDto.toDto(order);
+    }
+
+
+    private void isUsedCoupon(User user, CartItem cartItem) {
+        if (cartItem.getCoupon() == null) {
+            log.warn("⚠️ 쿠폰이 적용되지 않은 카트 아이템입니다. 카트 아이템 ID: {}", cartItem.getId());
+            return;  // 쿠폰이 없는 경우 바로 종료
+        }
+
+        Coupon coupon = couponRepository.findByIdWithLock(cartItem.getCoupon().getId())
+                .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_COUPON));
+
+        log.info("🎟 쿠폰 사용 검증 시작 - 쿠폰 ID: {}, 현재 재고: {}", coupon.getId(), coupon.getMaxCount());
+
+        if (coupon.getMaxCount() <= 0) {
+            log.error("🚨 쿠폰 사용 불가 - 쿠폰 ID: {}, 재고 부족", coupon.getId());
+            throw new InvalidInputException(ErrorCode.COUPON_OUT_OF_STOCK);
+        }
+
+        CouponUser couponUser = couponUserRepository.findByCouponIdAndUserUserId(coupon.getId(), user.getUserId())
+                .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_COUPON));
+
+        if (couponUser.isUsed()) {
+            log.error("🚨 이미 사용된 쿠폰 - 쿠폰 ID: {}", coupon.getId());
+            throw new InvalidInputException(ErrorCode.ALREADY_USED_COUPON);
+        }
+
+        // ✅ 즉시 반영하도록 트랜잭션 분리
+        coupon.decreaseMaxCount(1);
+        couponUser.markAsUsed();
+        couponRepository.saveAndFlush(coupon);
+        couponUserRepository.saveAndFlush(couponUser);
+        log.info("✅ 쿠폰 사용 완료 - 쿠폰 ID: {}, 남은 재고: {}", coupon.getId(), coupon.getMaxCount());
+
+        // 쿠폰 적용 후 카트 아이템 업데이트
+        cartItem.applyCoupon(coupon);
+        cartItemRepository.saveAndFlush(cartItem);
+        log.info("✅ 카트 아이템 업데이트 완료 - 카트 아이템 ID: {}", cartItem.getId());
+    }
+
+
+    @Transactional
+    public void decreaseProductQuantity(Long productOptionId, Integer quantity) {
+        ProductOption productOption = productOptionRepository.findByIdWithLock(productOptionId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.NOT_FOUND_PRODUCT_OPTION));
+
+        log.info("🔽 [재고 차감 요청] 상품 ID: {}, 현재 재고: {}, 요청 수량: {}",
+                productOptionId, productOption.getQuantity(), quantity);
+
+        if (productOption.getQuantity() < quantity) {
+            log.error("🚨 재고 부족으로 주문 실패 - 상품 ID: {}, 요청 수량: {}, 남은 재고: {}",
+                    productOptionId, quantity, productOption.getQuantity());
+            throw new InvalidInputException(ErrorCode.CAN_NOT_USE_PRODUCT);
+        }
+
+        productOption.decreaseQuantity(quantity);
+        productOptionRepository.saveAndFlush(productOption);
+
+        log.info("✅ 재고 차감 완료 - 상품 ID: {}, 남은 재고: {}", productOptionId, productOption.getQuantity());
     }
 
     @Transactional
@@ -261,33 +309,5 @@ public class OrdersServiceImpl implements OrdersService {
         findOrder.updateStatus(status);
         Orders savedOrder = ordersRepository.save(findOrder);
         return OrdersResponseDto.toDto(savedOrder);
-    }
-
-    private void isUsedCoupon(User user, CartItem cartItem) {
-        Coupon coupon = cartItem.getCoupon();
-        if (coupon != null) {
-            log.info("🎟 쿠폰 사용 검증 시작 - 쿠폰 ID: {}, 현재 재고: {}", coupon.getId(), coupon.getMaxCount());
-
-            if (coupon.getMaxCount() <= 0) {
-                log.error("🚨 쿠폰 사용 불가 - 쿠폰 ID: {}, 재고 부족", coupon.getId());
-                throw new InvalidInputException(ErrorCode.COUPON_OUT_OF_STOCK);
-            }
-
-            CouponUser couponUser = couponUserRepository.findByCouponIdAndUserUserId(coupon.getId(), user.getUserId())
-                    .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_COUPON));
-
-            if (couponUser.isUsed()) {
-                log.error("🚨 이미 사용된 쿠폰 - 쿠폰 ID: {}", coupon.getId());
-                throw new InvalidInputException(ErrorCode.ALREADY_USED_COUPON);
-            }
-
-            // ✅ 즉시 반영하도록 트랜잭션 분리
-            coupon.decreaseMaxCount(1);
-            couponUser.markAsUsed();
-            couponRepository.saveAndFlush(coupon);
-            couponUserRepository.saveAndFlush(couponUser);
-
-            log.info("✅ 쿠폰 사용 완료 - 쿠폰 ID: {}, 남은 재고: {}", coupon.getId(), coupon.getMaxCount());
-        }
     }
 }
