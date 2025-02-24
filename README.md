@@ -407,7 +407,7 @@ PESSIMISTIC_WRITE(비관적 락) 적용
 동시에 재고 감소를 실행하려는 다른 스레드는 블록(blocking) 상태가 되어 순차적으로 실행됨
 재고 초과 감소 방지 및 중복 실행 문제 해결  
 
-## 🚀 applyDifferentCouponsAndCreateOrderConcurrently
+## **🚀 applyDifferentCouponsAndCreateOrderConcurrently**
 
 ### 🔍 문제점
 - 첫 번째 상품 주문에만 쿠폰이 적용되지 않는 문제 발생  
