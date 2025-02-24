@@ -379,6 +379,34 @@ log.error("🚨 WebSocket 초기 메시지 전송 실패", e);
 -> 적용은 장바구니에서, 사용은 주문단계에서 이뤄짐 
 - 쿠폰 동시성 처리를 OrderServiceImpl에서 수행 
 
+## **🚀 testConcurrentStockReduction**  
+### **🔍 문제점**  
+- 여러 스레드에서 동시에 주문 요청을 보내도 재고가 감소하지 않음.  
+- 테스트가 종료되지 않거나 무한 대기 상태에 빠짐.  
+- StockLock이 적용되었음에도 재고 값이 모든 스레드에서 동일하게 유지됨.
+
+### **🛠️ 해결방법**  
+1. productOption.decreaseQuantity(quantity); 실행 후에도 JPA 1차 캐시로 인해 변경 사항이 즉시 반영되지 않음.  
+-> save() 대신 saveAndFlush()를 사용하여 트랜잭션이 끝나기 전에 즉시 변경 사항을 DB에 반영  
+2. CountDownLatch 감소 (countDown())가 정상적으로 실행되지 않음  -> finally 블록에서 countDown() 실행
+예외 발생 여부와 관계없이 countDownLatch.countDown();을 호출하여 모든 스레드가 정상적으로 종료되도록 수정
+
+## **🚀 createSingleOrderCartItemWithMultipleUsers**  
+### **🔍 문제점**  
+- 여러 개의 스레드(사용자)가 동시에 같은 ProductOption(상품 옵션)에 대해 주문을 진행할 때,
+재고가 정상적으로 감소하지 않음.
+- @Transactional을 사용해도 동시성 문제가 해결되지 않음 => @Transactional(isolation = Isolation.SERIALIZABLE)을 적용해도 해결 X 
+
+### **🛠️ 해결방법**    
+PESSIMISTIC_WRITE(비관적 락) 적용  
+하나의 스레드가 ProductOption을 조회하고 수정하는 동안 다른 트랜잭션이 접근하지 못하도록 설정  
+@Lock(LockModeType.PESSIMISTIC_WRITE)을 적용하여 재고 감소 로직을 동기화  
+- 기대 결과  
+하나의 트랜잭션이 ProductOption을 수정하는 동안 다른 트랜잭션이 접근할 수 없음
+동시에 재고 감소를 실행하려는 다른 스레드는 블록(blocking) 상태가 되어 순차적으로 실행됨
+재고 초과 감소 방지 및 중복 실행 문제 해결
+
+
 
 
 
