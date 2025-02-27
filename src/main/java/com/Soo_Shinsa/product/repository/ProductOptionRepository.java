@@ -5,6 +5,7 @@ import com.Soo_Shinsa.product.model.ProductOption;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -26,4 +27,8 @@ public interface ProductOptionRepository extends JpaRepository<ProductOption, Lo
     default ProductOption findByIdOrElseThrow(Long productOptionId) {
         return findById(productOptionId).orElseThrow(() -> new NotFoundException(NOT_FOUND_PRODUCT_OPTION));
     }
+
+    @Modifying
+    @Query("UPDATE ProductOption p SET p.quantity = p.quantity - :quantity WHERE p.id = :productOptionId AND p.quantity >= :quantity")
+    int decreaseStock(Long productOptionId, Integer quantity);
 }

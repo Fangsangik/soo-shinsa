@@ -11,6 +11,8 @@ import com.Soo_Shinsa.coupon.model.CouponBrandRelation;
 import com.Soo_Shinsa.coupon.model.CouponUser;
 import com.Soo_Shinsa.coupon.repository.CouponRepository;
 import com.Soo_Shinsa.coupon.repository.CouponUserRepository;
+import com.Soo_Shinsa.exception.ErrorCode;
+import com.Soo_Shinsa.exception.InvalidInputException;
 import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.utils.EntityValidator;
 import lombok.RequiredArgsConstructor;
@@ -31,31 +33,34 @@ public class CouponServiceImpl implements CouponService {
     public CouponResponseDto createCoupon(CouponRequestDto couponRequestDto, User user) {
         EntityValidator.validateAdminOrVendorAccess(user);
         // 쿠폰 조회
-        Coupon coupon = couponRepository.findByIdForUpdate(couponRequestDto.getCouponId())
-                .orElseGet(() -> {
-                    // 쿠폰이 없을 경우 새로 생성
-                    Coupon newCoupon = Coupon.builder()
-                            .couponName(couponRequestDto.getCouponName())
-                            .discountRate(couponRequestDto.getDiscountRate())
-                            .couponType(couponRequestDto.getCouponType())
-                            .maxCount(couponRequestDto.getMaxCount())
-                            .build();
-                    return couponRepository.save(newCoupon); // 새로 생성한 쿠폰 저장
-                });
+//        Coupon coupon = couponRepository.existsById(couponRequestDto.getCouponId());
+//        Coupon coupon = couponRepository.findByIdForUpdate(couponRequestDto.getCouponId())
+//                .orElseThrow(()-> new InvalidInputException(ErrorCode.ALREADY_USED_COUPON));
+
+        Coupon coupon = Coupon.builder()
+                .discountRate(couponRequestDto.getDiscountRate())
+                .couponName(couponRequestDto.getCouponName())
+                .couponType(couponRequestDto.getCouponType())
+                .maxCount(couponRequestDto.getMaxCount())
+                .isUsed(false)
+                .build();
+
+        couponRepository.save(coupon);
+
+        if (coupon.getIssuedCount() >= coupon.getMaxCount()) {
+            throw new InvalidInputException(ErrorCode.COUPON_OUT_OF_STOCK);
+        }
 
         boolean alreadyIssued = couponUserRepository.existsByCouponAndUser(coupon, user);
         if (alreadyIssued) {
-            throw new IllegalStateException("사용자는 이미 이 쿠폰을 발급받았습니다.");
+            throw new InvalidInputException(ErrorCode.ALREADY_USED_COUPON);
         }
 
-        // 발급 수량 검증 및 증가 (원자적 처리)
-        if (coupon.getIssuedCount() >= coupon.getMaxCount()) {
-            throw new IllegalStateException("쿠폰 발급 한도를 초과했습니다.");
+        int count = couponRepository.incrementIssuedCount(coupon.getId());
+        if (count == 0) {
+            throw new InvalidInputException(ErrorCode.COUPON_OUT_OF_STOCK);
         }
-        coupon.increaseIssuedCount(); // 발급 수 증가
-        couponRepository.save(coupon);
 
-        // 쿠폰 브랜드 연관 처리
         for (CouponBrandRelationDto relationDto : couponRequestDto.getBrands()) {
             Brand brand = brandRepository.findByIdOrElseThrow(relationDto.getBrandId());
             if (brand.getIsCouponLimited() != null && brand.getCouponCount() > 0) {
@@ -69,27 +74,18 @@ public class CouponServiceImpl implements CouponService {
                     .build();
             coupon.getCouponBrandRelations().add(relation);
         }
+        // 쿠폰 브랜드 연관 처리
 
         // 사용자에게 쿠폰 발급
         issueCouponToUser(coupon, user);
 
         // 응답 DTO 생성
-        return CouponResponseDto.builder()
-                .id(coupon.getId())
-                .couponCode(coupon.getCouponCode())
-                .couponName(coupon.getCouponName())
-                .discountRate(coupon.getDiscountRate())
-                .couponType(coupon.getCouponType())
-                .issueDate(coupon.getIssueDate())
-                .expirationDate(coupon.getExpirationDate())
-                .maxCount(coupon.getMaxCount())
-                .brandRelations(CouponBrandRelationDto.toDtos(coupon.getCouponBrandRelations()))
-                .build();
+        return CouponResponseDto.from(coupon);
 
     }
 
-    @Transactional
-    public void issueCouponToUser(Coupon coupon, User user) {
+
+    private void issueCouponToUser(Coupon coupon, User user) {
         CouponUser couponUser = CouponUser.builder()
                 .coupon(coupon)
                 .user(user)

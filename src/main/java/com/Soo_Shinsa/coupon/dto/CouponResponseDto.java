@@ -1,6 +1,7 @@
 package com.Soo_Shinsa.coupon.dto;
 
 import com.Soo_Shinsa.constant.CouponType;
+import com.Soo_Shinsa.coupon.model.Coupon;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,5 +34,19 @@ public class CouponResponseDto {
         this.couponType = couponType;
         this.brandRelations = brandRelations;
         this.maxCount = maxCount;
+    }
+
+    public static CouponResponseDto from(Coupon coupon) {
+        return CouponResponseDto.builder()
+                .id(coupon.getId())
+                .couponName(coupon.getCouponName())
+                .couponCode(coupon.getCouponCode())
+                .discountRate(coupon.getDiscountRate())
+                .expirationDate(coupon.getExpirationDate())
+                .issueDate(coupon.getIssueDate())
+                .couponType(coupon.getCouponType())
+                .maxCount(coupon.getMaxCount())
+                .brandRelations(CouponBrandRelationDto.toDtos(coupon.getCouponBrandRelations()))
+                .build();
     }
 }

@@ -2,6 +2,7 @@ package com.Soo_Shinsa.coupon.repository;
 
 import com.Soo_Shinsa.coupon.model.Coupon;
 import com.Soo_Shinsa.coupon.model.CouponUser;
+import com.Soo_Shinsa.exception.NotFoundException;
 import com.Soo_Shinsa.user.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -9,6 +10,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+
+import static com.Soo_Shinsa.exception.ErrorCode.NOT_FOUND_CATEGORY;
 
 @Repository
 public interface CouponUserRepository extends JpaRepository<CouponUser, Long> {
@@ -21,4 +24,10 @@ public interface CouponUserRepository extends JpaRepository<CouponUser, Long> {
 
 
     boolean existsByCouponAndUser(Coupon coupon, User user);
+
+    default CouponUser findByIdOrElseThrow(Long couponUserId) {
+        return findById(couponUserId).orElseThrow(
+                () -> new NotFoundException(NOT_FOUND_CATEGORY)
+        );
+    }
 }

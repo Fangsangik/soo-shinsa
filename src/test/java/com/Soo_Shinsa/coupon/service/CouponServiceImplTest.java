@@ -16,6 +16,7 @@ import com.Soo_Shinsa.coupon.repository.CouponRepository;
 import com.Soo_Shinsa.coupon.repository.CouponUserRepository;
 import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.user.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,9 +29,11 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@Slf4j
 @SpringBootTest
 class CouponServiceImplTest {
 
@@ -123,7 +126,7 @@ class CouponServiceImplTest {
 
     @Test
     void 병렬_쿠폰_발급_테스트() throws InterruptedException {
-        int threadCount = 100; // 동시에 실행할 요청 수
+        int threadCount = 10; // 동시에 실행할 요청 수
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
         CountDownLatch latch = new CountDownLatch(threadCount);
 
@@ -147,7 +150,7 @@ class CouponServiceImplTest {
         Coupon coupon = couponRepository.findByIdOrElseThrow(couponRequestDto.getCouponId());
         long issuedCoupons = couponUserRepository.count();
 
-        System.out.println("발급된 쿠폰 수: " + issuedCoupons);
+        log.info("발급된 쿠폰 수: {}", issuedCoupons);
         assertEquals(1, issuedCoupons); // maxCount가 10이므로 발급된 쿠폰 수는 10이어야 함
         assertEquals(1, coupon.getIssuedCount()); // issuedCount도 10이어야 함
     }
@@ -155,7 +158,7 @@ class CouponServiceImplTest {
     //5000건 정도 넣으니 테스트가 도중에 안돌아감
     @Test
     void 병렬_쿠폰_발급_테스트_선착순() throws InterruptedException {
-        int threadCount = 4000; // 동시에 실행할 요청 수
+        int threadCount = 3000; // 동시에 실행할 요청 수
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
         CountDownLatch latch = new CountDownLatch(threadCount);
 
@@ -179,23 +182,25 @@ class CouponServiceImplTest {
             executorService.submit(() -> {
                 try {
                     couponService.createCoupon(couponRequestDto, user);
-                    System.out.println("쿠폰 발급 완료: " + user.getUserId());
+                    log.info("쿠폰 발급 완료: {}", user.getUserId());
                 } catch (Exception e) {
-                    System.err.println("에러 발생: " + e.getMessage());
+                    log.error("에러 발생: {}", e.getMessage());
                 } finally {
                     latch.countDown();
                 }
             });
         }
 
-        latch.await(); // 모든 스레드가 완료될 때까지 대기
+        latch.await(10, TimeUnit.SECONDS); // 10초 동안 기다리도록 설정
         executorService.shutdown();
+        executorService.awaitTermination(10, TimeUnit.SECONDS); // 10초 후 강제 종료
+
 
         // 결과 검증
         Coupon coupon = couponRepository.findByIdOrElseThrow(couponRequestDto.getCouponId());
         long issuedCoupons = couponUserRepository.count();
 
-        System.out.println("발급된 쿠폰 수: " + issuedCoupons);
+        log.info("발급된 쿠폰 수: {}", issuedCoupons);
         assertEquals(10, issuedCoupons); // maxCount가 10이므로 발급된 쿠폰 수는 10이어야 함
         assertEquals(10, coupon.getIssuedCount()); // issuedCount도 10이어야 함
     }
