@@ -1,6 +1,7 @@
 package com.Soo_Shinsa.config;
 
 import com.Soo_Shinsa.auth.JwtAuthFilter;
+import com.Soo_Shinsa.user.service.CustomOAuth2UserService;
 import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
@@ -27,10 +28,10 @@ import static com.Soo_Shinsa.constant.UrlConst.*;
 public class WebConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final CustomOAuth2UserService customOAuth2UserService;
     private final AuthenticationProvider authenticationProvider;
     private final AuthenticationEntryPoint authEntryPoint;
     private final AccessDeniedHandler accessDeniedHandler;
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -58,6 +59,11 @@ public class WebConfig {
                                 .requestMatchers(CUSTOMER_INTERCEPTOR_LIST).hasRole("CUSTOMER")
                                 .requestMatchers(HttpMethod.GET,CUSTOMER_DENY_INTERCEPTOR_LIST).hasRole("CUSTOMER")
                                 .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(customOAuth2UserService)
+                        )
                 )
                 // Spring Security 예외에 대한 처리를 핸들러에 위임.
                 .exceptionHandling(handler -> handler

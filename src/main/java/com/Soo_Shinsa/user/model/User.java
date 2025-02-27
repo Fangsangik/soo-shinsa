@@ -2,6 +2,7 @@ package com.Soo_Shinsa.user.model;
 
 import com.Soo_Shinsa.constant.Role;
 import com.Soo_Shinsa.constant.UserStatus;
+import com.Soo_Shinsa.user.dto.KakaoUserInfoResponseDto;
 import com.Soo_Shinsa.user.dto.UserUpdateRequestDto;
 import jakarta.persistence.*;
 import lombok.Builder;
@@ -90,4 +91,7 @@ public class User {
         this.kakaoUser = kakaoUser;
         kakaoUser.assignUser(this);
     }
+
+    public User(KakaoUserInfoResponseDto userInfo) {
+        this.email = userInfo.getKakaoAccount().getEmail();}
 }
