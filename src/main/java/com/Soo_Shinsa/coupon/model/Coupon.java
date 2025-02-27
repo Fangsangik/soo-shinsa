@@ -77,11 +77,4 @@ public class Coupon {
             throw new InternalServerException(ErrorCode.COUPON_OUT_OF_STOCK);
         }
     }
-
-    public void increaseIssuedCount() {
-        if (this.issuedCount >= this.maxCount) {
-            throw new IllegalStateException("쿠폰 발급 한도를 초과했습니다.");
-        }
-        this.issuedCount++;
-    }
 }

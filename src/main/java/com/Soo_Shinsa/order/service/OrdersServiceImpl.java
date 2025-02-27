@@ -187,13 +187,19 @@ public class OrdersServiceImpl implements OrdersService {
         for (CartItem cartItem : cartItems) {
             log.info("🔍 주문 처리 중 - 카트 아이템 ID: {}, 쿠폰 적용 여부: {}", cartItem.getId(), cartItem.getCoupon() != null);
 
-            ProductOption productOption = productOptionRepository.findByIdWithLock(cartItem.getProductOption().getId())
-                    .orElseThrow(() -> new NotFoundException(ErrorCode.NOT_FOUND_PRODUCT_OPTION));
+            ProductOption productOption = productOptionRepository.findByIdOrElseThrow(cartItem.getProductOption().getId());
+            //ProductOption productOption = productOptionRepository.findByIdWithLock(cartItem.getProductOption().getId())
+            //        .orElseThrow(() -> new NotFoundException(ErrorCode.NOT_FOUND_PRODUCT_OPTION));
 
             Integer quantity = cartItem.getQuantity();
 
             // ✅ (1) 재고 먼저 감소 (비관적 락 활용)
-            decreaseProductQuantity(productOption.getId(), quantity);
+            //decreaseProductQuantity(productOption.getId(), quantity);
+            int updatedRows = productOptionRepository.decreaseStock(productOption.getId(), quantity);
+            if (updatedRows == 0) {
+                log.error("🚨 재고 부족으로 주문 실패 - 상품 ID: {}, 요청 수량: {}", productOption.getId(), quantity);
+                throw new InvalidInputException(ErrorCode.CAN_NOT_USE_PRODUCT);
+            }
 
             // ✅ (2) 이후 쿠폰 적용 (첫 번째 아이템에서 적용 안 되는 원인 확인)
             log.info("🎟 쿠폰 적용 시도 - 카트 아이템 ID: {}", cartItem.getId());
@@ -230,8 +236,10 @@ public class OrdersServiceImpl implements OrdersService {
             return;  // 쿠폰이 없는 경우 바로 종료
         }
 
-        Coupon coupon = couponRepository.findByIdWithLock(cartItem.getCoupon().getId())
-                .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_COUPON));
+        Coupon coupon = couponRepository.findByIdOrElseThrow(cartItem.getCoupon().getId());
+
+        //Coupon coupon = couponRepository.findByIdWithLock(cartItem.getCoupon().getId())
+        //        .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_COUPON));
 
         log.info("🎟 쿠폰 사용 검증 시작 - 쿠폰 ID: {}, 현재 재고: {}", coupon.getId(), coupon.getMaxCount());
 
@@ -264,23 +272,37 @@ public class OrdersServiceImpl implements OrdersService {
 
     @Transactional
     public void decreaseProductQuantity(Long productOptionId, Integer quantity) {
-        ProductOption productOption = productOptionRepository.findByIdWithLock(productOptionId)
-                .orElseThrow(() -> new NotFoundException(ErrorCode.NOT_FOUND_PRODUCT_OPTION));
+        log.info("🔽 [재고 차감 요청] 상품 ID: {}, 요청 수량: {}", productOptionId, quantity);
 
-        log.info("🔽 [재고 차감 요청] 상품 ID: {}, 현재 재고: {}, 요청 수량: {}",
-                productOptionId, productOption.getQuantity(), quantity);
-
-        if (productOption.getQuantity() < quantity) {
-            log.error("🚨 재고 부족으로 주문 실패 - 상품 ID: {}, 요청 수량: {}, 남은 재고: {}",
-                    productOptionId, quantity, productOption.getQuantity());
+        int updatedRows = productOptionRepository.decreaseStock(productOptionId, quantity);
+        if (updatedRows == 0) {
+            log.error("🚨 재고 부족으로 주문 실패 - 상품 ID: {}, 요청 수량: {}", productOptionId, quantity);
             throw new InvalidInputException(ErrorCode.CAN_NOT_USE_PRODUCT);
         }
 
-        productOption.decreaseQuantity(quantity);
-        productOptionRepository.saveAndFlush(productOption);
-
-        log.info("✅ 재고 차감 완료 - 상품 ID: {}, 남은 재고: {}", productOptionId, productOption.getQuantity());
+        log.info("✅ 재고 차감 완료 - 상품 ID: {}", productOptionId);
     }
+
+//    @Transactional
+//    public void decreaseProductQuantity(Long productOptionId, Integer quantity) {
+//        ProductOption productOption = productOptionRepository.findByIdWithLock(productOptionId)
+//                .orElseThrow(() -> new NotFoundException(ErrorCode.NOT_FOUND_PRODUCT_OPTION));
+//
+//        log.info("🔽 [재고 차감 요청] 상품 ID: {}, 현재 재고: {}, 요청 수량: {}",
+//                productOptionId, productOption.getQuantity(), quantity);
+//
+//        if (productOption.getQuantity() < quantity) {
+//            log.error("🚨 재고 부족으로 주문 실패 - 상품 ID: {}, 요청 수량: {}, 남은 재고: {}",
+//                    productOptionId, quantity, productOption.getQuantity());
+//            throw new InvalidInputException(ErrorCode.CAN_NOT_USE_PRODUCT);
+//        }
+//
+//        productOption.decreaseQuantity(quantity);
+//        productOptionRepository.saveAndFlush(productOption);
+//
+//        log.info("✅ 재고 차감 완료 - 상품 ID: {}, 남은 재고: {}", productOptionId, productOption.getQuantity());
+//    }
+
 
     @Transactional
     @Override

@@ -13,6 +13,9 @@ import static jakarta.persistence.FetchType.LAZY;
 @Getter
 @Entity
 @NoArgsConstructor
+@Table(name = "coupon_user", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"coupon_id", "user_id"})
+})
 public class CouponUser {
 
     @Id

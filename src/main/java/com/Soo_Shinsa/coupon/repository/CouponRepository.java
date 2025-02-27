@@ -3,13 +3,11 @@ package com.Soo_Shinsa.coupon.repository;
 import com.Soo_Shinsa.coupon.model.Coupon;
 import com.Soo_Shinsa.exception.ErrorCode;
 import com.Soo_Shinsa.exception.NotFoundException;
-import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.Optional;
 
 public interface CouponRepository extends JpaRepository<Coupon, Long> {
 
@@ -19,11 +17,7 @@ public interface CouponRepository extends JpaRepository<Coupon, Long> {
         );
     }
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT c FROM Coupon c WHERE c.id = :id")
-    Optional<Coupon> findByIdForUpdate(@Param("id") Long couponId);
-
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT c FROM Coupon c WHERE c.id = :id")
-    Optional<Coupon> findByIdWithLock(Long id);
+    @Modifying
+    @Query("UPDATE Coupon c SET c.issuedCount = c.issuedCount + 1 WHERE c.id = :couponId AND c.issuedCount < c.maxCount")
+    int incrementIssuedCount(@Param("couponId") Long couponId);
 }
