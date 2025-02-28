@@ -3,6 +3,7 @@ package com.Soo_Shinsa.cartitem.repository;
 import com.Soo_Shinsa.cartitem.dto.CartItemDateRequestDto;
 import com.Soo_Shinsa.cartitem.dto.CartItemResponseDto;
 import com.Soo_Shinsa.cartitem.model.QCartItem;
+import com.Soo_Shinsa.cartitem.model.QCartItemProductOption;
 import com.Soo_Shinsa.product.dto.ProductOptionResponseDto;
 import com.Soo_Shinsa.product.model.QProductOption;
 import com.Soo_Shinsa.user.model.User;
@@ -16,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.Optional;
 
 @RequiredArgsConstructor
 public class CartItemCustomRepositoryImpl implements CartItemCustomRepository {
@@ -25,6 +27,7 @@ public class CartItemCustomRepositoryImpl implements CartItemCustomRepository {
     @Override
     public Page<CartItemResponseDto> findByAllCartItem(User user, CartItemDateRequestDto requestDto, Pageable pageable) {
         QCartItem cartItem = QCartItem.cartItem;
+        QCartItemProductOption cartItemProductOption = QCartItemProductOption.cartItemProductOption;
         QProductOption productOption = QProductOption.productOption;
 
         // 조건 빌더 생성
@@ -34,55 +37,48 @@ public class CartItemCustomRepositoryImpl implements CartItemCustomRepository {
         if (requestDto.getStartDate() != null) {
             builder.and(cartItem.createdAt.goe(Timestamp.valueOf(requestDto.getStartDate().atStartOfDay())));
         }
-
         if (requestDto.getEndDate() != null) {
-            builder.and(cartItem.createdAt.loe(Timestamp.valueOf(requestDto.getEndDate().atStartOfDay())));
+            builder.and(cartItem.createdAt.loe(Timestamp.valueOf(requestDto.getEndDate().atTime(23, 59, 59))));
         }
 
-        // 페이징된 데이터 가져오기
+        // ✅ 단일 쿼리로 장바구니 + 옵션 가져오기 (JOIN FETCH)
         List<CartItemResponseDto> content = queryFactory
-                .select(cartItem)
+                .select(Projections.constructor(CartItemResponseDto.class,
+                        cartItem.id,
+                        cartItem.quantity,
+                        cartItem.product.id,
+                        cartItem.product.price,
+                        Projections.list(
+                                Projections.constructor(ProductOptionResponseDto.class,
+                                        productOption.id,
+                                        productOption.size,
+                                        productOption.color,
+                                        productOption.productStatus,
+                                        productOption.product.id,
+                                        productOption.quantity
+                                )
+                        )
+                ))
                 .from(cartItem)
-                .leftJoin(productOption).on(cartItem.product.id.eq(productOption.product.id))
+                .leftJoin(cartItemProductOption).on(cartItem.id.eq(cartItemProductOption.cartItem.id))  // ✅ 장바구니-상품옵션 관계 조인
+                .leftJoin(productOption).on(cartItemProductOption.productOption.id.eq(productOption.id)) // ✅ 상품 옵션 조인
                 .where(builder)
                 .orderBy(cartItem.createdAt.desc())
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
-                .fetch()
-                .stream()
-                .map(cart -> {
-                    // 상품 옵션 리스트 가져오기
-                    List<ProductOptionResponseDto> optionDtos = queryFactory
-                            .select(Projections.constructor(ProductOptionResponseDto.class,
-                                    productOption.id,
-                                    productOption.size,
-                                    productOption.color,
-                                    productOption.productStatus,
-                                    productOption.product.id
-                            ))
-                            .from(productOption)
-                            .where(productOption.product.id.eq(cart.getProduct().getId()))
-                            .fetch();
+                .fetch();
 
-                    return new CartItemResponseDto(
-                            cart.getId(),
-                            cart.getQuantity(),
-                            cart.getProduct().getId(),
-                            cart.getProduct().getPrice(),
-                            optionDtos
-                    );
-                })
-                .toList();
+        // ✅ `COUNT(*) OVER()` 활용하여 쿼리 1회만 실행
+        long totalCount = Optional.ofNullable(
+                queryFactory
+                        .select(cartItem.count())
+                        .from(cartItem)
+                        .where(builder)
+                        .fetchOne()
+        ).orElse(0L);
 
-        // 총 레코드 수 가져오기
-        Long totalCount = queryFactory
-                .select(cartItem.count())
-                .from(cartItem)
-                .where(builder)
-                .fetchOne();
+        return new PageImpl<>(content, pageable, totalCount);
 
-        // PageImpl로 결과 반환
-        return new PageImpl<>(content, pageable, totalCount != null ? totalCount : 0);
     }
 
 }

@@ -2,7 +2,9 @@ package com.Soo_Shinsa.cartitem.service;
 
 import com.Soo_Shinsa.cartitem.dto.*;
 import com.Soo_Shinsa.cartitem.model.CartItem;
+import com.Soo_Shinsa.cartitem.model.CartItemProductOption;
 import com.Soo_Shinsa.cartitem.repository.CartItemRepository;
+import com.Soo_Shinsa.category.repository.CartItemProductOptionRepository;
 import com.Soo_Shinsa.coupon.calculate.DiscountCouponCalculator;
 import com.Soo_Shinsa.coupon.calculate.PercentageDiscountCalculator;
 import com.Soo_Shinsa.coupon.model.Coupon;
@@ -30,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,30 +48,45 @@ public class CartItemServiceImpl implements CartItemService {
     private final CouponUserRepository couponUserRepository;
     private final CouponRepository couponRepository;
     private final CouponBrandRelationRepository couponBrandRelationRepository;
+    private final CartItemProductOptionRepository cartItemProductOptionRepository;
 
     @Transactional
     @Override
     public CartItemResponseDto create(User user, CartItemRequestDto requestDto) {
-
         Product product = productRepository.findByIdOrElseThrow(requestDto.getProductId());
 
         if (product.getProductStatus().equals(ProductStatus.SOLD_OUT) || product.getProductStatus().equals(ProductStatus.UNAVAILABLE)) {
             throw new InternalServerException(ErrorCode.CAN_NOT_USE_PRODUCT);
         }
 
-        List<ProductOption> productOptions = productOptionRepository.findProductOptionByProductId(product.getId());
+        List<ProductOption> productOptions = productOptionRepository.findAllById(requestDto.getProductOptionIds());
+
+        for (ProductOption option : productOptions) {
+            if (!option.getProduct().getId().equals(product.getId())) {
+                throw new InternalServerException(ErrorCode.INVALID_PRODUCT_OPTION);
+            }
+        }
 
         CartItem cartItem = CartItem.builder()
                 .quantity(requestDto.getQuantity())
                 .user(user)
                 .product(product)
-                .productOption(productOptions.get(0))
                 .build();
 
-        cartItemRepository.save(cartItem);
+        cartItem = cartItemRepository.save(cartItem); // 여기서 먼저 저장
+
+        List<CartItemProductOption> cartItemProductOptions = new ArrayList<>();
+        for (ProductOption option : productOptions) {
+            CartItemProductOption cartItemProductOption = new CartItemProductOption(cartItem, option);
+            cartItemProductOptions.add(cartItemProductOption);
+        }
+
+        cartItemProductOptionRepository.saveAll(cartItemProductOptions); // 옵션 데이터 저장
 
         return CartItemResponseDto.toDto(cartItem, productOptions);
     }
+
+
 
     @Override
     public CartItemResponseDto findById(Long cartId, User user) {
@@ -94,13 +112,13 @@ public class CartItemServiceImpl implements CartItemService {
 
     @Transactional
     @Override
-    public CartItemResponseDto update(Long cartId, User user, Integer quantity) {
+    public CartItemResponseDto update(User user, CartItemUpdateRequestDto requestDto) {
         User userId = userRepository.findByIdOrElseThrow(user.getUserId());
 
-        CartItem cartItem = cartItemRepository.findByIdOrElseThrow(cartId);
+        CartItem cartItem = cartItemRepository.findByIdOrElseThrow(requestDto.getCartItemId());
 
         EntityValidator.validateUserOwnership(userId.getUserId(), cartItem.getUser().getUserId());
-        cartItem.updateCartItem(quantity);
+        cartItem.updateCartItem(requestDto.getQuantity());
 
 
         // 상품 옵션 조회
@@ -157,16 +175,27 @@ public class CartItemServiceImpl implements CartItemService {
         }
 
         DiscountCouponCalculator discountCouponCalculator = new PercentageDiscountCalculator();
-        BigDecimal discountPrice = discountCouponCalculator.calculateDiscountedPrice(cartItem.getProduct().getPrice(), coupon.getDiscountRate());
+        BigDecimal discountRate = coupon.getDiscountRate();
 
-        if (discountPrice == null || discountPrice.compareTo(BigDecimal.ZERO) <= 0) {
-            discountPrice = cartItem.getProduct().getPrice();
+        // 1. 옵션별로 가격과 수량을 가져오기
+        List<ProductOption> productOptions = productOptionRepository.findProductOptionByProductId(cartItem.getProduct().getId());
+
+        BigDecimal totalOriginalPrice = BigDecimal.ZERO;
+        BigDecimal totalDiscountedPrice = BigDecimal.ZERO;
+
+        for (ProductOption option : productOptions) {
+            BigDecimal optionPrice = cartItem.getProduct().getPrice(); // 기본 가격 (6000원)
+            BigDecimal optionTotalPrice = optionPrice.multiply(BigDecimal.valueOf(option.getQuantity())); // 옵션 수량 적용
+
+            BigDecimal optionDiscountedPrice = discountCouponCalculator.calculateDiscountedPrice(optionTotalPrice, discountRate);
+
+            totalOriginalPrice = totalOriginalPrice.add(optionTotalPrice);
+            totalDiscountedPrice = totalDiscountedPrice.add(optionDiscountedPrice);
         }
 
-        cartItem.applyCoupon(coupon, discountPrice);
+        cartItem.applyCoupon(coupon, totalDiscountedPrice);
         cartItemRepository.saveAndFlush(cartItem);
 
-        List<ProductOption> productOptions = productOptionRepository.findProductOptionByProductId(cartItem.getProduct().getId());
         return ApplyCouponCartResponseDto.toDto(cartItem, productOptions);
     }
 
