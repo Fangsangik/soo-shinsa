@@ -62,4 +62,5 @@ public class ResponseMessage {
     public static final String AUTHENTICATION_REQUIRED = "인증이 필요합니다. 로그인 후 이용해주세요.";
     public static final String INVALID_TOKEN = "유효하지 않은 토큰입니다.";
     public static final String ORDER_CANCEL_SUCCESS = "주문이 취소되었습니다.";
+    public static final String COUPON_ASSIGN_SUCCESS = "쿠폰이 지급되었습니다.";
 }

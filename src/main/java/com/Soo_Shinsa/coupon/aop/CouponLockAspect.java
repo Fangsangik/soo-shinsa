@@ -30,10 +30,13 @@ public class CouponLockAspect {
                 throw new IllegalStateException("현재 쿠폰 발급 요청이 많아 잠시 후 다시 시도해주세요.");
             }
             return joinPoint.proceed();
+        } catch (Exception e) {
+            throw e;
         } finally {
-            if (acquired && lock.isHeldByCurrentThread()) {
+            if (acquired) {
                 lock.unlock();
             }
         }
     }
 }
+

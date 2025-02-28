@@ -3,7 +3,6 @@ package com.Soo_Shinsa.cartitem.model;
 import com.Soo_Shinsa.coupon.model.Coupon;
 import com.Soo_Shinsa.global.constant.BaseTimeEntity;
 import com.Soo_Shinsa.product.model.Product;
-import com.Soo_Shinsa.product.model.ProductOption;
 import com.Soo_Shinsa.user.model.User;
 import jakarta.persistence.*;
 import lombok.Builder;
@@ -66,10 +65,5 @@ public class CartItem extends BaseTimeEntity {
 
     public void applyCoupon(Coupon coupon) {
         this.coupon = coupon; // 쿠폰 정보 저장
-    }
-
-    // ✅ 상품 옵션 추가하는 메서드
-    public void addProductOption(ProductOption productOption) {
-        this.productOptions.add(new CartItemProductOption(this, productOption));
     }
 }

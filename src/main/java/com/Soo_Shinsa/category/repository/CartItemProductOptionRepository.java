@@ -1,6 +1,7 @@
 package com.Soo_Shinsa.category.repository;
 
 import com.Soo_Shinsa.cartitem.model.CartItemProductOption;
+import com.Soo_Shinsa.product.model.ProductOption;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -18,6 +19,9 @@ public interface CartItemProductOptionRepository extends JpaRepository<CartItemP
     @Modifying
     @Query("DELETE FROM CartItemProductOption cpo WHERE cpo.cartItem.id IN :cartItemIds")
     void deleteByCartItemIds(@Param("cartItemIds") List<Long> cartItemIds);
+
+    @Query("SELECT cpo.productOption FROM CartItemProductOption cpo WHERE cpo.cartItem.id = :cartItemId")
+    List<ProductOption> findProductOptionsByCartItemId(@Param("cartItemId") Long cartItemId);
 
     boolean existsByCartItemId(Long id);
 }

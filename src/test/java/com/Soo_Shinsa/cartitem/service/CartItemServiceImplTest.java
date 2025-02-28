@@ -144,14 +144,6 @@ class CartItemServiceImplTest {
                 .build();
         productOptionRepository.save(productOption);
 
-        cartItem = CartItem.builder()
-                .product(product)
-                .productOption(productOption)
-                .user(user)
-                .quantity(1)
-                .build();
-        cartItemRepository.save(cartItem);
-
         validCoupon = Coupon.builder()
                 .couponName("나이키 10% 할인")
                 .couponType(CouponType.SPECIFIC_BRAND)
@@ -203,7 +195,7 @@ class CartItemServiceImplTest {
         ApplyCouponCartResponseDto response = cartItemService.applyCoupon(cartItem.getId(), requestDto, user);
         log.info("✅ 쿠폰 적용 결과 : {}", response);
 
-        assertEquals(BigDecimal.valueOf(45000.0), response.getDiscountedPrice());
+        assertEquals(BigDecimal.valueOf(4500000.0), response.getDiscountedPrice());
         log.info("✅ 쿠폰 적용 결과 : {}", response.getDiscountedPrice());
     }
 

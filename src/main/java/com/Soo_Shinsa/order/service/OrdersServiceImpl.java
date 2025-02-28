@@ -125,15 +125,14 @@ public class OrdersServiceImpl implements OrdersService {
         return OrdersResponseDto.toDto(order);
     }
 
-    @StockLock(key = "'lock:productOption:' + #cartItem.id")
-    @Transactional(isolation = Isolation.READ_COMMITTED)
+    @StockLock(key = "'lock:productOption:' + #productOption.Id")
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     @Override
     public OrdersResponseDto createSingleOrderCartItem(User user, Long cartItemId) {
         CartItem cartItem = cartItemRepository.findByIdOrElseThrow(cartItemId);
 
         List<ProductOption> productOptions = cartItem.getProductOptions().stream()
-                .map(cartItemProductOption -> productOptionRepository.findByIdWithLock(cartItemProductOption.getProductOption().getId())
-                        .orElseThrow(() -> new NotFoundException(ErrorCode.NOT_FOUND_PRODUCT_OPTION)))
+                .map(cartItemProductOption -> productOptionRepository.findByIdOrElseThrow(cartItemProductOption.getProductOption().getId()))
                 .toList();
 
         Product product = cartItem.getProduct();
@@ -200,7 +199,7 @@ public class OrdersServiceImpl implements OrdersService {
     }
 
 
-    @StockLock(key = "'lock:productOption:' + #cartItem.id")
+    @StockLock(key = "'lock:productOption:' + #productOption.Id")
     @Transactional(isolation = Isolation.READ_COMMITTED)
     @Override
     public OrdersResponseDto createAllOrderFromCart(User user) {

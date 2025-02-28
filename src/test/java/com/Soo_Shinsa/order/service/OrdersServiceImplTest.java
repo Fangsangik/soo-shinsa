@@ -4,10 +4,12 @@ import com.Soo_Shinsa.brand.model.Brand;
 import com.Soo_Shinsa.brand.repository.BrandRepository;
 import com.Soo_Shinsa.cartitem.dto.ApplyCouponCartRequestDto;
 import com.Soo_Shinsa.cartitem.model.CartItem;
+import com.Soo_Shinsa.cartitem.model.CartItemProductOption;
 import com.Soo_Shinsa.cartitem.repository.CartItemRepository;
 import com.Soo_Shinsa.cartitem.service.CartItemService;
 import com.Soo_Shinsa.category.model.Category;
 import com.Soo_Shinsa.category.model.SubCategory;
+import com.Soo_Shinsa.category.repository.CartItemProductOptionRepository;
 import com.Soo_Shinsa.category.repository.CategoryRepository;
 import com.Soo_Shinsa.category.repository.SubCategoryRepository;
 import com.Soo_Shinsa.coupon.model.Coupon;
@@ -28,7 +30,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -73,6 +74,9 @@ class OrdersServiceImplTest {
 
     @Autowired
     private OrdersService ordersService;
+
+    @Autowired
+    private CartItemProductOptionRepository cartItemProductOptionRepository;
 
     private User user;
     private Category category;
@@ -162,11 +166,10 @@ class OrdersServiceImplTest {
 
         cartItem = CartItem.builder()
                 .product(product)
-                .productOption(productOption)
                 .user(user)
                 .quantity(1)
                 .build();
-        cartItemRepository.save(cartItem);
+        cartItemRepository.save(cartItem); // 먼저 저장하여 cartItem_id 생성
 
         validCoupon = Coupon.builder()
                 .couponName("나이키 10% 할인")
@@ -205,7 +208,6 @@ class OrdersServiceImplTest {
         couponBrandRelationRepository.save(wrongBrandRelation);
     }
 
-    @Transactional
     @Test
     void testConcurrentStockReduction() throws InterruptedException {
         log.info("상품 재고 동시성 test");
@@ -238,7 +240,6 @@ class OrdersServiceImplTest {
         Assertions.assertEquals(0, left.getQuantity());
     }
 
-    @Transactional
     @Test
     void createSingleOrderCartItemWithMultipleUsers() throws InterruptedException {
         int stockQuantity = 10;
@@ -264,12 +265,17 @@ class OrdersServiceImplTest {
 
             CartItem newCartItem = CartItem.builder()
                     .product(product)
-                    .productOption(productOption)
                     .user(newUser)
                     .quantity(1)
                     .build();
             cartItemRepository.save(newCartItem);
             cartItems.add(newCartItem);
+
+            CartItemProductOption cartItemProductOption = CartItemProductOption.builder()
+                    .cartItem(newCartItem)
+                    .productOption(productOption)
+                    .build();
+            cartItemProductOptionRepository.save(cartItemProductOption);
         }
 
         // ✅ 여러 유저가 동시에 주문 진행
@@ -286,7 +292,7 @@ class OrdersServiceImplTest {
                     cartItemService.applyCoupon(currentCartItem.getId(), requestDto, currentUser);
                     ordersService.createSingleOrderCartItem(currentUser, currentCartItem.getId());
 
-                    ProductOption updateQuantity = productOptionRepository.findByIdOrElseThrow(currentCartItem.getProductOption().getId());
+                    ProductOption updateQuantity = productOptionRepository.findByIdOrElseThrow(productOption.getId());
                     Coupon updatedCoupon = couponRepository.findByIdOrElseThrow(validCoupon.getId());
 
                     log.info("✅ 주문 성공 - 유저: {}, 남은 재고: {}, 남은 쿠폰 수: {}",
@@ -319,7 +325,6 @@ class OrdersServiceImplTest {
      *
      * @throws InterruptedException
      */
-    @Transactional
     @Test
     void applyDifferentCouponsAndCreateOrderConcurrently() throws InterruptedException {
         couponRepository.deleteAll();
@@ -351,12 +356,17 @@ class OrdersServiceImplTest {
         for (int i = 0; i < 10; i++) {
             CartItem cartItem = CartItem.builder()
                     .product(product)
-                    .productOption(productOption)
                     .user(user)
                     .quantity(1)
                     .build();
             cartItemRepository.save(cartItem);
             cartItems.add(cartItem);
+
+            CartItemProductOption cartItemProductOption = CartItemProductOption.builder()
+                    .cartItem(cartItem)
+                    .productOption(productOption)
+                    .build();
+            cartItemProductOptionRepository.save(cartItemProductOption);
         }
 
         // ✅ 쿠폰 적용과 주문을 동시에 진행
@@ -382,7 +392,7 @@ class OrdersServiceImplTest {
                     ordersService.createSingleOrderCartItem(user, currentCartItem.getId());
 
                     // ✅ 최종 재고 및 쿠폰 개수 확인
-                    ProductOption updatedStock = productOptionRepository.findByIdOrElseThrow(currentCartItem.getProductOption().getId());
+                    ProductOption updatedStock = productOptionRepository.findByIdOrElseThrow(productOption.getId());
                     Coupon updatedCoupon = couponRepository.findByIdOrElseThrow(currentCoupon.getId());
 
                     log.info("✅ 주문 성공 - 카트 아이템 ID: {}, 남은 재고: {}, 남은 쿠폰 수: {}",
