@@ -63,13 +63,12 @@ public class CartItemController {
     }
 
 
-    @PatchMapping("/{cartId}")
+    @PatchMapping
     @Operation(summary = "장바구니 수정", description = "장바구니 상품의 수량을 수정합니다.")
     public ResponseEntity<CommonResponse<CartItemResponseDto>> update(@AuthenticationPrincipal UserDetails userDetails,
-                                                                      @PathVariable Long cartId,
-                                                                      @Valid @RequestBody CartItemRequestDto dto) {
+                                                                      @Valid @RequestBody CartItemUpdateRequestDto dto) {
         User user = UserUtils.getUser(userDetails);
-        CartItemResponseDto saved = cartItemService.update(cartId, user, dto.getQuantity());
+        CartItemResponseDto saved = cartItemService.update(user, dto);
         CommonResponse<CartItemResponseDto> response = new CommonResponse<>(ResponseMessage.CART_UPDATE_SUCCESS, saved);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }

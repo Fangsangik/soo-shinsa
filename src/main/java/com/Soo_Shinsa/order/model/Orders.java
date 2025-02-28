@@ -104,4 +104,8 @@ public class Orders extends BaseTimeEntity {
     public void updateStatus(OrdersStatus status) {
         this.status = status;
     }
+
+    public void updateTotalPrice(BigDecimal totalPrice) {
+        this.totalPrice = totalPrice;
+    }
 }

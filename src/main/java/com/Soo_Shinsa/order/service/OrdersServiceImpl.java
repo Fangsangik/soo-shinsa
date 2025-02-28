@@ -2,6 +2,7 @@ package com.Soo_Shinsa.order.service;
 
 import com.Soo_Shinsa.cartitem.model.CartItem;
 import com.Soo_Shinsa.cartitem.repository.CartItemRepository;
+import com.Soo_Shinsa.category.repository.CartItemProductOptionRepository;
 import com.Soo_Shinsa.coupon.model.Coupon;
 import com.Soo_Shinsa.coupon.model.CouponUser;
 import com.Soo_Shinsa.coupon.repository.CouponRepository;
@@ -52,6 +53,7 @@ public class OrdersServiceImpl implements OrdersService {
     private final CouponRepository couponRepository;
     private final PaymentRepository paymentRepository;
     private final TossPaymentsService tossPaymentsService;
+    private final CartItemProductOptionRepository cartItemProductOptionRepository;
 
 
     @Override
@@ -123,59 +125,82 @@ public class OrdersServiceImpl implements OrdersService {
         return OrdersResponseDto.toDto(order);
     }
 
-    @StockLock(key = "'lock:productOption:' + #productOption.id")
-    @Transactional(isolation = Isolation.SERIALIZABLE)
+    @StockLock(key = "'lock:productOption:' + #cartItem.id")
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     @Override
     public OrdersResponseDto createSingleOrderCartItem(User user, Long cartItemId) {
-
-
         CartItem cartItem = cartItemRepository.findByIdOrElseThrow(cartItemId);
-        ProductOption productOption = productOptionRepository.findByIdWithLock(cartItem.getProductOption().getId())
-                .orElseThrow(() -> new NotFoundException(ErrorCode.NOT_FOUND_PRODUCT_OPTION));
 
-        log.info("🔒 StockLock 적용 확인 - productOptionId: {}", productOption.getId());
-        Product product = cartItem.getProductOption().getProduct();
+        List<ProductOption> productOptions = cartItem.getProductOptions().stream()
+                .map(cartItemProductOption -> productOptionRepository.findByIdWithLock(cartItemProductOption.getProductOption().getId())
+                        .orElseThrow(() -> new NotFoundException(ErrorCode.NOT_FOUND_PRODUCT_OPTION)))
+                .toList();
+
+        Product product = cartItem.getProduct();
 
         if (product.getProductStatus().equals(ProductStatus.SOLD_OUT) || product.getProductStatus().equals(ProductStatus.UNAVAILABLE)) {
             throw new InternalServerException(ErrorCode.CAN_NOT_USE_PRODUCT);
         }
 
-        if (productOption.getQuantity() < cartItem.getQuantity()) {
-            throw new InternalServerException(ErrorCode.CAN_NOT_USE_PRODUCT);
+        for (ProductOption option : productOptions) {
+            if (option.getQuantity() < cartItem.getQuantity()) {
+                throw new InternalServerException(ErrorCode.CAN_NOT_USE_PRODUCT);
+            }
+            option.decreaseQuantity(cartItem.getQuantity());
+            productOptionRepository.saveAndFlush(option);
         }
 
-        productOption.decreaseQuantity(cartItem.getQuantity());
-        productOptionRepository.saveAndFlush(productOption);
+        try {
+            isUsedCoupon(user, cartItem);
+        } catch (Exception e) {
+            log.warn("⚠️ 쿠폰 적용 중 오류 발생. 카트 아이템 ID: {}", cartItem.getId());
+        }
 
-        isUsedCoupon(user, cartItem);
+        // ✅ 총 가격을 0으로 초기화
+        BigDecimal totalPrice = BigDecimal.ZERO;
 
         Orders order = Orders.builder()
                 .user(user)
-                .totalPrice(cartItem.getDiscountedPrice() != null
-                        ? cartItem.getDiscountedPrice()
-                        : product.getPrice().multiply(BigDecimal.valueOf(cartItem.getQuantity())))
+                .totalPrice(totalPrice)  // 초기 0으로 설정
                 .status(OrdersStatus.PENDING)
                 .build();
 
-        OrderItem orderItem = OrderItem.builder()
-                .order(order)
-                .price(product.getPrice())
-                .productOption(productOption)
-                .price(order.getTotalPrice())
-                .product(product)
-                .quantity(cartItem.getQuantity())
-                .build();
+        // ✅ 각 옵션별로 가격을 계산하고, `totalPrice`에 반영
+        for (ProductOption option : productOptions) {
+            // ✅ 할인된 가격이 있으면 적용, 없으면 `null`
+            BigDecimal optionPrice = (cartItem.getDiscountedPrice() != null)
+                    ? cartItem.getDiscountedPrice().multiply(BigDecimal.valueOf(cartItem.getQuantity()))
+                    : option.getProduct().getPrice().multiply(BigDecimal.valueOf(cartItem.getQuantity()));
 
-        order.addOrderItem(orderItem);
-        ordersRepository.save(order);
+            totalPrice = totalPrice.add(optionPrice); // 🚀 **옵션 가격을 누적**
 
+            OrderItem orderItem = OrderItem.builder()
+                    .order(order)
+                    .price(option.getProduct().getPrice())
+                    .discountPrice(cartItem.getDiscountedPrice() != null ? optionPrice : null) // ✅ 할인 없으면 `null`
+                    .productOption(option)
+                    .product(option.getProduct())
+                    .quantity(cartItem.getQuantity())
+                    .build();
+
+            order.addOrderItem(orderItem);
+        }
+
+        // ✅ 주문 객체에 최종 가격 업데이트 (JPA `save()` 전에 반영)
+        order.updateTotalPrice(totalPrice);
+
+        ordersRepository.save(order); // ✅ 최종 가격 업데이트된 주문 저장
         cartItemRepository.delete(cartItem);
+        if (cartItemProductOptionRepository.existsByCartItemId(cartItem.getId())) {
+            cartItemProductOptionRepository.deleteByCartItemId(cartItem.getId());
+        }
+
 
         return OrdersResponseDto.toDto(order);
     }
 
-    //TODO : 모든 상품 주문시 전체 가격 계산
-    @StockLock(key = "'lock:productOption:' + #productOption.id")
+
+    @StockLock(key = "'lock:productOption:' + #cartItem.id")
     @Transactional(isolation = Isolation.READ_COMMITTED)
     @Override
     public OrdersResponseDto createAllOrderFromCart(User user) {
@@ -185,53 +210,76 @@ public class OrdersServiceImpl implements OrdersService {
             throw new NotFoundException(ErrorCode.NOT_FOUND_CART);
         }
 
-        BigDecimal totalPrice = BigDecimal.ZERO; // 총 주문 금액 초기화
+        BigDecimal totalPrice = BigDecimal.ZERO;
 
         Orders order = Orders.builder()
                 .user(user)
-                .totalPrice(totalPrice) // 초기값
+                .totalPrice(totalPrice)
                 .status(OrdersStatus.PENDING)
                 .build();
 
         for (CartItem cartItem : cartItems) {
             log.info("🔍 주문 처리 중 - 카트 아이템 ID: {}, 쿠폰 적용 여부: {}", cartItem.getId(), cartItem.getCoupon() != null);
 
-            ProductOption productOption = productOptionRepository.findByIdOrElseThrow(cartItem.getProductOption().getId());
-            //ProductOption productOption = productOptionRepository.findByIdWithLock(cartItem.getProductOption().getId())
-            //        .orElseThrow(() -> new NotFoundException(ErrorCode.NOT_FOUND_PRODUCT_OPTION));
+            List<ProductOption> productOptions = cartItem.getProductOptions().stream()
+                    .map(cartItemProductOption -> productOptionRepository.findByIdOrElseThrow(cartItemProductOption.getProductOption().getId()))
+                    .toList();
 
             Integer quantity = cartItem.getQuantity();
 
-            //decreaseProductQuantity(productOption.getId(), quantity);
-            int updatedRows = productOptionRepository.decreaseStock(productOption.getId(), quantity);
-            if (updatedRows == 0) {
-                log.error("🚨 재고 부족으로 주문 실패 - 상품 ID: {}, 요청 수량: {}", productOption.getId(), quantity);
-                throw new InvalidInputException(ErrorCode.CAN_NOT_USE_PRODUCT);
+            BigDecimal cartItemTotalPrice = BigDecimal.ZERO; // **각 CartItem별 개별 가격 계산**
+
+            for (ProductOption option : productOptions) {
+                int updatedRows = productOptionRepository.decreaseStock(option.getId(), quantity);
+                if (updatedRows == 0) {
+                    log.error("🚨 재고 부족으로 주문 실패 - 상품 옵션 ID: {}, 요청 수량: {}", option.getId(), quantity);
+                    throw new InvalidInputException(ErrorCode.CAN_NOT_USE_PRODUCT);
+                }
             }
 
-            // ✅ (2) 이후 쿠폰 적용 (첫 번째 아이템에서 적용 안 되는 원인 확인)
-            log.info("🎟 쿠폰 적용 시도 - 카트 아이템 ID: {}", cartItem.getId());
-            isUsedCoupon(user, cartItem);
+            try {
+                log.info("🎟 쿠폰 적용 시도 - 카트 아이템 ID: {}", cartItem.getId());
+                isUsedCoupon(user, cartItem);
+            } catch (Exception e) {
+                log.warn("⚠️ 쿠폰 적용 중 오류 발생. 카트 아이템 ID: {}", cartItem.getId());
+            }
 
-            BigDecimal discountPrice = cartItem.getDiscountedPrice() != null
-                    ? cartItem.getDiscountedPrice()
-                    : productOption.getProduct().getPrice().multiply(BigDecimal.valueOf(quantity));
+            for (ProductOption option : productOptions) {
+                BigDecimal optionPrice = option.getProduct().getPrice().multiply(BigDecimal.valueOf(quantity));
+                BigDecimal discountPrice = cartItem.getDiscountedPrice() != null
+                        ? cartItem.getDiscountedPrice().multiply(BigDecimal.valueOf(quantity))
+                        : optionPrice;
 
-            OrderItem orderItem = OrderItem.builder()
-                    .order(order)
-                    .price(productOption.getProduct().getPrice())
-                    .discountPrice(discountPrice)
-                    .product(productOption.getProduct())
-                    .productOption(productOption)
-                    .quantity(quantity)
-                    .build();
+                cartItemTotalPrice = cartItemTotalPrice.add(discountPrice); // **각 카트 아이템의 가격을 누적**
 
-            order.addOrderItem(orderItem);
-            log.info("✅ 주문 아이템 생성 완료 - 상품 ID: {}, 남은 재고: {}", productOption.getId(), productOption.getQuantity());
+                OrderItem orderItem = OrderItem.builder()
+                        .order(order)
+                        .price(option.getProduct().getPrice())
+                        .discountPrice(discountPrice)
+                        .product(option.getProduct())
+                        .productOption(option)
+                        .quantity(quantity)
+                        .build();
+
+                order.addOrderItem(orderItem);
+                log.info("✅ 주문 아이템 생성 완료 - 상품 옵션 ID: {}, 남은 재고: {}", option.getId(), option.getQuantity());
+            }
+
+            totalPrice = totalPrice.add(cartItemTotalPrice);
+
+            order.updateTotalPrice(totalPrice);
+            ordersRepository.save(order);
+
+            return OrdersResponseDto.toDto(order);
         }
 
+
+        order.updateTotalPrice(totalPrice); // ✅ 총 주문 가격 업데이트
+        List<Long> cartItemIds = cartItems.stream().map(CartItem::getId).toList();
+
+        ordersRepository.save(order);
+        cartItemProductOptionRepository.deleteByCartItemIds(cartItemIds);
         cartItemRepository.deleteAllInBatch(cartItems);
-        ordersRepository.saveAndFlush(order);
 
         log.info("✅ 전체 주문 완료 - 최종 재고 확인");
         return OrdersResponseDto.toDto(order);

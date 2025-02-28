@@ -59,6 +59,7 @@ public class CategoryServiceImpl implements CategoryService {
 
         Category findCategory = categoryRepository.findByIdOrElseThrow(categoryId);
         findCategory.update(dto.getName());
+        categoryRepository.save(findCategory);
         return CategoryResponseDto.toDto(findCategory);
     }
 }

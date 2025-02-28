@@ -72,7 +72,8 @@ public enum ErrorCode {
     COUPON_NOT_APPLIED("쿠폰이 적용되지 않았습니다.", HttpStatus.BAD_REQUEST),
     COUPON_DISCOUNT_PRICE_MISSING("쿠폰 할인 금액이 적용되지 않았습니다.", HttpStatus.BAD_REQUEST),
     ALREADY_CANCELED("이미 취소된 상품입니다", HttpStatus.BAD_REQUEST),
-    INVALID_PAYMENT_AMOUNT("결제금액이 맞지 않습니다.", HttpStatus.BAD_REQUEST);
+    INVALID_PAYMENT_AMOUNT("결제금액이 맞지 않습니다.", HttpStatus.BAD_REQUEST),
+    INVALID_PRODUCT_OPTION("옳지 않은 옵션 입니다.", HttpStatus.BAD_REQUEST);
 
 
     private final String message;

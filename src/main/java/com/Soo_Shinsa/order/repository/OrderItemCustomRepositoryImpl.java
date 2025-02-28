@@ -36,7 +36,7 @@ public class OrderItemCustomRepositoryImpl implements OrderItemCustomRepository{
         }
 
         if (dateRequestDto.getEndDate() != null) {
-            builder.and(orders.createdAt.loe(Timestamp.valueOf(dateRequestDto.getEndDate().atStartOfDay())));
+            builder.and(orders.createdAt.loe(Timestamp.valueOf(dateRequestDto.getEndDate().atTime(23, 59, 59))));
         }
 
         // 실제 데이터를 가져옴

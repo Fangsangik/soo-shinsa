@@ -11,11 +11,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
 @NoArgsConstructor
-@Table(name = "cartitems")
 public class CartItem extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,12 +26,8 @@ public class CartItem extends BaseTimeEntity {
     private Integer quantity;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "users_id")
+    @JoinColumn(name = "user_id")
     private User user;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "productoption_Id", nullable = false)
-    private ProductOption productOption;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
@@ -42,12 +39,14 @@ public class CartItem extends BaseTimeEntity {
 
     private BigDecimal discountedPrice;
 
+    // ✅ 여러 개의 옵션을 저장하는 리스트
+    @OneToMany(mappedBy = "cartItem", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CartItemProductOption> productOptions = new ArrayList<>();
 
     @Builder
-    public CartItem(Integer quantity, User user, ProductOption productOption, Product product, Coupon coupon, BigDecimal discountedPrice) {
+    public CartItem(Integer quantity, User user, Product product, Coupon coupon, BigDecimal discountedPrice) {
         this.quantity = quantity;
         this.user = user;
-        this.productOption = productOption;
         this.product = product;
         this.coupon = coupon;
         this.discountedPrice = discountedPrice;
@@ -57,7 +56,6 @@ public class CartItem extends BaseTimeEntity {
         if (quantity < 1) {
             throw new IllegalArgumentException("수량은 1개 이상이어야 합니다.");
         }
-
         this.quantity = quantity;
     }
 
@@ -68,5 +66,10 @@ public class CartItem extends BaseTimeEntity {
 
     public void applyCoupon(Coupon coupon) {
         this.coupon = coupon; // 쿠폰 정보 저장
+    }
+
+    // ✅ 상품 옵션 추가하는 메서드
+    public void addProductOption(ProductOption productOption) {
+        this.productOptions.add(new CartItemProductOption(this, productOption));
     }
 }
