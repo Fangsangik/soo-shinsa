@@ -26,17 +26,6 @@ import org.springframework.web.bind.annotation.*;
 public class OrderItemController {
     private final OrderItemService orderItemService;
 
-    //오더 아이템 생성
-    @PostMapping
-    @Operation(summary = "주문 아이템 생성", description = "새로운 주문 아이템을 생성합니다.")
-    public ResponseEntity<CommonResponse<OrderItemResponseDto>> createOrderItem(@Valid @RequestBody OrderItemRequestDto requestDto,
-                                                                               @AuthenticationPrincipal UserDetails userDetails) {
-        User user = UserUtils.getUser(userDetails);
-        OrderItemResponseDto orderItem = orderItemService.createOrderItem(requestDto, user);
-        CommonResponse<OrderItemResponseDto> response = new CommonResponse<>(ResponseMessage.ORDER_ITEM_CREATE_SUCCESS, orderItem);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
     //특정유저의 특정 오더아이템 읽기
     @GetMapping("/{OrderItemsId}")
     @Operation(summary = "주문 아이템 조회", description = "특정 주문 아이템을 조회합니다.")

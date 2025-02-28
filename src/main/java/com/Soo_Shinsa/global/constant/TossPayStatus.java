@@ -4,9 +4,10 @@ import lombok.Getter;
 
 @Getter
 public enum TossPayStatus {
-    CANCELED("취소"),
-    READY("준비"),
-    DONE("완료");
+    PENDING("결제 대기"),
+    PAYMENT("결제 완료"),
+    CANCEL("결제 취소"),
+    REFUND("환불 완료");
 
     private String message;
 

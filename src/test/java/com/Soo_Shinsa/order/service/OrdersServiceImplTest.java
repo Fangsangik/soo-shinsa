@@ -28,6 +28,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -204,6 +205,7 @@ class OrdersServiceImplTest {
         couponBrandRelationRepository.save(wrongBrandRelation);
     }
 
+    @Transactional
     @Test
     void testConcurrentStockReduction() throws InterruptedException {
         log.info("상품 재고 동시성 test");
@@ -236,6 +238,7 @@ class OrdersServiceImplTest {
         Assertions.assertEquals(0, left.getQuantity());
     }
 
+    @Transactional
     @Test
     void createSingleOrderCartItemWithMultipleUsers() throws InterruptedException {
         int stockQuantity = 10;
@@ -316,6 +319,7 @@ class OrdersServiceImplTest {
      *
      * @throws InterruptedException
      */
+    @Transactional
     @Test
     void applyDifferentCouponsAndCreateOrderConcurrently() throws InterruptedException {
         couponRepository.deleteAll();

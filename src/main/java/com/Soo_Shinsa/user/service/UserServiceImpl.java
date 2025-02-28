@@ -21,7 +21,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,6 +28,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import static com.Soo_Shinsa.global.exception.ErrorCode.*;
 
 @Slf4j
 @Service
@@ -38,7 +39,6 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final GradeRepository gradeRepository;
     private final UserGradeRepository userGradeRepository;
-    private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
     private final JwtAccessTokenService jwtAccessTokenService;
@@ -53,7 +53,7 @@ public class UserServiceImpl implements UserService {
         //검증
         //중복체크
         if (userRepository.existsByEmail(dto.getEmail())) {
-            throw new NoAuthorizedException(EMAIL_EXIST);
+            throw new NoAuthorizedException(ErrorCode.EMAIL_EXIST);
         }
 
         //user 생성

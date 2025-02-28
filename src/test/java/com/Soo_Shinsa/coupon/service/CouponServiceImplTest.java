@@ -21,6 +21,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -67,6 +68,10 @@ class CouponServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        couponRepository.deleteAll();
+        userRepository.deleteAll();
+        brandRepository.deleteAll();
+
         testUser = User.builder()
                 .email("test@test.com")
                 .password("password")
@@ -124,6 +129,7 @@ class CouponServiceImplTest {
 
     }
 
+    @Transactional
     @Test
     void 병렬_쿠폰_발급_테스트() throws InterruptedException {
         int threadCount = 10; // 동시에 실행할 요청 수
@@ -155,6 +161,7 @@ class CouponServiceImplTest {
         assertEquals(1, coupon.getIssuedCount()); // issuedCount도 10이어야 함
     }
 
+    @Transactional
     //5000건 정도 넣으니 테스트가 도중에 안돌아감
     @Test
     void 병렬_쿠폰_발급_테스트_선착순() throws InterruptedException {

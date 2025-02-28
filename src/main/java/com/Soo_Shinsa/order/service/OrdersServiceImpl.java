@@ -8,6 +8,7 @@ import com.Soo_Shinsa.coupon.repository.CouponRepository;
 import com.Soo_Shinsa.coupon.repository.CouponUserRepository;
 import com.Soo_Shinsa.global.constant.OrdersStatus;
 import com.Soo_Shinsa.global.constant.ProductStatus;
+import com.Soo_Shinsa.global.constant.TossPayStatus;
 import com.Soo_Shinsa.global.exception.ErrorCode;
 import com.Soo_Shinsa.global.exception.InternalServerException;
 import com.Soo_Shinsa.global.exception.InvalidInputException;
@@ -17,13 +18,16 @@ import com.Soo_Shinsa.order.dto.OrderDateRequestDto;
 import com.Soo_Shinsa.order.dto.OrdersResponseDto;
 import com.Soo_Shinsa.order.model.OrderItem;
 import com.Soo_Shinsa.order.model.Orders;
+import com.Soo_Shinsa.order.model.Payment;
 import com.Soo_Shinsa.order.repository.OrdersRepository;
+import com.Soo_Shinsa.order.repository.PaymentRepository;
 import com.Soo_Shinsa.product.aop.StockLock;
 import com.Soo_Shinsa.product.model.Product;
 import com.Soo_Shinsa.product.model.ProductOption;
 import com.Soo_Shinsa.product.repository.ProductOptionRepository;
 import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.user.repository.UserRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -46,6 +50,8 @@ public class OrdersServiceImpl implements OrdersService {
     private final CouponUserRepository couponUserRepository;
     private final ProductOptionRepository productOptionRepository;
     private final CouponRepository couponRepository;
+    private final PaymentRepository paymentRepository;
+    private final TossPaymentsService tossPaymentsService;
 
 
     @Override
@@ -98,7 +104,7 @@ public class OrdersServiceImpl implements OrdersService {
         Orders order = Orders.builder()
                 .user(user)
                 .totalPrice(totalPrice)
-                .status(OrdersStatus.ORDERCOMPLETED)
+                .status(OrdersStatus.PENDING)
                 .build();
 
 
@@ -106,7 +112,7 @@ public class OrdersServiceImpl implements OrdersService {
                 .order(order)
                 .product(product)
                 .productOption(productOption)
-                .price(productOption.getProduct().getPrice())
+                .price(order.getTotalPrice())
                 .quantity(quantity)
                 .build();
 
@@ -148,14 +154,14 @@ public class OrdersServiceImpl implements OrdersService {
                 .totalPrice(cartItem.getDiscountedPrice() != null
                         ? cartItem.getDiscountedPrice()
                         : product.getPrice().multiply(BigDecimal.valueOf(cartItem.getQuantity())))
-                .status(OrdersStatus.ORDERCOMPLETED)
+                .status(OrdersStatus.PENDING)
                 .build();
 
         OrderItem orderItem = OrderItem.builder()
                 .order(order)
                 .price(product.getPrice())
                 .productOption(productOption)
-                .discountPrice(cartItem.getDiscountedPrice())
+                .price(order.getTotalPrice())
                 .product(product)
                 .quantity(cartItem.getQuantity())
                 .build();
@@ -179,9 +185,12 @@ public class OrdersServiceImpl implements OrdersService {
             throw new NotFoundException(ErrorCode.NOT_FOUND_CART);
         }
 
+        BigDecimal totalPrice = BigDecimal.ZERO; // 총 주문 금액 초기화
+
         Orders order = Orders.builder()
                 .user(user)
-                .status(OrdersStatus.ORDERCOMPLETED)
+                .totalPrice(totalPrice) // 초기값
+                .status(OrdersStatus.PENDING)
                 .build();
 
         for (CartItem cartItem : cartItems) {
@@ -193,7 +202,6 @@ public class OrdersServiceImpl implements OrdersService {
 
             Integer quantity = cartItem.getQuantity();
 
-            // ✅ (1) 재고 먼저 감소 (비관적 락 활용)
             //decreaseProductQuantity(productOption.getId(), quantity);
             int updatedRows = productOptionRepository.decreaseStock(productOption.getId(), quantity);
             if (updatedRows == 0) {
@@ -270,19 +278,6 @@ public class OrdersServiceImpl implements OrdersService {
     }
 
 
-    @Transactional
-    public void decreaseProductQuantity(Long productOptionId, Integer quantity) {
-        log.info("🔽 [재고 차감 요청] 상품 ID: {}, 요청 수량: {}", productOptionId, quantity);
-
-        int updatedRows = productOptionRepository.decreaseStock(productOptionId, quantity);
-        if (updatedRows == 0) {
-            log.error("🚨 재고 부족으로 주문 실패 - 상품 ID: {}, 요청 수량: {}", productOptionId, quantity);
-            throw new InvalidInputException(ErrorCode.CAN_NOT_USE_PRODUCT);
-        }
-
-        log.info("✅ 재고 차감 완료 - 상품 ID: {}", productOptionId);
-    }
-
 //    @Transactional
 //    public void decreaseProductQuantity(Long productOptionId, Integer quantity) {
 //        ProductOption productOption = productOptionRepository.findByIdWithLock(productOptionId)
@@ -306,22 +301,6 @@ public class OrdersServiceImpl implements OrdersService {
 
     @Transactional
     @Override
-    public OrdersResponseDto createOrder(User user) {
-
-        Orders order = Orders.builder()
-                .totalPrice(BigDecimal.ZERO)
-                .user(user)
-                .status(OrdersStatus.BEFOREPAYMENT)
-                .build();
-
-        Orders savedOrder = ordersRepository.save(order);
-
-
-        return OrdersResponseDto.toDto(savedOrder);
-    }
-
-    @Transactional
-    @Override
     public OrdersResponseDto updateOrder(User user, Long orderId, OrdersStatus status) {
 
         User findUser = userRepository.findByIdOrElseThrow(user.getUserId());
@@ -332,4 +311,28 @@ public class OrdersServiceImpl implements OrdersService {
         Orders savedOrder = ordersRepository.save(findOrder);
         return OrdersResponseDto.toDto(savedOrder);
     }
+
+    @Transactional
+    public void cancelOrder(User user, Long orderId) throws JsonProcessingException {
+        // 사용자 및 주문 조회
+        User findUser = userRepository.findByIdOrElseThrow(user.getUserId());
+        Orders findOrder = ordersRepository.findByIdOrElseThrow(orderId);
+
+        // 주문이 해당 사용자에게 속하는지 검증
+        EntityValidator.validateAndOrders(findOrder, findUser.getUserId());
+
+        // 결제 정보 조회
+        Payment payment = paymentRepository.findByOrderId(findOrder.getOrderId());
+
+        if (payment != null && payment.getStatus() == TossPayStatus.PAYMENT) {
+            // 결제 완료 상태라면 결제 취소 실행
+            tossPaymentsService.cancelPayment(payment.getPaymentKey(), "사용자 주문 취소");
+        }
+
+        // 주문 상태 변경
+        findOrder.updateStatus(OrdersStatus.ORDERCANCEL);
+        ordersRepository.save(findOrder);
+    }
+
+
 }

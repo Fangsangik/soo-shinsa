@@ -3,6 +3,8 @@ package com.Soo_Shinsa.order.service;
 import com.Soo_Shinsa.global.constant.OrdersStatus;
 import com.Soo_Shinsa.global.constant.TossPayMethod;
 import com.Soo_Shinsa.global.constant.TossPayStatus;
+import com.Soo_Shinsa.global.exception.ErrorCode;
+import com.Soo_Shinsa.global.exception.InvalidInputException;
 import com.Soo_Shinsa.order.dto.PayloadRequestDto;
 import com.Soo_Shinsa.order.dto.PaymentRequestDto;
 import com.Soo_Shinsa.order.dto.PaymentResponseDto;
@@ -22,14 +24,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
 import java.util.Base64;
 
-import static com.Soo_Shinsa.global.constant.OrdersStatus.PAYMENTCOMPLETED;
+import static com.Soo_Shinsa.global.constant.OrdersStatus.ORDERCOMPLETED;
 
 
 @Service
@@ -52,10 +54,13 @@ public class TossPaymentsServiceImpl implements TossPaymentsService {
         Orders order = ordersRepository.findById(requestDto.getOrder())
                 .orElseThrow(() -> new IllegalArgumentException("오더가 없습니다"));
 
+        order.updateStatus(OrdersStatus.ORDERCOMPLETED);
+        ordersRepository.save(order);
+
         Payment payment = new Payment(
                 order.getOrderId(),
                 order.getTotalPrice(),
-                TossPayStatus.READY,
+                TossPayStatus.PENDING,
                 TossPayMethod.CARD,
                 order,
                 user
@@ -73,18 +78,32 @@ public class TossPaymentsServiceImpl implements TossPaymentsService {
         headers.set("Authorization", "Basic " + Base64.getEncoder().encodeToString((secretKey + ":").getBytes()));
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        Payment findPayment = paymentRepository.findByOrderId(orderId);
-        findPayment.update(TossPayStatus.DONE, paymentKey);
-        paymentRepository.save(findPayment);
+        Orders order = ordersRepository.findByOrderId(orderId);
+        Payment payment = paymentRepository.findByOrderId(orderId);
+
+        BigDecimal orderTotalPrice = order.getTotalPrice();
+        BigDecimal paymentAmount = BigDecimal.valueOf(amount);
+
+        // 결제 금액이 주문 금액보다 크면 예외 발생
+        if (paymentAmount.compareTo(orderTotalPrice) > 0) {
+            throw new InvalidInputException(ErrorCode.INVALID_PAYMENT_AMOUNT);
+        }
+
+        // 결제 금액이 정확히 일치하지 않으면 예외 발생
+        if (paymentAmount.compareTo(orderTotalPrice) != 0) {
+            throw new InvalidInputException(ErrorCode.INVALID_PAYMENT_AMOUNT);
+        }
+
+
+        payment.update(TossPayStatus.PAYMENT, paymentKey);
+        paymentRepository.save(payment);
+
+        order.updateStatus(ORDERCOMPLETED);
+        ordersRepository.save(order);
 
         PayloadRequestDto payload = new PayloadRequestDto(orderId, String.valueOf(amount));
         HttpEntity<String> request = new HttpEntity<>(objectMapper.writeValueAsString(payload), headers);
-        ResponseEntity<JsonNode> responseEntity = restTemplate.postForEntity(
-                "https://api.tosspayments.com/v1/payments/" + paymentKey, request, JsonNode.class);
-        Orders findOrder = ordersRepository.findByOrderId(orderId);
-        findOrder.updateStatus(PAYMENTCOMPLETED);
-        ordersRepository.save(findOrder);
-
+        restTemplate.postForEntity("https://api.tosspayments.com/v1/payments/" + paymentKey, request, JsonNode.class);
     }
 
     @Transactional
@@ -94,22 +113,24 @@ public class TossPaymentsServiceImpl implements TossPaymentsService {
         headers.set("Authorization", "Basic " + Base64.getEncoder().encodeToString((secretKey + ":").getBytes()));
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        Payment findPayment = paymentRepository.findByPaymentKey(paymentKey);
+        Payment payment = paymentRepository.findByPaymentKey(paymentKey);
+        Orders orders = ordersRepository.findByIdOrElseThrow(payment.getOrder().getId());
 
-        String orderId = findPayment.getOrderId();
-        Orders findOrder = ordersRepository.findByOrderId(orderId);
-        findOrder.updateStatus(OrdersStatus.RETURN);
-        ordersRepository.save(findOrder);
+        if (orders.getStatus() == OrdersStatus.ORDERCANCEL) {
+            throw new InvalidInputException(ErrorCode.ALREADY_CANCELED);
+        }
 
-        findPayment.update(TossPayStatus.CANCELED, paymentKey);
-        paymentRepository.save(findPayment);
+        orders.updateStatus(OrdersStatus.ORDERCANCEL);
+        ordersRepository.save(orders);
+
+        payment.update(TossPayStatus.CANCEL, paymentKey);
+        paymentRepository.save(payment);
 
         PayloadRequestDto payload = new PayloadRequestDto(cancelReason);
         HttpEntity<String> request = new HttpEntity<>(objectMapper.writeValueAsString(payload), headers);
 
         // API 호출
-        ResponseEntity<JsonNode> responseEntity = restTemplate.postForEntity(
-                "https://api.tosspayments.com/v1/payments/" + paymentKey + "/cancel", request, JsonNode.class);
+        restTemplate.postForEntity("https://api.tosspayments.com/v1/payments/" + paymentKey + "/cancel", request, JsonNode.class);
     }
 
 
