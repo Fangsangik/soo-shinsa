@@ -1,8 +1,8 @@
 package com.Soo_Shinsa.product.model;
 
 import com.Soo_Shinsa.brand.model.Brand;
-import com.Soo_Shinsa.constant.BaseTimeEntity;
-import com.Soo_Shinsa.constant.ProductStatus;
+import com.Soo_Shinsa.global.constant.BaseTimeEntity;
+import com.Soo_Shinsa.global.constant.ProductStatus;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;

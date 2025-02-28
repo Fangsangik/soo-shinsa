@@ -1,7 +1,7 @@
 package com.Soo_Shinsa.user.model;
 
-import com.Soo_Shinsa.constant.BaseTimeEntity;
-import com.Soo_Shinsa.constant.GradeType;
+import com.Soo_Shinsa.global.constant.BaseTimeEntity;
+import com.Soo_Shinsa.global.constant.GradeType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

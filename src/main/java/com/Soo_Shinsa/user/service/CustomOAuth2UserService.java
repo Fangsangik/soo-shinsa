@@ -1,6 +1,6 @@
 package com.Soo_Shinsa.user.service;
 
-import com.Soo_Shinsa.auth.JwtProvider;
+import com.Soo_Shinsa.global.auth.JwtProvider;
 import com.Soo_Shinsa.user.dto.KakaoUserInfoResponseDto;
 import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.user.repository.UserRepository;

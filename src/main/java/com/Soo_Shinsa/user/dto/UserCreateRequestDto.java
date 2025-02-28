@@ -1,7 +1,7 @@
 package com.Soo_Shinsa.user.dto;
 
-import com.Soo_Shinsa.constant.Role;
-import com.Soo_Shinsa.constant.UserStatus;
+import com.Soo_Shinsa.global.constant.Role;
+import com.Soo_Shinsa.global.constant.UserStatus;
 import com.Soo_Shinsa.user.model.User;
 import lombok.Builder;
 import lombok.Getter;

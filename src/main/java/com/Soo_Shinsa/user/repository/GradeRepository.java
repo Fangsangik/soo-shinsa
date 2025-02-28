@@ -1,6 +1,6 @@
 package com.Soo_Shinsa.user.repository;
 
-import com.Soo_Shinsa.constant.GradeType;
+import com.Soo_Shinsa.global.constant.GradeType;
 import com.Soo_Shinsa.user.model.Grade;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

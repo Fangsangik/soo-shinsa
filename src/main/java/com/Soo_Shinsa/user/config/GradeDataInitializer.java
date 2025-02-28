@@ -1,6 +1,6 @@
 package com.Soo_Shinsa.user.config;
 
-import com.Soo_Shinsa.constant.GradeType;
+import com.Soo_Shinsa.global.constant.GradeType;
 import com.Soo_Shinsa.user.model.Grade;
 import com.Soo_Shinsa.user.repository.GradeRepository;
 import org.springframework.boot.CommandLineRunner;

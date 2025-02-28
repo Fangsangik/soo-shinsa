@@ -1,6 +1,6 @@
 package com.Soo_Shinsa.review.model;
 
-import com.Soo_Shinsa.constant.BaseTimeEntity;
+import com.Soo_Shinsa.global.constant.BaseTimeEntity;
 import com.Soo_Shinsa.order.model.OrderItem;
 import com.Soo_Shinsa.product.model.Product;
 import com.Soo_Shinsa.user.model.User;

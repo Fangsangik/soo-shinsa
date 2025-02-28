@@ -1,7 +1,7 @@
 package com.Soo_Shinsa.order.dto;
 
-import com.Soo_Shinsa.constant.TossPayMethod;
-import com.Soo_Shinsa.constant.TossPayStatus;
+import com.Soo_Shinsa.global.constant.TossPayMethod;
+import com.Soo_Shinsa.global.constant.TossPayStatus;
 import com.Soo_Shinsa.order.model.Payment;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

@@ -1,6 +1,6 @@
 package com.Soo_Shinsa.review.repository;
 
-import com.Soo_Shinsa.exception.NotFoundException;
+import com.Soo_Shinsa.global.exception.NotFoundException;
 import com.Soo_Shinsa.review.dto.ReviewResponseDto;
 import com.Soo_Shinsa.review.model.Review;
 import org.springframework.data.domain.Page;
@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import static com.Soo_Shinsa.exception.ErrorCode.NOT_FOUND_REVIEW;
+import static com.Soo_Shinsa.global.exception.ErrorCode.NOT_FOUND_REVIEW;
 
 public interface ReviewRepository extends JpaRepository<Review, Long> {
 

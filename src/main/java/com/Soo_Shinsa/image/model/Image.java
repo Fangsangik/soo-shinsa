@@ -1,9 +1,9 @@
 package com.Soo_Shinsa.image.model;
 
-import com.Soo_Shinsa.constant.BaseTimeEntity;
-import com.Soo_Shinsa.constant.FilePath;
-import com.Soo_Shinsa.constant.TargetType;
-import com.Soo_Shinsa.utils.FileUtils;
+import com.Soo_Shinsa.global.constant.BaseTimeEntity;
+import com.Soo_Shinsa.global.constant.FilePath;
+import com.Soo_Shinsa.global.constant.TargetType;
+import com.Soo_Shinsa.global.utils.FileUtils;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

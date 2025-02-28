@@ -1,7 +1,7 @@
 package com.Soo_Shinsa.user.service;
 
-import com.Soo_Shinsa.auth.dto.JwtAuthResponseDto;
-import com.Soo_Shinsa.auth.dto.RefreshTokenRequestDto;
+import com.Soo_Shinsa.global.auth.dto.JwtAuthResponseDto;
+import com.Soo_Shinsa.global.auth.dto.RefreshTokenRequestDto;
 import com.Soo_Shinsa.user.dto.*;
 import com.Soo_Shinsa.user.model.User;
 import jakarta.servlet.http.HttpServletRequest;

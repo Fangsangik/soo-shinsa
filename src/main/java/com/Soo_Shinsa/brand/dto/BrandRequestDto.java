@@ -1,6 +1,6 @@
 package com.Soo_Shinsa.brand.dto;
 
-import com.Soo_Shinsa.constant.BrandStatus;
+import com.Soo_Shinsa.global.constant.BrandStatus;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;

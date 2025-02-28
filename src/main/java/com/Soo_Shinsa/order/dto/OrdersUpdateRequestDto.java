@@ -1,6 +1,6 @@
 package com.Soo_Shinsa.order.dto;
 
-import com.Soo_Shinsa.constant.OrdersStatus;
+import com.Soo_Shinsa.global.constant.OrdersStatus;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

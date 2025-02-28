@@ -1,7 +1,7 @@
 package com.Soo_Shinsa.product.dto;
 
 
-import com.Soo_Shinsa.constant.ProductStatus;
+import com.Soo_Shinsa.global.constant.ProductStatus;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;

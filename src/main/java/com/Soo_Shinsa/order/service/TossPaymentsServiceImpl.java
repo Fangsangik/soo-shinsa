@@ -1,8 +1,8 @@
 package com.Soo_Shinsa.order.service;
 
-import com.Soo_Shinsa.constant.OrdersStatus;
-import com.Soo_Shinsa.constant.TossPayMethod;
-import com.Soo_Shinsa.constant.TossPayStatus;
+import com.Soo_Shinsa.global.constant.OrdersStatus;
+import com.Soo_Shinsa.global.constant.TossPayMethod;
+import com.Soo_Shinsa.global.constant.TossPayStatus;
 import com.Soo_Shinsa.order.dto.PayloadRequestDto;
 import com.Soo_Shinsa.order.dto.PaymentRequestDto;
 import com.Soo_Shinsa.order.dto.PaymentResponseDto;
@@ -29,7 +29,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.Base64;
 
-import static com.Soo_Shinsa.constant.OrdersStatus.PAYMENTCOMPLETED;
+import static com.Soo_Shinsa.global.constant.OrdersStatus.PAYMENTCOMPLETED;
 
 
 @Service

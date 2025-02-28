@@ -1,8 +1,8 @@
 package com.Soo_Shinsa.category.repository;
 
 import com.Soo_Shinsa.category.model.SubCategory;
-import com.Soo_Shinsa.exception.ErrorCode;
-import com.Soo_Shinsa.exception.NotFoundException;
+import com.Soo_Shinsa.global.exception.ErrorCode;
+import com.Soo_Shinsa.global.exception.NotFoundException;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SubCategoryRepository extends JpaRepository<SubCategory, Long> {

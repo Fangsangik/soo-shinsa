@@ -1,6 +1,6 @@
 package com.Soo_Shinsa.user.repository;
 
-import com.Soo_Shinsa.exception.NotFoundException;
+import com.Soo_Shinsa.global.exception.NotFoundException;
 import com.Soo_Shinsa.user.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -8,7 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
-import static com.Soo_Shinsa.exception.ErrorCode.NOT_FOUND_USER;
+import static com.Soo_Shinsa.global.exception.ErrorCode.NOT_FOUND_USER;
 
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);

@@ -1,13 +1,13 @@
 package com.Soo_Shinsa.order.controller;
 
 
+import com.Soo_Shinsa.global.utils.UserUtils;
 import com.Soo_Shinsa.order.dto.PaymentCancelDto;
 import com.Soo_Shinsa.order.dto.PaymentRequestDto;
 import com.Soo_Shinsa.order.dto.PaymentResponseDto;
 import com.Soo_Shinsa.order.dto.UserOrderDTO;
 import com.Soo_Shinsa.order.service.TossPaymentsService;
 import com.Soo_Shinsa.user.model.User;
-import com.Soo_Shinsa.utils.UserUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

@@ -1,6 +1,6 @@
 package com.Soo_Shinsa.coupon.dto;
 
-import com.Soo_Shinsa.constant.CouponType;
+import com.Soo_Shinsa.global.constant.CouponType;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

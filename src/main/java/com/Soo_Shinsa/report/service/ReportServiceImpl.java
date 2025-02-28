@@ -1,10 +1,11 @@
 package com.Soo_Shinsa.report.service;
 
 import com.Soo_Shinsa.brand.repository.BrandRepository;
-import com.Soo_Shinsa.constant.ReportStatus;
-import com.Soo_Shinsa.constant.TargetType;
-import com.Soo_Shinsa.exception.ErrorCode;
-import com.Soo_Shinsa.exception.NotFoundException;
+import com.Soo_Shinsa.global.constant.ReportStatus;
+import com.Soo_Shinsa.global.constant.TargetType;
+import com.Soo_Shinsa.global.exception.ErrorCode;
+import com.Soo_Shinsa.global.exception.NotFoundException;
+import com.Soo_Shinsa.global.utils.EntityValidator;
 import com.Soo_Shinsa.product.repository.ProductRepository;
 import com.Soo_Shinsa.report.dto.ReportProcessDto;
 import com.Soo_Shinsa.report.dto.ReportRequestDto;
@@ -13,7 +14,6 @@ import com.Soo_Shinsa.report.model.Report;
 import com.Soo_Shinsa.report.repository.ReportRepository;
 import com.Soo_Shinsa.review.repository.ReviewRepository;
 import com.Soo_Shinsa.user.model.User;
-import com.Soo_Shinsa.utils.EntityValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

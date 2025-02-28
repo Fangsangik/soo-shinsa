@@ -1,7 +1,7 @@
 package com.Soo_Shinsa.product.repository;
 
-import com.Soo_Shinsa.exception.ErrorCode;
-import com.Soo_Shinsa.exception.InvalidInputException;
+import com.Soo_Shinsa.global.exception.ErrorCode;
+import com.Soo_Shinsa.global.exception.InvalidInputException;
 import com.Soo_Shinsa.product.dto.FindProductOptionRequestDto;
 import com.Soo_Shinsa.product.dto.ProductOptionResponseDto;
 import com.Soo_Shinsa.product.model.QProductOption;

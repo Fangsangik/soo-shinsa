@@ -1,6 +1,6 @@
 package com.Soo_Shinsa.statistics.dto;
 
-import com.Soo_Shinsa.constant.PeriodType;
+import com.Soo_Shinsa.global.constant.PeriodType;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

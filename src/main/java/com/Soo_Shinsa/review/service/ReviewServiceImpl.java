@@ -1,6 +1,7 @@
 package com.Soo_Shinsa.review.service;
 
-import com.Soo_Shinsa.constant.TargetType;
+import com.Soo_Shinsa.global.constant.TargetType;
+import com.Soo_Shinsa.global.utils.EntityValidator;
 import com.Soo_Shinsa.image.model.Image;
 import com.Soo_Shinsa.image.service.ImageService;
 import com.Soo_Shinsa.order.model.OrderItem;
@@ -14,7 +15,6 @@ import com.Soo_Shinsa.review.dto.ReviewUpdateDto;
 import com.Soo_Shinsa.review.model.Review;
 import com.Soo_Shinsa.review.repository.ReviewRepository;
 import com.Soo_Shinsa.user.model.User;
-import com.Soo_Shinsa.utils.EntityValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

@@ -1,6 +1,6 @@
 package com.Soo_Shinsa.user.model;
 
-import com.Soo_Shinsa.constant.BaseCreatedTimeEntity;
+import com.Soo_Shinsa.global.constant.BaseCreatedTimeEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
