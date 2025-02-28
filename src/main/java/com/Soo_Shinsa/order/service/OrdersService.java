@@ -4,6 +4,7 @@ import com.Soo_Shinsa.global.constant.OrdersStatus;
 import com.Soo_Shinsa.order.dto.OrderDateRequestDto;
 import com.Soo_Shinsa.order.dto.OrdersResponseDto;
 import com.Soo_Shinsa.user.model.User;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.data.domain.Page;
 
 public interface OrdersService {
@@ -12,7 +13,6 @@ public interface OrdersService {
     OrdersResponseDto createSingleProductOrder(User user, Long productId, Integer quantity);
     OrdersResponseDto createAllOrderFromCart(User user);
     OrdersResponseDto createSingleOrderCartItem (User user, Long cartItemId);
-    OrdersResponseDto createOrder (User user);
-
+    void cancelOrder(User user, Long orderId) throws JsonProcessingException;
     OrdersResponseDto updateOrder (User user, Long orderId, OrdersStatus status);
 }

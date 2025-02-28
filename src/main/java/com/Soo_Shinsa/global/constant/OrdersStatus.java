@@ -4,20 +4,9 @@ import lombok.Getter;
 
 @Getter
 public enum OrdersStatus {
-    BEFOREPAYMENT("결제 전"),
-    PAYMENTCOMPLETED("결제 완료"),
-    ONDELIVERY("배송 시작"),
-    DELIVERYCOMPLETED("배송 완료"),
+    ORDERCANCEL("주문 취소"),
     ORDERCOMPLETED("주문 완료"),
-    CANCEL("취소 신청"),
-    RETURN("취소 완료"),
-    REQUESTFORRETURN("반품 신청"),
-    RETURNCOMPLETED("반품 완료"),
-    CANCELRETURN("반품 취소"),
-    APPLYFOREXCHANGE("교환 신청"),
-    COMPLETEDEXCHANGE("교환 완료"),
-    EXCHANGECANCELLATION("교환 취소");
-
+    PENDING("결제 대기"),;
     private final String message;
 
     OrdersStatus(String message) {

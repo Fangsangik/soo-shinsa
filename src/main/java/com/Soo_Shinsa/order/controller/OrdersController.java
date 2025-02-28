@@ -10,6 +10,7 @@ import com.Soo_Shinsa.order.dto.OrdersUpdateRequestDto;
 import com.Soo_Shinsa.order.service.OrdersService;
 import com.Soo_Shinsa.product.dto.SingleProductOrderRequestDto;
 import com.Soo_Shinsa.user.model.User;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -74,16 +75,6 @@ public class OrdersController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    //오더 단일 생성
-    @PostMapping
-    @Operation(summary = "주문 생성", description = "새로운 주문을 생성합니다.")
-    public ResponseEntity<CommonResponse<OrdersResponseDto>> createOrder(@AuthenticationPrincipal UserDetails userDetails) {
-        User user = UserUtils.getUser(userDetails);
-        OrdersResponseDto responseDto = ordersService.createOrder(user);
-        CommonResponse<OrdersResponseDto> response = new CommonResponse<>(ResponseMessage.ORDER_CREATE_SUCCESS, responseDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
     //오더 수정
     @PatchMapping
     @Operation(summary = "주문 수정", description = "주문의 상태를 수정합니다.")
@@ -105,4 +96,14 @@ public class OrdersController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+
+    @PostMapping("{orderId}/cancel")
+    @Operation(summary = "주문 취소", description = "주문을 취소합니다.")
+    public ResponseEntity<CommonResponse<String>> cancelOrder(@AuthenticationPrincipal UserDetails userDetails,
+                                                              @PathVariable Long orderId) throws JsonProcessingException {
+        User user = UserUtils.getUser(userDetails);
+        ordersService.cancelOrder(user, orderId);
+        CommonResponse<String> response = new CommonResponse<>(ResponseMessage.ORDER_CANCEL_SUCCESS, "주문이 취소되었습니다.");
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
 }
