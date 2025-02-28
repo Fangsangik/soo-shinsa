@@ -207,6 +207,7 @@ class CartItemServiceImplTest {
         log.info("✅ 쿠폰 적용 결과 : {}", response.getDiscountedPrice());
     }
 
+    @Transactional
     @Test
     void inValidCoupon() {
         log.info("🚨 inValidCoupon 테스트 시작");

@@ -41,20 +41,22 @@ dependencies {
     // Spring Batch
     implementation 'org.springframework.boot:spring-boot-starter-batch'
 
-    implementation 'com.querydsl:querydsl-jpa:5.0.0'
-    annotationProcessor "com.querydsl:querydsl-apt:5.0.0:jpa"
+    // Quartz (스케줄링)
+    implementation 'org.springframework.boot:spring-boot-starter-quartz'
+
+    implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
+    annotationProcessor "com.querydsl:querydsl-apt:5.0.0:jakarta"
     annotationProcessor "jakarta.annotation:jakarta.annotation-api"
     annotationProcessor "jakarta.persistence:jakarta.persistence-api"
 
     //web
     implementation 'org.springframework.boot:spring-boot-starter-web'
-
+    //lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
     //mysql
     runtimeOnly 'com.mysql:mysql-connector-j'
-
-    compileOnly 'org.projectlombok:lombok:1.18.30'
-    annotationProcessor 'org.projectlombok:lombok:1.18.30'
-
+    annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -72,7 +74,6 @@ dependencies {
 
     // aws
     implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
-
     // Spring Batch
     implementation 'org.springframework.boot:spring-boot-starter-batch'
 
@@ -83,9 +84,6 @@ dependencies {
     //mybatis
     implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.4'
     testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:3.0.4'
-
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
 }
