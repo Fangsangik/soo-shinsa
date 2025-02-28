@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Getter
 @NoArgsConstructor
 public class CartItemRequestDto {
@@ -15,11 +17,11 @@ public class CartItemRequestDto {
     private Integer quantity;
 
     @NotNull(message = "상품 옵션 아이디를 입력해주세요.")
-    private Long productOptionId;
+    private List<Long> productOptionIds;
 
-    public CartItemRequestDto(Long productId, Integer quantity, Long productOptionId) {
+    public CartItemRequestDto(Long productId, Integer quantity, List<Long> productOptionIds) {
         this.productId = productId;
         this.quantity = quantity;
-        this.productOptionId = productOptionId;
+        this.productOptionIds = productOptionIds;
     }
 }

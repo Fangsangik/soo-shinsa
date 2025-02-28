@@ -31,12 +31,12 @@ public class CategoryController {
     @PostMapping
     @Operation(summary = "카테고리 생성", description = "새로운 카테고리를 생성합니다.")
     public ResponseEntity<CommonResponse<CategoryResponseDto>> create(@AuthenticationPrincipal UserDetails userDetails,
-                                                                     @Valid @RequestBody CategoryRequestDto dto
+                                                                      @Valid @RequestBody CategoryRequestDto dto
     ) {
         User user = UserUtils.getUser(userDetails);
         CategoryResponseDto saved = categoryService.create(user, dto);
 
-        CommonResponse<CategoryResponseDto> response = new CommonResponse<>(ResponseMessage.CATEGORY_CREATE_SUCCESS,saved);
+        CommonResponse<CategoryResponseDto> response = new CommonResponse<>(ResponseMessage.CATEGORY_CREATE_SUCCESS, saved);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -44,28 +44,28 @@ public class CategoryController {
     @Operation(summary = "카테고리 조회", description = "특정 카테고리를 조회합니다.")
     public ResponseEntity<CommonResponse<CategoryResponseDto>> findById(@PathVariable Long categoryId) {
         CategoryResponseDto findCategory = categoryService.findById(categoryId);
-        CommonResponse<CategoryResponseDto> response = new CommonResponse<>(ResponseMessage.CATEGORY_SELECT_SUCCESS,findCategory);
+        CommonResponse<CategoryResponseDto> response = new CommonResponse<>(ResponseMessage.CATEGORY_SELECT_SUCCESS, findCategory);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
     @GetMapping
     @Operation(summary = "전체 카테고리 조회", description = "모든 카테고리를 페이징하여 조회합니다.")
     public ResponseEntity<CommonResponse<Page<FindCategoryResponseDto>>> findAll(@RequestParam(defaultValue = "0") int page,
-                                                                 @RequestParam(defaultValue = "10") int size) {
+                                                                                 @RequestParam(defaultValue = "10") int size) {
         Page<FindCategoryResponseDto> findAll = categoryService.findAll(page, size);
-        CommonResponse<Page<FindCategoryResponseDto>> response = new CommonResponse<>(ResponseMessage.CATEGORY_SELECT_SUCCESS,findAll);
+        CommonResponse<Page<FindCategoryResponseDto>> response = new CommonResponse<>(ResponseMessage.CATEGORY_SELECT_SUCCESS, findAll);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
     @PatchMapping("/{categoryId}")
     @Operation(summary = "카테고리 수정", description = "카테고리를 수정합니다.")
     public ResponseEntity<CommonResponse<CategoryResponseDto>> update(@AuthenticationPrincipal UserDetails userDetails,
-                                                      @Valid @RequestBody CategoryUpdateRequestDto dto,
-                                                      @PathVariable Long categoryId
+                                                                      @Valid @RequestBody CategoryUpdateRequestDto dto,
+                                                                      @PathVariable Long categoryId
     ) {
         User user = UserUtils.getUser(userDetails);
         CategoryResponseDto update = categoryService.update(user, dto, categoryId);
-        CommonResponse<CategoryResponseDto> response = new CommonResponse<>(ResponseMessage.CATEGORY_UPDATE_SUCCESS,update);
+        CommonResponse<CategoryResponseDto> response = new CommonResponse<>(ResponseMessage.CATEGORY_UPDATE_SUCCESS, update);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 }

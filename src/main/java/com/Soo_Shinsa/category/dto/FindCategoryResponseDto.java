@@ -7,19 +7,13 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class FindCategoryResponseDto {
-
     private Long id;
-
-    private Long parentId;
-
     private String name;
-
-    private Long totalCount;
+    private Long totalCount; // 추가
 
     @Builder
-    public FindCategoryResponseDto(Long id, Long subCategoryId, Long parentId, String name, Long totalCount) {
+    public FindCategoryResponseDto(Long id, String name, Long totalCount) { // 순서 맞추기
         this.id = id;
-        this.parentId = parentId;
         this.name = name;
         this.totalCount = totalCount;
     }
