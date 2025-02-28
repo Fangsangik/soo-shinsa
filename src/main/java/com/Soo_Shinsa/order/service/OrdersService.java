@@ -1,6 +1,6 @@
 package com.Soo_Shinsa.order.service;
 
-import com.Soo_Shinsa.constant.OrdersStatus;
+import com.Soo_Shinsa.global.constant.OrdersStatus;
 import com.Soo_Shinsa.order.dto.OrderDateRequestDto;
 import com.Soo_Shinsa.order.dto.OrdersResponseDto;
 import com.Soo_Shinsa.user.model.User;

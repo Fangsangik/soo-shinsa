@@ -1,8 +1,9 @@
 package com.Soo_Shinsa.order.service;
 
-import com.Soo_Shinsa.constant.ProductStatus;
-import com.Soo_Shinsa.exception.ErrorCode;
-import com.Soo_Shinsa.exception.InternalServerException;
+import com.Soo_Shinsa.global.constant.ProductStatus;
+import com.Soo_Shinsa.global.exception.ErrorCode;
+import com.Soo_Shinsa.global.exception.InternalServerException;
+import com.Soo_Shinsa.global.utils.EntityValidator;
 import com.Soo_Shinsa.order.dto.OrderDateRequestDto;
 import com.Soo_Shinsa.order.dto.OrderItemRequestDto;
 import com.Soo_Shinsa.order.dto.OrderItemResponseDto;
@@ -16,7 +17,6 @@ import com.Soo_Shinsa.product.repository.ProductOptionRepository;
 import com.Soo_Shinsa.product.repository.ProductRepository;
 import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.user.repository.UserRepository;
-import com.Soo_Shinsa.utils.EntityValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -29,8 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.concurrent.TimeUnit;
 
-import static com.Soo_Shinsa.constant.OrdersStatus.BEFOREPAYMENT;
-import static com.Soo_Shinsa.exception.ErrorCode.ONLY_BEFORE_PAYMENT;
+import static com.Soo_Shinsa.global.constant.OrdersStatus.BEFOREPAYMENT;
+import static com.Soo_Shinsa.global.exception.ErrorCode.ONLY_BEFORE_PAYMENT;
 
 @Slf4j
 @Service

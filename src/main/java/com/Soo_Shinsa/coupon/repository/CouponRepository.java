@@ -1,8 +1,8 @@
 package com.Soo_Shinsa.coupon.repository;
 
 import com.Soo_Shinsa.coupon.model.Coupon;
-import com.Soo_Shinsa.exception.ErrorCode;
-import com.Soo_Shinsa.exception.NotFoundException;
+import com.Soo_Shinsa.global.exception.ErrorCode;
+import com.Soo_Shinsa.global.exception.NotFoundException;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

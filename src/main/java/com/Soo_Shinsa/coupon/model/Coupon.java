@@ -1,8 +1,8 @@
 package com.Soo_Shinsa.coupon.model;
 
-import com.Soo_Shinsa.constant.CouponType;
-import com.Soo_Shinsa.exception.ErrorCode;
-import com.Soo_Shinsa.exception.InternalServerException;
+import com.Soo_Shinsa.global.constant.CouponType;
+import com.Soo_Shinsa.global.exception.ErrorCode;
+import com.Soo_Shinsa.global.exception.InternalServerException;
 import com.Soo_Shinsa.product.model.Product;
 import jakarta.persistence.*;
 import lombok.Builder;

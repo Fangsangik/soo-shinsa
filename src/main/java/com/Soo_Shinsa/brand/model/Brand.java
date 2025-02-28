@@ -1,9 +1,9 @@
 package com.Soo_Shinsa.brand.model;
 
 import com.Soo_Shinsa.category.model.SubCategory;
-import com.Soo_Shinsa.constant.BaseTimeEntity;
-import com.Soo_Shinsa.constant.BrandStatus;
 import com.Soo_Shinsa.coupon.model.CouponBrandRelation;
+import com.Soo_Shinsa.global.constant.BaseTimeEntity;
+import com.Soo_Shinsa.global.constant.BrandStatus;
 import com.Soo_Shinsa.user.model.User;
 import jakarta.persistence.*;
 import lombok.Builder;

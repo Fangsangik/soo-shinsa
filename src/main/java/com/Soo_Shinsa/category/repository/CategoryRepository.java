@@ -1,10 +1,10 @@
 package com.Soo_Shinsa.category.repository;
 
 import com.Soo_Shinsa.category.model.Category;
-import com.Soo_Shinsa.exception.NotFoundException;
+import com.Soo_Shinsa.global.exception.NotFoundException;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import static com.Soo_Shinsa.exception.ErrorCode.NOT_FOUND_CATEGORY;
+import static com.Soo_Shinsa.global.exception.ErrorCode.NOT_FOUND_CATEGORY;
 
 public interface CategoryRepository extends JpaRepository<Category, Long>, CategoryCustomRepository {
 

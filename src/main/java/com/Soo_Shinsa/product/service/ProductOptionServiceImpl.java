@@ -1,7 +1,8 @@
 package com.Soo_Shinsa.product.service;
 
-import com.Soo_Shinsa.exception.ErrorCode;
-import com.Soo_Shinsa.exception.NotFoundException;
+import com.Soo_Shinsa.global.exception.ErrorCode;
+import com.Soo_Shinsa.global.exception.NotFoundException;
+import com.Soo_Shinsa.global.utils.EntityValidator;
 import com.Soo_Shinsa.product.dto.FindProductOptionRequestDto;
 import com.Soo_Shinsa.product.dto.ProductOptionRequestDto;
 import com.Soo_Shinsa.product.dto.ProductOptionResponseDto;
@@ -11,7 +12,6 @@ import com.Soo_Shinsa.product.model.ProductOption;
 import com.Soo_Shinsa.product.repository.ProductOptionRepository;
 import com.Soo_Shinsa.product.repository.ProductRepository;
 import com.Soo_Shinsa.user.model.User;
-import com.Soo_Shinsa.utils.EntityValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

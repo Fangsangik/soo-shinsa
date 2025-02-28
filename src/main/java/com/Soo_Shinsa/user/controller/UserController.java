@@ -1,16 +1,16 @@
 package com.Soo_Shinsa.user.controller;
 
-import com.Soo_Shinsa.auth.JwtAccessTokenService;
-import com.Soo_Shinsa.auth.JwtProvider;
-import com.Soo_Shinsa.auth.JwtRefreshTokenService;
-import com.Soo_Shinsa.auth.UserDetailsImp;
-import com.Soo_Shinsa.auth.dto.JwtAuthResponseDto;
-import com.Soo_Shinsa.auth.dto.RefreshTokenRequestDto;
+import com.Soo_Shinsa.global.auth.JwtAccessTokenService;
+import com.Soo_Shinsa.global.auth.JwtProvider;
+import com.Soo_Shinsa.global.auth.JwtRefreshTokenService;
+import com.Soo_Shinsa.global.auth.UserDetailsImp;
+import com.Soo_Shinsa.global.auth.dto.JwtAuthResponseDto;
+import com.Soo_Shinsa.global.auth.dto.RefreshTokenRequestDto;
+import com.Soo_Shinsa.global.utils.CommonResponse;
+import com.Soo_Shinsa.global.utils.ResponseMessage;
+import com.Soo_Shinsa.global.utils.UserUtils;
 import com.Soo_Shinsa.user.dto.*;
 import com.Soo_Shinsa.user.service.UserService;
-import com.Soo_Shinsa.utils.CommonResponse;
-import com.Soo_Shinsa.utils.ResponseMessage;
-import com.Soo_Shinsa.utils.UserUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;

@@ -1,15 +1,15 @@
 package com.Soo_Shinsa.review.controller;
 
-import com.Soo_Shinsa.auth.UserDetailsImp;
+import com.Soo_Shinsa.global.auth.UserDetailsImp;
+import com.Soo_Shinsa.global.utils.CommonResponse;
+import com.Soo_Shinsa.global.utils.ResponseMessage;
+import com.Soo_Shinsa.global.utils.UserUtils;
 import com.Soo_Shinsa.review.dto.ReviewRateDto;
 import com.Soo_Shinsa.review.dto.ReviewRequestDto;
 import com.Soo_Shinsa.review.dto.ReviewResponseDto;
 import com.Soo_Shinsa.review.dto.ReviewUpdateDto;
 import com.Soo_Shinsa.review.service.ReviewService;
 import com.Soo_Shinsa.user.model.User;
-import com.Soo_Shinsa.utils.CommonResponse;
-import com.Soo_Shinsa.utils.ResponseMessage;
-import com.Soo_Shinsa.utils.UserUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

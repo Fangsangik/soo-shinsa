@@ -1,10 +1,10 @@
 package com.Soo_Shinsa.order.repository;
 
-import com.Soo_Shinsa.exception.NotFoundException;
+import com.Soo_Shinsa.global.exception.NotFoundException;
 import com.Soo_Shinsa.order.model.OrderItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import static com.Soo_Shinsa.exception.ErrorCode.NOT_FOUND_ORDER_OPTION;
+import static com.Soo_Shinsa.global.exception.ErrorCode.NOT_FOUND_ORDER_OPTION;
 
 
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long>, OrderItemCustomRepository {

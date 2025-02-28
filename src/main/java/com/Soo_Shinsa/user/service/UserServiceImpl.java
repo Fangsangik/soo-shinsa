@@ -1,13 +1,14 @@
 package com.Soo_Shinsa.user.service;
 
-import com.Soo_Shinsa.auth.*;
-import com.Soo_Shinsa.auth.dto.JwtAuthResponseDto;
-import com.Soo_Shinsa.auth.dto.RefreshTokenRequestDto;
-import com.Soo_Shinsa.constant.AuthenticationScheme;
-import com.Soo_Shinsa.constant.GradeType;
-import com.Soo_Shinsa.constant.Role;
-import com.Soo_Shinsa.constant.UserStatus;
-import com.Soo_Shinsa.exception.*;
+import com.Soo_Shinsa.global.auth.*;
+import com.Soo_Shinsa.global.auth.dto.JwtAuthResponseDto;
+import com.Soo_Shinsa.global.auth.dto.RefreshTokenRequestDto;
+import com.Soo_Shinsa.global.constant.AuthenticationScheme;
+import com.Soo_Shinsa.global.constant.GradeType;
+import com.Soo_Shinsa.global.constant.Role;
+import com.Soo_Shinsa.global.constant.UserStatus;
+import com.Soo_Shinsa.global.exception.*;
+import com.Soo_Shinsa.global.utils.ResponseMessage;
 import com.Soo_Shinsa.user.dto.*;
 import com.Soo_Shinsa.user.model.Grade;
 import com.Soo_Shinsa.user.model.User;
@@ -16,7 +17,6 @@ import com.Soo_Shinsa.user.repository.GradeRepository;
 import com.Soo_Shinsa.user.repository.KakaoUserRepository;
 import com.Soo_Shinsa.user.repository.UserGradeRepository;
 import com.Soo_Shinsa.user.repository.UserRepository;
-import com.Soo_Shinsa.utils.ResponseMessage;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,8 +29,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import static com.Soo_Shinsa.exception.ErrorCode.*;
 
 @Slf4j
 @Service

@@ -1,6 +1,6 @@
 package com.Soo_Shinsa.statistics.service;
 
-import com.Soo_Shinsa.constant.StatisticsEnum;
+import com.Soo_Shinsa.global.constant.StatisticsEnum;
 import com.Soo_Shinsa.statistics.dto.StatisticsForSaleRequestDto;
 import com.Soo_Shinsa.statistics.dto.StatisticsHeaderResponseDto;
 import com.Soo_Shinsa.statistics.dto.StatisticsRequestDto;

@@ -1,10 +1,10 @@
 package com.Soo_Shinsa.image.service;
 
-import com.Soo_Shinsa.constant.TargetType;
-import com.Soo_Shinsa.exception.InvalidInputException;
+import com.Soo_Shinsa.global.constant.TargetType;
+import com.Soo_Shinsa.global.exception.InvalidInputException;
+import com.Soo_Shinsa.global.utils.S3Uploader;
 import com.Soo_Shinsa.image.model.Image;
 import com.Soo_Shinsa.image.repository.ImageRepository;
-import com.Soo_Shinsa.utils.S3Uploader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -13,7 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 
-import static com.Soo_Shinsa.exception.ErrorCode.FAIL_UPLOAD_FILE;
+import static com.Soo_Shinsa.global.exception.ErrorCode.FAIL_UPLOAD_FILE;
 
 @Slf4j
 @Service

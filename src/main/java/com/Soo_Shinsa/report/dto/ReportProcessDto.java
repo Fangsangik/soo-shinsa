@@ -1,6 +1,6 @@
 package com.Soo_Shinsa.report.dto;
 
-import com.Soo_Shinsa.constant.ReportStatus;
+import com.Soo_Shinsa.global.constant.ReportStatus;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

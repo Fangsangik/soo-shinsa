@@ -1,6 +1,6 @@
 package com.Soo_Shinsa.brand.dto;
 
-import com.Soo_Shinsa.constant.BrandStatus;
+import com.Soo_Shinsa.global.constant.BrandStatus;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 

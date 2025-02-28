@@ -1,8 +1,8 @@
 package com.Soo_Shinsa.user.dto;
 
-import com.Soo_Shinsa.constant.GradeType;
-import com.Soo_Shinsa.constant.Role;
-import com.Soo_Shinsa.constant.UserStatus;
+import com.Soo_Shinsa.global.constant.GradeType;
+import com.Soo_Shinsa.global.constant.Role;
+import com.Soo_Shinsa.global.constant.UserStatus;
 import com.Soo_Shinsa.user.model.User;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

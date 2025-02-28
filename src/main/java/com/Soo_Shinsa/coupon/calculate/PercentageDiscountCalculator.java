@@ -1,8 +1,8 @@
 package com.Soo_Shinsa.coupon.calculate;
 
 import com.Soo_Shinsa.coupon.model.Coupon;
-import com.Soo_Shinsa.exception.ErrorCode;
-import com.Soo_Shinsa.exception.InvalidInputException;
+import com.Soo_Shinsa.global.exception.ErrorCode;
+import com.Soo_Shinsa.global.exception.InvalidInputException;
 import com.Soo_Shinsa.product.model.Product;
 
 import java.math.BigDecimal;

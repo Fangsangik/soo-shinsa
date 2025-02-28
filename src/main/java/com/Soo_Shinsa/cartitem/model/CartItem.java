@@ -1,7 +1,7 @@
 package com.Soo_Shinsa.cartitem.model;
 
-import com.Soo_Shinsa.constant.BaseTimeEntity;
 import com.Soo_Shinsa.coupon.model.Coupon;
+import com.Soo_Shinsa.global.constant.BaseTimeEntity;
 import com.Soo_Shinsa.product.model.Product;
 import com.Soo_Shinsa.product.model.ProductOption;
 import com.Soo_Shinsa.user.model.User;

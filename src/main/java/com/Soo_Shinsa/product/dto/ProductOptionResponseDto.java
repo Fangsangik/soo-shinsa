@@ -1,6 +1,6 @@
 package com.Soo_Shinsa.product.dto;
 
-import com.Soo_Shinsa.constant.ProductStatus;
+import com.Soo_Shinsa.global.constant.ProductStatus;
 import com.Soo_Shinsa.product.model.ProductOption;
 import lombok.Builder;
 import lombok.Getter;

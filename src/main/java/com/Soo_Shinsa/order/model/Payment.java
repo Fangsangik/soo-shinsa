@@ -1,8 +1,8 @@
 package com.Soo_Shinsa.order.model;
 
-import com.Soo_Shinsa.constant.BaseTimeEntity;
-import com.Soo_Shinsa.constant.TossPayMethod;
-import com.Soo_Shinsa.constant.TossPayStatus;
+import com.Soo_Shinsa.global.constant.BaseTimeEntity;
+import com.Soo_Shinsa.global.constant.TossPayMethod;
+import com.Soo_Shinsa.global.constant.TossPayStatus;
 import com.Soo_Shinsa.user.model.User;
 import jakarta.persistence.*;
 import lombok.Getter;

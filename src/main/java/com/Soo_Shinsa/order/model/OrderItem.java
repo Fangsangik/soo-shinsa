@@ -1,6 +1,6 @@
 package com.Soo_Shinsa.order.model;
 
-import com.Soo_Shinsa.constant.BaseTimeEntity;
+import com.Soo_Shinsa.global.constant.BaseTimeEntity;
 import com.Soo_Shinsa.product.model.Product;
 import com.Soo_Shinsa.product.model.ProductOption;
 import jakarta.persistence.*;

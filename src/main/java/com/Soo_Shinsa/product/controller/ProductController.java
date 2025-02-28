@@ -1,11 +1,11 @@
 package com.Soo_Shinsa.product.controller;
 
+import com.Soo_Shinsa.global.utils.CommonResponse;
+import com.Soo_Shinsa.global.utils.ResponseMessage;
+import com.Soo_Shinsa.global.utils.UserUtils;
 import com.Soo_Shinsa.product.dto.*;
 import com.Soo_Shinsa.product.service.ProductService;
 import com.Soo_Shinsa.user.model.User;
-import com.Soo_Shinsa.utils.CommonResponse;
-import com.Soo_Shinsa.utils.ResponseMessage;
-import com.Soo_Shinsa.utils.UserUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

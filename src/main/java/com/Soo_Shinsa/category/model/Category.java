@@ -1,6 +1,6 @@
 package com.Soo_Shinsa.category.model;
 
-import com.Soo_Shinsa.constant.BaseTimeEntity;
+import com.Soo_Shinsa.global.constant.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
