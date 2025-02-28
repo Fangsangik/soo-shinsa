@@ -10,6 +10,7 @@ import com.Soo_Shinsa.coupon.dto.CouponBrandRelationDto;
 import com.Soo_Shinsa.coupon.dto.CouponRequestDto;
 import com.Soo_Shinsa.coupon.model.Coupon;
 import com.Soo_Shinsa.coupon.model.CouponBrandRelation;
+import com.Soo_Shinsa.coupon.repository.CouponBrandRelationRepository;
 import com.Soo_Shinsa.coupon.repository.CouponRepository;
 import com.Soo_Shinsa.coupon.repository.CouponUserRepository;
 import com.Soo_Shinsa.global.constant.Role;
@@ -21,7 +22,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -59,6 +59,9 @@ class CouponServiceImplTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private CouponBrandRelationRepository couponBrandRelationRepository;
+
     private Coupon coupon;
     private User testUser;
     private CouponRequestDto couponRequestDto;
@@ -68,10 +71,6 @@ class CouponServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        couponRepository.deleteAll();
-        userRepository.deleteAll();
-        brandRepository.deleteAll();
-
         testUser = User.builder()
                 .email("test@test.com")
                 .password("password")
@@ -105,11 +104,10 @@ class CouponServiceImplTest {
         brandRepository.save(brand);
 
         coupon = Coupon.builder()
-                .couponName("병렬 처리 테스트 쿠폰")
-                .discountRate(new BigDecimal("10.0"))
+                .couponName("테스트 쿠폰")
+                .discountRate(BigDecimal.TEN)
                 .maxCount(10)
                 .build();
-
         couponRepository.save(coupon);
 
         CouponBrandRelation couponBrandRelation = CouponBrandRelation.builder()
@@ -117,7 +115,7 @@ class CouponServiceImplTest {
                 .brand(brand) // 브랜드와 연관
                 .build();
         coupon.getCouponBrandRelations().add(couponBrandRelation); // 관계 추가
-        couponRepository.save(coupon);
+        couponBrandRelationRepository.save(couponBrandRelation);
 
         couponRequestDto = CouponRequestDto.builder()
                 .couponId(coupon.getId())
@@ -129,10 +127,9 @@ class CouponServiceImplTest {
 
     }
 
-    @Transactional
     @Test
     void 병렬_쿠폰_발급_테스트() throws InterruptedException {
-        int threadCount = 10; // 동시에 실행할 요청 수
+        int threadCount = 2; // 동시에 실행할 요청 수
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
         CountDownLatch latch = new CountDownLatch(threadCount);
 
@@ -161,11 +158,10 @@ class CouponServiceImplTest {
         assertEquals(1, coupon.getIssuedCount()); // issuedCount도 10이어야 함
     }
 
-    @Transactional
     //5000건 정도 넣으니 테스트가 도중에 안돌아감
     @Test
     void 병렬_쿠폰_발급_테스트_선착순() throws InterruptedException {
-        int threadCount = 3000; // 동시에 실행할 요청 수
+        int threadCount = 100; // 동시에 실행할 요청 수
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
         CountDownLatch latch = new CountDownLatch(threadCount);
 

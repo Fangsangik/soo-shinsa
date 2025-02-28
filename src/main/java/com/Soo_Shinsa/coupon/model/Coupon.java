@@ -3,6 +3,7 @@ package com.Soo_Shinsa.coupon.model;
 import com.Soo_Shinsa.global.constant.CouponType;
 import com.Soo_Shinsa.global.exception.ErrorCode;
 import com.Soo_Shinsa.global.exception.InternalServerException;
+import com.Soo_Shinsa.global.exception.InvalidInputException;
 import com.Soo_Shinsa.product.model.Product;
 import jakarta.persistence.*;
 import lombok.Builder;
@@ -76,5 +77,12 @@ public class Coupon {
         } else {
             throw new InternalServerException(ErrorCode.COUPON_OUT_OF_STOCK);
         }
+    }
+
+    public void issueCoupon() {
+        if (this.issuedCount >= this.maxCount) {
+            throw new InvalidInputException(ErrorCode.COUPON_OUT_OF_STOCK);
+        }
+        this.issuedCount++;
     }
 }
