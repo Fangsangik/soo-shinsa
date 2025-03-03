@@ -13,7 +13,6 @@ import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
@@ -32,52 +31,50 @@ public class WebConfig {
     private final AuthenticationProvider authenticationProvider;
     private final AuthenticationEntryPoint authEntryPoint;
     private final AccessDeniedHandler accessDeniedHandler;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .headers(headers -> headers
                         .contentSecurityPolicy(csp -> csp.policyDirectives(
                                 "default-src 'self'; " +
-                                        "connect-src * ws://localhost:8080 ws://127.0.0.1:8080 ws://0.0.0.0:8080 ws://[::1]:8080; " +
-                                        "script-src 'self' 'unsafe-inline'; " +
-                                        "style-src 'self' 'unsafe-inline';"
+                                        "frame-src 'self' https://payment-gateway-sandbox.tosspayments.com https://js.tosspayments.com; " + // ✅ frame-src 추가
+                                        "script-src 'self' 'unsafe-inline' https://js.tosspayments.com; " +
+                                        "connect-src 'self' ws://localhost:8080 ws://127.0.0.1:8080 " +
+                                        "https://api.tosspayments.com https://event.tosspayments.com https://apigw-sandbox.tosspayments.com; " +
+                                        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;"
                         ))
                 )
-                .csrf(AbstractHttpConfigurer::disable)
-                .formLogin(AbstractHttpConfigurer::disable)
-                .httpBasic(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth->
-                        auth.requestMatchers(WHITE_LIST).permitAll()
-                                .requestMatchers("/ws/**").permitAll()
-                                // static 리소스 경로
-                                .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
-                                // 일부 dispatch 타입
-                                .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.INCLUDE,
-                                        DispatcherType.ERROR).permitAll()
-                                .requestMatchers(ADMIN_INTERCEPTOR_LIST).hasRole("ADMIN")
-                                .requestMatchers(VENDOR_INTERCEPTOR_LIST).hasRole("VENDOR")
-                                .requestMatchers(CUSTOMER_INTERCEPTOR_LIST).hasRole("CUSTOMER")
-                                .requestMatchers(HttpMethod.GET,CUSTOMER_DENY_INTERCEPTOR_LIST).hasRole("CUSTOMER")
-                                .anyRequest().authenticated()
+
+                .csrf(csrf -> csrf.disable())
+                .formLogin(formLogin -> formLogin.disable())
+                .httpBasic(httpBasic -> httpBasic.disable())
+                .authorizeHttpRequests(auth -> auth
+                        // ✅ 정적 리소스 경로를 완전히 허용
+                        .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
+                        .requestMatchers("/static/**", "/stylesheets/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
+                        .requestMatchers(WHITE_LIST).permitAll()
+                        .requestMatchers("/ws/**").permitAll()
+                        .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.INCLUDE, DispatcherType.ERROR).permitAll()
+                        .requestMatchers(ADMIN_INTERCEPTOR_LIST).hasRole("ADMIN")
+                        .requestMatchers(VENDOR_INTERCEPTOR_LIST).hasRole("VENDOR")
+                        .requestMatchers(CUSTOMER_INTERCEPTOR_LIST).hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.GET, CUSTOMER_DENY_INTERCEPTOR_LIST).hasRole("CUSTOMER")
+                        .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
-                        .userInfoEndpoint(userInfo -> userInfo
-                                .userService(customOAuth2UserService)
-                        )
+                        .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                 )
-                // Spring Security 예외에 대한 처리를 핸들러에 위임.
                 .exceptionHandling(handler -> handler
                         .authenticationEntryPoint(authEntryPoint)
-                        .accessDeniedHandler(accessDeniedHandler))
-                // JWT 기반 테스트를 위해 SecurityContext를 가져올 때 HttpSession을 사용하지 않도록 설정.
-                .sessionManagement(
-                        session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                        .accessDeniedHandler(accessDeniedHandler)
+                )
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-
 
     @Bean
     public RoleHierarchy roleHierarchy() {

@@ -14,16 +14,13 @@ public class PaymentRequestDto {
     private TossPayMethod method; // 결제 수단 (CARD)
 
     @NotNull(message = "오더는 필수값 입니다.")
-    private Long order; // 주문 ID
+    private String orderId; // 주문 ID
 
 
-
-
-
-    public PaymentRequestDto(String paymentKey, TossPayMethod method,Long order) {
+    public PaymentRequestDto(String paymentKey, TossPayMethod method, String orderId) {
         this.paymentKey = paymentKey;
         this.method = method;
-        this.order=order;
+        this.orderId = orderId;
 
     }
 }

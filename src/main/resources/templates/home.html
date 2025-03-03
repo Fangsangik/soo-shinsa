@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko">
 <head>
     <title>구매하기</title>
     <meta charset="utf-8"/>
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
-    <link rel="stylesheet" href="/stylesheets/style.css" />
+    <link rel="stylesheet" href="/static/stylesheets/style.css" />
 </head>
 <body>
 <section>
@@ -13,31 +13,33 @@
 
     <button id="payment-button">결제하기</button>
 </section>
-<script src="https://js.tosspayments.com/v1"></script>
-<script th:inline="javascript">
+<script defer src="https://js.tosspayments.com/v1"></script>
+<script>
+    window.onload = function () {
+        var tossPayments = TossPayments("[[${tosspayments_key}]]"); // 올바른 client-key가 있는지 확인
 
-    var tossPayments = TossPayments(/*[[${tosspayments_key}]]*/);
-    var button = document.getElementById("payment-button");
+        var button = document.getElementById("payment-button");
 
-    var orderId = [[${orderName}]]
+        button.addEventListener("click", function () {
+            var method = "카드";
+            var paymentData = {
+                amount: parseInt('[[${totalPrice}]]'),
+                orderId: '[[${orderName}]]',
+                orderName: '[[${orderName}]]',
+                customerName: '[[${name}]]',
+                successUrl: window.location.origin + "/api/success",
+                failUrl: window.location.origin + "/fail",
+            };
 
-    button.addEventListener("click", function () {
+            console.log("결제 요청 데이터:", paymentData); // ✅ 요청 데이터 확인
 
-        var method = "카드";
-        var paymentData = {
-            amount: parseInt('[[${totalPrice}]]'),
-            orderId: orderId,
-            orderName: '[[${orderName}]]',
-            customerName: '[[${name}]]',
-            successUrl: window.location.origin + "/api/success",
-            failUrl: window.location.origin + "/fail",
-        };
-
-
-
-        tossPayments.requestPayment(method, paymentData);
-    });
-
+            tossPayments.requestPayment(method, paymentData)
+                .catch(function(error) {
+                    console.error("결제 요청 중 오류 발생:", error);
+                });
+        });
+    };
 </script>
+
 </body>
 </html>

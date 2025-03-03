@@ -6,9 +6,9 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class PayloadRequestDto {
-    String orderId;
-    String amount;
-    String cancelReason;
+    private String orderId;
+    private String amount;
+    private String cancelReason;
 
     public PayloadRequestDto(String orderId, String amount) {
         this.orderId = orderId;

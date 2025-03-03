@@ -30,7 +30,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtBlackListService jwtBlackListService;
     private final UserDetailsService userDetailsService;
     private final JwtAccessTokenService jwtAccessTokenService;
-    private final List<String> WHITE_LIST = List.of("/users/login", "/users/signin", "users/logout", "/auth/**",
+    private final List<String> WHITE_LIST = List.of("/users/login", "/users/signin", "users/logout", "/auth/**", "/api/home/**",
             "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/api/chat/**", "/kakao/callback");
 
     @Override

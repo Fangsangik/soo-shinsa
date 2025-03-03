@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 public class UrlConst {
     //로그인 필터 화이트 리스트
     public static final String[] WHITE_LIST =
-            {"/users/login", "/users/signin", "users/logout", "/v3/api-docs/**", "/oauth2/**", "/auth/**",
+            {"/users/login", "/users/signin", "users/logout", "/v3/api-docs/**", "/oauth2/**", "/auth/**", "/api/home/**",
                     "/swagger-ui/**", "/swagger-ui.html", "/api/v1/users", "/kakao/callback", "/api/chat/**", "/ws/**", "/test", "/stylesheets/**", "/success"};
 
     //어드민 인터셉터 리스트

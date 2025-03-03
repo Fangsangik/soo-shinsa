@@ -5,7 +5,7 @@ import com.Soo_Shinsa.global.utils.UserUtils;
 import com.Soo_Shinsa.order.dto.PaymentCancelDto;
 import com.Soo_Shinsa.order.dto.PaymentRequestDto;
 import com.Soo_Shinsa.order.dto.PaymentResponseDto;
-import com.Soo_Shinsa.order.dto.UserOrderDTO;
+import com.Soo_Shinsa.order.dto.UserOrderDto;
 import com.Soo_Shinsa.order.service.TossPaymentsService;
 import com.Soo_Shinsa.user.model.User;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -40,8 +40,7 @@ public class TossPaymentsController {
     @PostMapping("/create")
     @Operation(summary = "결제 생성", description = "새로운 결제를 생성합니다.")
     public ResponseEntity<PaymentResponseDto> createPayment(@AuthenticationPrincipal UserDetails userDetails,
-                                                            @Valid
-                                                            @RequestBody PaymentRequestDto requestDto) {
+                                                            @Valid @RequestBody PaymentRequestDto requestDto) {
         User user = UserUtils.getUser(userDetails);
         PaymentResponseDto responseDto = tossPaymentsService.createPayment(requestDto, user);
         return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
@@ -61,13 +60,14 @@ public class TossPaymentsController {
     public String home(@PathVariable Long userId,
                        @PathVariable Long orderId,
                        Model model) {
-        UserOrderDTO item = tossPaymentsService.findItem(userId, orderId);
+        UserOrderDto item = tossPaymentsService.findItem(userId, orderId);
         BigDecimal totalPrice = item.getOrder().getTotalPrice();
 
         String orderName = item.getOrder().getOrderId();
         String name = item.getUser().getName();
 
         model.addAttribute("tosspayments_key", clientKey);
+        System.out.println("clientKey = " + clientKey);
         model.addAttribute("totalPrice", totalPrice);
         model.addAttribute("orderName", orderName);
         model.addAttribute("name", name);
