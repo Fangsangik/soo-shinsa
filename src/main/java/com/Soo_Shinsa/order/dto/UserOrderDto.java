@@ -8,11 +8,11 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
-public class UserOrderDTO {
+public class UserOrderDto {
     private User user;
     private Orders order;
 
-    public UserOrderDTO(User user, Orders order) {
+    public UserOrderDto(User user, Orders order) {
         this.user = user;
         this.order = order;
     }
