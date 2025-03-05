@@ -14,9 +14,12 @@ import com.Soo_Shinsa.product.repository.ProductOptionRepository;
 import com.Soo_Shinsa.product.repository.ProductRepository;
 import com.Soo_Shinsa.review.repository.ReviewRepository;
 import com.Soo_Shinsa.user.model.User;
+import com.Soo_Shinsa.user.model.UserProductView;
+import com.Soo_Shinsa.user.repository.UserProductViewRepository;
 import com.Soo_Shinsa.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +41,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductOptionRepository productOptionRepository;
     private final ReviewRepository reviewRepository;
     private final OrderItemRepository orderItemRepository;
+    private final UserProductViewRepository userProductViewRepository;
 
 
     @Transactional
@@ -118,5 +124,45 @@ public class ProductServiceImpl implements ProductService {
         productRepository.delete(product);
     }
 
+    @Override
+    public Page<ProductResponseDto> findUserBasedRecommendation(User user, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
 
+        List<UserProductView> viewedOptions = userProductViewRepository.findRecentlyViewedProductOptions(user.getUserId(), pageable);
+
+        if (!viewedOptions.isEmpty()) {
+            Set<Long> viewedProductIds = viewedOptions.stream()
+                    .map(option -> option.getProductOption().getProduct().getId())
+                    .collect(Collectors.toSet());
+
+            Page<Product> recommendations = productRepository.findByBrandAndProductId(
+                    viewedOptions.get(0).getProductOption().getProduct().getBrand().getId(),
+                    viewedOptions.get(0).getProductOption().getProduct().getId(),
+                    pageable
+            );
+
+            List<ProductResponseDto> filteredList = recommendations.getContent().stream()
+                    .filter(product -> !viewedProductIds.contains(product.getId()))
+                    .map(ProductResponseDto::toDto)
+                    .toList();
+
+            return new PageImpl<>(filteredList, pageable, recommendations.getTotalElements());
+        }
+
+        return findBestSellersOrRandom(pageable);
+    }
+
+    /**
+     * 베스트셀러 조회, 없으면 랜덤 상품 반환 (페이징 적용)
+     */
+    private Page<ProductResponseDto> findBestSellersOrRandom(Pageable pageable) {
+        Page<Product> bestSellingProducts = productRepository.findBestSellingProducts(pageable);
+
+        if (!bestSellingProducts.isEmpty()) {
+            return bestSellingProducts.map(ProductResponseDto::toDto);
+        }
+
+        Page<Product> randomProducts = productRepository.findRandomProducts(pageable);
+        return randomProducts.map(ProductResponseDto::toDto);
+    }
 }

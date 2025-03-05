@@ -97,6 +97,7 @@ public class OrdersServiceImpl implements OrdersService {
         }
 
         productOption.decreaseQuantity(quantity);
+        productOption.increaseSaleCount(quantity);
         productOptionRepository.saveAndFlush(productOption);
         log.info("📉 재고 감소 완료 - 남은 재고: {}", productOption.getQuantity());
 
@@ -145,6 +146,7 @@ public class OrdersServiceImpl implements OrdersService {
             if (option.getQuantity() < cartItem.getQuantity()) {
                 throw new InternalServerException(ErrorCode.CAN_NOT_USE_PRODUCT);
             }
+            option.increaseSaleCount(cartItem.getQuantity());
             option.decreaseQuantity(cartItem.getQuantity());
             productOptionRepository.saveAndFlush(option);
         }
@@ -234,6 +236,8 @@ public class OrdersServiceImpl implements OrdersService {
                     log.error("🚨 재고 부족으로 주문 실패 - 상품 옵션 ID: {}, 요청 수량: {}", option.getId(), quantity);
                     throw new InvalidInputException(ErrorCode.CAN_NOT_USE_PRODUCT);
                 }
+                option.increaseSaleCount(quantity);
+                productOptionRepository.save(option);
             }
 
             try {

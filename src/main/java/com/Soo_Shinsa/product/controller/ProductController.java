@@ -70,6 +70,17 @@ public class ProductController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @GetMapping("/recommendations")
+    @Operation(summary = "사용자 기반 추천 상품 리스트 조회", description = "사용자 기반 추천 상품 리스트를 조회합니다.")
+    public ResponseEntity<CommonResponse<Page<ProductResponseDto>>> findUserBasedRecommendation(@AuthenticationPrincipal UserDetails userDetails,
+                                                                                               @RequestParam(defaultValue = "0") int page,
+                                                                                               @RequestParam(defaultValue = "10") int size) {
+        User user = UserUtils.getUser(userDetails);
+        Page<ProductResponseDto> productResponseDto = productService.findUserBasedRecommendation(user, page, size);
+        CommonResponse<Page<ProductResponseDto>> response = new CommonResponse<>(ResponseMessage.PRODUCT_SELECT_SUCCESS, productResponseDto);
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
     @DeleteMapping("/{productId}")
     @Operation(summary = "상품 삭제", description = "특정 상품을 삭제합니다.")
     public ResponseEntity<Void> deleteProduct(@AuthenticationPrincipal UserDetails userDetails,
