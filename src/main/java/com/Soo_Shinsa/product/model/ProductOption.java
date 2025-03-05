@@ -29,6 +29,9 @@ public class ProductOption extends BaseTimeEntity {
     private Product product;
 
     private Integer quantity;
+
+    private int salesCount = 0;
+
     @Builder
     public ProductOption(String size, String color, ProductStatus productStatus, Product product, Integer quantity) {
         this.size = size;
@@ -57,17 +60,14 @@ public class ProductOption extends BaseTimeEntity {
         }
     }
 
-    public void updateQuantity(int change) {
-        if (this.quantity + change < 0) {
-            throw new IllegalArgumentException("재고 수량이 부족합니다.");
-        }
-        this.quantity += change;
-    }
-
     public void decreaseQuantity(int quantity) {
         if (this.quantity < quantity) {
             throw new IllegalArgumentException("재고 수량이 부족합니다.");
         }
         this.quantity -= quantity;
+    }
+
+    public void increaseSaleCount(int quantity) {
+        this.salesCount += quantity;
     }
 }
