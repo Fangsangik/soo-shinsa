@@ -67,7 +67,7 @@ public class OrdersController {
     }
 
     //카트에 담음 물건을 구매 생성
-    @PostMapping("/single_cart")
+    @PostMapping("/carts/all")
     @Operation(summary = "장바구니 전체 주문 생성", description = "장바구니에 담긴 모든 상품을 주문합니다.")
     public ResponseEntity<CommonResponse<OrdersResponseDto>> createAllOrderFromCart(@AuthenticationPrincipal UserDetails userDetails) {
         User user = UserUtils.getUser(userDetails);
