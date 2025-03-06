@@ -43,7 +43,7 @@ public class TossPaymentsServiceImpl implements TossPaymentsService {
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Value("${toss.secret-key}")
+    @Value("${toss.secret_api_key}")
     private String secretKey;
 
 

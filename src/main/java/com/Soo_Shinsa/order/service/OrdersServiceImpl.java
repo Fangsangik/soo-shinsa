@@ -15,6 +15,7 @@ import com.Soo_Shinsa.global.exception.InternalServerException;
 import com.Soo_Shinsa.global.exception.InvalidInputException;
 import com.Soo_Shinsa.global.exception.NotFoundException;
 import com.Soo_Shinsa.global.utils.EntityValidator;
+import com.Soo_Shinsa.order.dto.OrderCreateRequestDto;
 import com.Soo_Shinsa.order.dto.OrderDateRequestDto;
 import com.Soo_Shinsa.order.dto.OrdersResponseDto;
 import com.Soo_Shinsa.order.model.OrderItem;
@@ -129,8 +130,8 @@ public class OrdersServiceImpl implements OrdersService {
     @StockLock(key = "'lock:productOption:' + #productOption.Id")
     @Transactional(isolation = Isolation.SERIALIZABLE)
     @Override
-    public OrdersResponseDto createSingleOrderCartItem(User user, Long cartItemId) {
-        CartItem cartItem = cartItemRepository.findByIdOrElseThrow(cartItemId);
+    public OrdersResponseDto createSingleOrderCartItem(User user, OrderCreateRequestDto requestDto) {
+        CartItem cartItem = cartItemRepository.findByIdOrElseThrow(requestDto.getCartId());
 
         List<ProductOption> productOptions = cartItem.getProductOptions().stream()
                 .map(cartItemProductOption -> productOptionRepository.findByIdOrElseThrow(cartItemProductOption.getProductOption().getId()))

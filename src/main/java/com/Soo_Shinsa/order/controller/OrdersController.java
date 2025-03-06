@@ -4,6 +4,7 @@ package com.Soo_Shinsa.order.controller;
 import com.Soo_Shinsa.global.utils.CommonResponse;
 import com.Soo_Shinsa.global.utils.ResponseMessage;
 import com.Soo_Shinsa.global.utils.UserUtils;
+import com.Soo_Shinsa.order.dto.OrderCreateRequestDto;
 import com.Soo_Shinsa.order.dto.OrderDateRequestDto;
 import com.Soo_Shinsa.order.dto.OrdersResponseDto;
 import com.Soo_Shinsa.order.dto.OrdersUpdateRequestDto;
@@ -66,7 +67,7 @@ public class OrdersController {
     }
 
     //카트에 담음 물건을 구매 생성
-    @PostMapping("/carts")
+    @PostMapping("/single_cart")
     @Operation(summary = "장바구니 전체 주문 생성", description = "장바구니에 담긴 모든 상품을 주문합니다.")
     public ResponseEntity<CommonResponse<OrdersResponseDto>> createAllOrderFromCart(@AuthenticationPrincipal UserDetails userDetails) {
         User user = UserUtils.getUser(userDetails);
@@ -86,12 +87,12 @@ public class OrdersController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
-    @PostMapping("/carts/{cartId}")
+    @PostMapping("/carts")
     @Operation(summary = "장바구니 개별 주문 생성", description = "장바구니에 담긴 특정 상품을 주문합니다.")
     public ResponseEntity<CommonResponse<OrdersResponseDto>> createOrderFromCart(@AuthenticationPrincipal UserDetails userDetails,
-                                                                                 @PathVariable Long cartId) {
+                                                                                 @RequestBody OrderCreateRequestDto requestDto) {
         User user = UserUtils.getUser(userDetails);
-        OrdersResponseDto responseDto = ordersService.createSingleOrderCartItem(user, cartId);
+        OrdersResponseDto responseDto = ordersService.createSingleOrderCartItem(user, requestDto);
         CommonResponse<OrdersResponseDto> response = new CommonResponse<>(ResponseMessage.ORDER_CREATE_SUCCESS, responseDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

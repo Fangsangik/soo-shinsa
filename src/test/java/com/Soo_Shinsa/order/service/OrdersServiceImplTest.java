@@ -17,6 +17,7 @@ import com.Soo_Shinsa.coupon.model.CouponBrandRelation;
 import com.Soo_Shinsa.coupon.repository.CouponBrandRelationRepository;
 import com.Soo_Shinsa.coupon.repository.CouponRepository;
 import com.Soo_Shinsa.global.constant.*;
+import com.Soo_Shinsa.order.dto.OrderCreateRequestDto;
 import com.Soo_Shinsa.order.repository.OrdersRepository;
 import com.Soo_Shinsa.product.model.Product;
 import com.Soo_Shinsa.product.model.ProductOption;
@@ -290,7 +291,12 @@ class OrdersServiceImplTest {
                             .build();
 
                     cartItemService.applyCoupon(currentCartItem.getId(), requestDto, currentUser);
-                    ordersService.createSingleOrderCartItem(currentUser, currentCartItem.getId());
+
+                    OrderCreateRequestDto createRequestDto = OrderCreateRequestDto.builder()
+                            .cartId(currentCartItem.getId())
+                            .build();
+
+                    ordersService.createSingleOrderCartItem(currentUser,  createRequestDto);
 
                     ProductOption updateQuantity = productOptionRepository.findByIdOrElseThrow(productOption.getId());
                     Coupon updatedCoupon = couponRepository.findByIdOrElseThrow(validCoupon.getId());
@@ -388,8 +394,12 @@ class OrdersServiceImplTest {
 
                     log.info("✅ 쿠폰 적용 성공 - 카트 아이템 ID: {}", currentCartItem.getId());
 
+                    OrderCreateRequestDto createRequestDto = OrderCreateRequestDto.builder()
+                            .cartId(updatedCartItem.getId())
+                            .build();
+
                     // ✅ 주문 실행
-                    ordersService.createSingleOrderCartItem(user, currentCartItem.getId());
+                    ordersService.createSingleOrderCartItem(user, createRequestDto);
 
                     // ✅ 최종 재고 및 쿠폰 개수 확인
                     ProductOption updatedStock = productOptionRepository.findByIdOrElseThrow(productOption.getId());
