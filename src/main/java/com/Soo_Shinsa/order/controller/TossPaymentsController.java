@@ -32,7 +32,7 @@ public class TossPaymentsController {
     private final TossPaymentsService tossPaymentsService;
 
 
-    @Value("${toss.client-key}")
+    @Value("${toss.client_api_key}")
     private String clientKey;
 
 

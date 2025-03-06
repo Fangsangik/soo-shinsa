@@ -55,7 +55,7 @@ public class CartItemServiceImpl implements CartItemService {
     public CartItemResponseDto create(User user, CartItemRequestDto requestDto) {
         Product product = productRepository.findByIdOrElseThrow(requestDto.getProductId());
 
-        if (product.getProductStatus().equals(ProductStatus.SOLD_OUT) || product.getProductStatus().equals(ProductStatus.UNAVAILABLE)) {
+        if (ProductStatus.SOLD_OUT.equals(product.getProductStatus())|| ProductStatus.UNAVAILABLE.equals(product.getProductStatus())) {
             throw new InternalServerException(ErrorCode.CAN_NOT_USE_PRODUCT);
         }
 

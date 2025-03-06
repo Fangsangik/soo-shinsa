@@ -1,8 +1,5 @@
 package com.Soo_Shinsa.user.controller;
 
-import com.Soo_Shinsa.global.auth.JwtAccessTokenService;
-import com.Soo_Shinsa.global.auth.JwtProvider;
-import com.Soo_Shinsa.global.auth.JwtRefreshTokenService;
 import com.Soo_Shinsa.global.auth.UserDetailsImp;
 import com.Soo_Shinsa.global.auth.dto.JwtAuthResponseDto;
 import com.Soo_Shinsa.global.auth.dto.RefreshTokenRequestDto;
@@ -32,9 +29,6 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/users")
 public class UserController {
 
-    private final JwtRefreshTokenService jwtRefreshTokenService;
-    private final JwtAccessTokenService jwtAccessTokenService;
-    private final JwtProvider jwtProvider;
     private final UserService userService;
 
 
