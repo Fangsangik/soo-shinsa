@@ -13,6 +13,10 @@
 - **Payment**: Toss Payments
 - Authentication :  SpringSecurity, Kakao
 
+## 🌐 Frontend
+
+A lightweight React-based frontend is available under the `frontend` directory. Open `frontend/index.html` in a browser and you will be able to log in and browse data from most services. The UI lets you look up products, view categories and brands, check your cart and view your orders.
+
 ---
 
 ## 🚀 프로젝트 기간
