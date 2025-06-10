@@ -12,6 +12,16 @@
 - **API Management**: Postman, Swagger
 - **Payment**: Toss Payments
 - Authentication :  SpringSecurity, Kakao
+- CORS : Simple global configuration so the React frontend can call the API
+
+## 🌐 Frontend
+
+The project ships with a small React based UI under `frontend`.  Open
+`frontend/index.html` directly in your browser and you will be able to log
+in with your user account and navigate through several screens.  Navigation is
+handled via React Router so no build step is required.  From the UI you can
+look up products, browse categories and brands, view your cart and your past
+orders.
 
 ---
 
