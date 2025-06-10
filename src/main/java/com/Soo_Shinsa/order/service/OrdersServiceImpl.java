@@ -296,10 +296,8 @@ public class OrdersServiceImpl implements OrdersService {
             return;  // 쿠폰이 없는 경우 바로 종료
         }
 
-        Coupon coupon = couponRepository.findByIdOrElseThrow(cartItem.getCoupon().getId());
-
-        //Coupon coupon = couponRepository.findByIdWithLock(cartItem.getCoupon().getId())
-        //        .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_COUPON));
+        Coupon coupon = couponRepository.findByIdWithLock(cartItem.getCoupon().getId())
+                .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_COUPON));
 
         log.info("🎟 쿠폰 사용 검증 시작 - 쿠폰 ID: {}, 현재 재고: {}", coupon.getId(), coupon.getMaxCount());
 
