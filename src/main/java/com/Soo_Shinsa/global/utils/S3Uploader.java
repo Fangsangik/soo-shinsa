@@ -19,7 +19,7 @@ import java.net.URLDecoder;
 import java.util.Objects;
 import java.util.UUID;
 
-import static com.Soo_Shinsa.global.exception.ErrorCode.FAIl_IMAGE_DELETE;
+import static com.Soo_Shinsa.global.exception.ErrorCode.FAIL_IMAGE_DELETE;
 import static com.Soo_Shinsa.global.exception.ErrorCode.MAX_10MB_SIZE;
 
 @Slf4j
@@ -106,10 +106,10 @@ public class S3Uploader {
      */
     private void removeNewFile(File uploadFile) {
         if (!uploadFile.delete()) {
-            log.info("로컬 파일이 삭제되었습니다.");
-            throw new InvalidInputException(FAIl_IMAGE_DELETE);
+            log.error("로컬 파일이 삭제되지 않았습니다.");
+            throw new InvalidInputException(FAIL_IMAGE_DELETE);
         }
-        log.error("로컬 파일이 삭제되지 않았습니다.");
+        log.info("로컬 파일이 삭제되었습니다.");
     }
 
     private String putS3(File uploadFile, String fileName) {
