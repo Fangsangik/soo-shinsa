@@ -4,10 +4,7 @@ package com.Soo_Shinsa.order.controller;
 import com.Soo_Shinsa.global.utils.CommonResponse;
 import com.Soo_Shinsa.global.utils.ResponseMessage;
 import com.Soo_Shinsa.global.utils.UserUtils;
-import com.Soo_Shinsa.order.dto.OrderCreateRequestDto;
-import com.Soo_Shinsa.order.dto.OrderDateRequestDto;
-import com.Soo_Shinsa.order.dto.OrdersResponseDto;
-import com.Soo_Shinsa.order.dto.OrdersUpdateRequestDto;
+import com.Soo_Shinsa.order.dto.*;
 import com.Soo_Shinsa.order.service.OrdersService;
 import com.Soo_Shinsa.product.dto.SingleProductOrderRequestDto;
 import com.Soo_Shinsa.user.model.User;
@@ -105,6 +102,60 @@ public class OrdersController {
         User user = UserUtils.getUser(userDetails);
         ordersService.cancelOrder(user, orderId);
         CommonResponse<String> response = new CommonResponse<>(ResponseMessage.ORDER_CANCEL_SUCCESS, "주문이 취소되었습니다.");
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+    @PostMapping("{orderId}/partial-cancel")
+    @Operation(summary = "주문 부분 취소", description = "주문의 특정 상품을 부분 취소합니다.")
+    public ResponseEntity<CommonResponse<PartialCancelResponseDto>> partialCancelOrder(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long orderId,
+            @Valid @RequestBody PartialCancelRequestDto requestDto) throws JsonProcessingException {
+        
+        User user = UserUtils.getUser(userDetails);
+        PartialCancelResponseDto responseDto = ordersService.partialCancelOrder(user, orderId, requestDto);
+        CommonResponse<PartialCancelResponseDto> response = new CommonResponse<>(
+            ResponseMessage.ORDER_CANCEL_SUCCESS, 
+            responseDto
+        );
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+    // 🚀 성능 최적화된 엔드포인트들
+    @GetMapping("/{orderId}/optimized")
+    @Operation(summary = "최적화된 주문 상세 조회", description = "N+1 문제를 해결한 빠른 주문 상세 조회입니다.")
+    public ResponseEntity<CommonResponse<OrdersResponseDto>> getOrderByIdOptimized(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long orderId) {
+        User user = UserUtils.getUser(userDetails);
+        OrdersResponseDto responseDto = ordersService.getOrderByIdOptimized(orderId, user);
+        CommonResponse<OrdersResponseDto> response = new CommonResponse<>(ResponseMessage.ORDER_SELECT_SUCCESS, responseDto);
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+    @GetMapping("/users/summary")
+    @Operation(summary = "최적화된 주문 요약 목록", description = "경량 DTO를 사용한 빠른 주문 목록 조회입니다.")
+    public ResponseEntity<CommonResponse<Page<OrderSummaryDto>>> getOrderSummariesOptimized(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody OrderDateRequestDto dateRequestDto,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        User user = UserUtils.getUser(userDetails);
+        Page<OrderSummaryDto> orderSummaries = ordersService.getOrderSummariesByUserId(user, dateRequestDto, page, size);
+        CommonResponse<Page<OrderSummaryDto>> response = new CommonResponse<>(ResponseMessage.ORDER_SELECT_SUCCESS, orderSummaries);
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+    @GetMapping("/users/optimized")
+    @Operation(summary = "최적화된 주문 전체 목록", description = "2단계 조회를 사용한 빠른 주문 목록 조회입니다.")
+    public ResponseEntity<CommonResponse<Page<OrdersResponseDto>>> getOrdersByUserOptimized(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody OrderDateRequestDto dateRequestDto,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        User user = UserUtils.getUser(userDetails);
+        Page<OrdersResponseDto> allByUserId = ordersService.getAllByUserIdOptimized(user, dateRequestDto, page, size);
+        CommonResponse<Page<OrdersResponseDto>> response = new CommonResponse<>(ResponseMessage.ORDER_SELECT_SUCCESS, allByUserId);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 }
