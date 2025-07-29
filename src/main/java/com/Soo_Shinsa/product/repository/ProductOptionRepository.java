@@ -31,4 +31,8 @@ public interface ProductOptionRepository extends JpaRepository<ProductOption, Lo
     @Modifying
     @Query("UPDATE ProductOption p SET p.quantity = p.quantity - :quantity WHERE p.id = :productOptionId AND p.quantity >= :quantity")
     int decreaseStock(Long productOptionId, Integer quantity);
+
+    @Modifying
+    @Query("UPDATE ProductOption p SET p.quantity = p.quantity + :quantity WHERE p.id = :productOptionId")
+    int increaseStock(Long productOptionId, Integer quantity);
 }
