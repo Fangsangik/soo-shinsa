@@ -74,7 +74,10 @@ public enum ErrorCode {
     ALREADY_CANCELED("이미 취소된 상품입니다", HttpStatus.BAD_REQUEST),
     INVALID_PAYMENT_AMOUNT("결제금액이 맞지 않습니다.", HttpStatus.BAD_REQUEST),
     INVALID_PRODUCT_OPTION("옳지 않은 옵션 입니다.", HttpStatus.BAD_REQUEST),
-    LOCK_FAILED("락 획득 실패", HttpStatus.BAD_REQUEST);
+    LOCK_FAILED("락 획득 실패", HttpStatus.BAD_REQUEST),
+    ALREADY_CANCEL_ORDER("이미 취소된 주문입니다", HttpStatus.BAD_REQUEST),
+    NOT_FOUND_ORDER_ITEM("주문 상품을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
+    CAN_NOT_CANCEL_ORDER("주문을 취소할 수 없습니다", HttpStatus.BAD_REQUEST);
 
 
     private final String message;
