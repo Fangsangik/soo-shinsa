@@ -8,6 +8,7 @@ import com.Soo_Shinsa.global.constant.GradeType;
 import com.Soo_Shinsa.global.constant.Role;
 import com.Soo_Shinsa.global.constant.UserStatus;
 import com.Soo_Shinsa.global.exception.*;
+import com.Soo_Shinsa.global.security.SecurityLogger;
 import com.Soo_Shinsa.global.utils.ResponseMessage;
 import com.Soo_Shinsa.user.dto.*;
 import com.Soo_Shinsa.user.model.Grade;
@@ -129,7 +130,7 @@ public class UserServiceImpl implements UserService {
         String accessToken = jwtProvider.generateTokenBy(user.getEmail(), jwtProvider.getExpiryMillis());
         String refreshToken = jwtProvider.generateTokenBy(user.getEmail(), jwtProvider.getRefreshExpiryMillis());
 
-        log.info("🟢 AccessToken 생성 완료: {}", accessToken);
+        log.info("🟢 AccessToken 생성 완료: {}", SecurityLogger.maskToken(accessToken));
 
         jwtAccessTokenService.saveAccessToken(accessToken, user.getEmail(), jwtProvider.getExpiryMillis());
 
@@ -180,11 +181,11 @@ public class UserServiceImpl implements UserService {
         }
 
         token = token.substring(7).trim(); // "Bearer " 제거
-        log.info("로그아웃 요청 처리 중: 토큰 = {}", token);
+        log.info("로그아웃 요청 처리 중: 토큰 = {}", SecurityLogger.maskToken(token));
 
-        // 블랙리스트 추가 및 토큰 삭제
+        // 블랙리스트 추가 및 현재 사용자의 토큰만 삭제
         jwtBlackListService.addBlackList(token, jwtProvider.getExpiryMillis());
-        jwtAccessTokenService.deleteAllAccessTokens();
+        jwtAccessTokenService.deleteAccessToken(userDetailsImp.getUsername()); // 현재 사용자 이메일로 토큰 삭제
         jwtRefreshTokenService.deleteRefreshToken(userDetailsImp.getUsername());
 
         log.info("사용자 로그아웃 성공: {}", userDetailsImp.getUsername());
