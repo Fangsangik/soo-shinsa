@@ -1,7 +1,6 @@
 package com.Soo_Shinsa.order.repository;
 
 import com.Soo_Shinsa.global.exception.NotFoundException;
-import com.Soo_Shinsa.order.dto.OrderSummaryDto;
 import com.Soo_Shinsa.order.model.Orders;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -73,59 +72,19 @@ public interface OrdersRepository extends JpaRepository<Orders, Long>, OrderCust
                                           Pageable pageable);
 
     // 🚀 성능 최적화: 경량 주문 요약 정보 조회 (DTO Projection)
-    @Query("SELECT new com.Soo_Shinsa.order.dto.OrderSummaryDto(" +
-           "o.id, " +
-           "o.orderId, " +
-           "o.totalPrice, " +
-           "o.status, " +
-           "o.createdAt, " +
-           "CAST(COUNT(oi.id) AS long), " +
-           "CAST(SUM(CASE WHEN oi.status = 'ORDERED' THEN 1 ELSE 0 END) AS long), " +
-           "CAST(SUM(CASE WHEN oi.status IN ('CANCELLED', 'REFUNDED') THEN 1 ELSE 0 END) AS long), " +
-           "COALESCE(SUM(CASE WHEN oi.status = 'ORDERED' THEN COALESCE(oi.discountPrice, oi.price) * oi.quantity ELSE 0 END), 0), " +
-           "COALESCE(SUM(CASE WHEN oi.status IN ('CANCELLED', 'REFUNDED') THEN COALESCE(oi.discountPrice, oi.price) * oi.quantity ELSE 0 END), 0), " +
-           "CASE " +
-           "  WHEN SUM(CASE WHEN oi.status = 'ORDERED' THEN 1 ELSE 0 END) = 0 THEN 'FULLY_CANCELLED' " +
-           "  WHEN SUM(CASE WHEN oi.status IN ('CANCELLED', 'REFUNDED') THEN 1 ELSE 0 END) > 0 THEN 'PARTIALLY_CANCELLED' " +
-           "  ELSE 'ACTIVE' " +
-           "END, " +
-           "(SELECT p.productName FROM OrderItem oi2 JOIN oi2.product p WHERE oi2.order.id = o.id ORDER BY oi2.id ASC LIMIT 1)" +
-           ") " +
-           "FROM Orders o " +
-           "LEFT JOIN o.orderItems oi " +
+    @Query("SELECT o FROM Orders o " +
            "WHERE o.user.userId = :userId " +
            "AND (:startDate IS NULL OR o.createdAt >= :startDate) " +
            "AND (:endDate IS NULL OR o.createdAt <= :endDate) " +
-           "GROUP BY o.id, o.orderId, o.totalPrice, o.status, o.createdAt " +
            "ORDER BY o.createdAt DESC")
-    Page<OrderSummaryDto> findOrderSummariesByUserIdAndDate(@Param("userId") Long userId,
+    Page<Orders> findOrderSummariesByUserIdAndDate(@Param("userId") Long userId,
                                                            @Param("startDate") LocalDateTime startDate,
                                                            @Param("endDate") LocalDateTime endDate,
                                                            Pageable pageable);
 
     // 🚀 성능 최적화: 간단한 주문 요약 정보 조회
-    @Query("SELECT new com.Soo_Shinsa.order.dto.OrderSummaryDto(" +
-           "o.id, " +
-           "o.orderId, " +
-           "o.totalPrice, " +
-           "o.status, " +
-           "o.createdAt, " +
-           "CAST(COUNT(oi.id) AS long), " +
-           "CAST(SUM(CASE WHEN oi.status = 'ORDERED' THEN 1 ELSE 0 END) AS long), " +
-           "CAST(SUM(CASE WHEN oi.status IN ('CANCELLED', 'REFUNDED') THEN 1 ELSE 0 END) AS long), " +
-           "COALESCE(SUM(CASE WHEN oi.status = 'ORDERED' THEN COALESCE(oi.discountPrice, oi.price) * oi.quantity ELSE 0 END), 0), " +
-           "COALESCE(SUM(CASE WHEN oi.status IN ('CANCELLED', 'REFUNDED') THEN COALESCE(oi.discountPrice, oi.price) * oi.quantity ELSE 0 END), 0), " +
-           "CASE " +
-           "  WHEN SUM(CASE WHEN oi.status = 'ORDERED' THEN 1 ELSE 0 END) = 0 THEN 'FULLY_CANCELLED' " +
-           "  WHEN SUM(CASE WHEN oi.status IN ('CANCELLED', 'REFUNDED') THEN 1 ELSE 0 END) > 0 THEN 'PARTIALLY_CANCELLED' " +
-           "  ELSE 'ACTIVE' " +
-           "END, " +
-           "(SELECT p.productName FROM OrderItem oi2 JOIN oi2.product p WHERE oi2.order.id = o.id ORDER BY oi2.id ASC LIMIT 1)" +
-           ") " +
-           "FROM Orders o " +
-           "LEFT JOIN o.orderItems oi " +
+    @Query("SELECT o FROM Orders o " +
            "WHERE o.user.userId = :userId " +
-           "GROUP BY o.id, o.orderId, o.totalPrice, o.status, o.createdAt " +
-           "ORDER BY o.createdAt DESC")
-    Page<OrderSummaryDto> findOrderSummariesByUserId(@Param("userId") Long userId, Pageable pageable);
+           "ORDER BY o.createdAt DESC")        
+    Page<Orders> findOrderSummariesByUserId(@Param("userId") Long userId, Pageable pageable);
 }
