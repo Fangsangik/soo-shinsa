@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
 import java.util.Base64;
 
 import static com.Soo_Shinsa.global.constant.OrdersStatus.ORDERCOMPLETED;
@@ -118,5 +119,33 @@ public class TossPaymentsServiceImpl implements TossPaymentsService {
         User user = userRepository.findByIdOrElseThrow(userId);
         Orders order = ordersRepository.findByIdOrElseThrow(orderId);
         return new UserOrderDto(user, order);
+    }
+
+    @Transactional
+    @Override
+    public void partialCancelPayment(String paymentKey, BigDecimal cancelAmount, String cancelReason) throws JsonProcessingException {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Basic " + Base64.getEncoder().encodeToString((secretKey + ":").getBytes()));
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        Payment findPayment = paymentRepository.findByPaymentKey(paymentKey);
+
+        // 부분 취소를 위한 payload 생성 (취소 금액 포함)
+        String requestBody = objectMapper.writeValueAsString(new PartialCancelRequest(cancelAmount, cancelReason));
+        HttpEntity<String> request = new HttpEntity<>(requestBody, headers);
+
+        // Toss Payments 부분 취소 API 호출
+        restTemplate.postForEntity("https://api.tosspayments.com/v1/payments/" + paymentKey + "/cancel", request, JsonNode.class);
+    }
+
+    // 부분 취소 요청을 위한 내부 클래스
+    private static class PartialCancelRequest {
+        public final BigDecimal cancelAmount;
+        public final String cancelReason;
+
+        public PartialCancelRequest(BigDecimal cancelAmount, String cancelReason) {
+            this.cancelAmount = cancelAmount;
+            this.cancelReason = cancelReason;
+        }
     }
 }
