@@ -33,7 +33,7 @@ public class CouponServiceImpl implements CouponService {
     private final CouponUserRepository couponUserRepository;
 
     @CouponLock(key = "'lock:coupon:' + #couponRequestDto.couponId")
-    @Transactional(isolation = Isolation.SERIALIZABLE)
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     @Override
     public CouponResponseDto createCoupon(CouponRequestDto couponRequestDto, User user) {
         EntityValidator.validateAdminOrVendorAccess(user);
