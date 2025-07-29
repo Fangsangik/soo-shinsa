@@ -8,8 +8,9 @@ import lombok.RequiredArgsConstructor;
 public class UrlConst {
     //로그인 필터 화이트 리스트
     public static final String[] WHITE_LIST =
-            {"/users/login", "/users/signin", "users/logout", "/v3/api-docs/**", "/oauth2/**", "/auth/**", "/api/**",
-                    "/swagger-ui/**", "/swagger-ui.html", "/api/v1/users", "/kakao/callback", "/api/chat/**", "/ws/**", "/test", "/stylesheets/**", "/success"};
+            {"/users/login", "/users/signin", "/users/logout", "/v3/api-docs/**", "/oauth2/**", "/auth/**", 
+                    "/swagger-ui/**", "/swagger-ui.html", "/api/v1/users", "/kakao/callback", "/api/chat/**", "/ws/**", 
+                    "/test", "/stylesheets/**", "/success", "/actuator/**", "/actuator/health"};
 
     //어드민 인터셉터 리스트
     public static final String[] ADMIN_INTERCEPTOR_LIST = {"/admin", "/admin/**"};
