@@ -54,7 +54,9 @@ public class BatchConfig {
     }
 
 
-    @Bean
+    // 리더의 open/close 는 스텝이 관리한다. 컨테이너가 종료 때 또 close 하면
+    // 열린 적 없는 리더라 매번 ItemStreamException 이 났다.
+    @Bean(destroyMethod = "")
     public JpaPagingItemReader<OrderHistoryForStatistic> orderHistoryReader() {
         JpaNativeQueryProvider<OrderHistoryForStatistic> queryProvider = new JpaNativeQueryProvider<>();
         queryProvider.setSqlQuery(

@@ -38,6 +38,8 @@ dependencies {
 
     //redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    // macOS 개발 장비에서 netty DNS resolver 가 없다고 부팅마다 ERROR 를 찍는다. linux 에선 무해.
+    runtimeOnly 'io.netty:netty-resolver-dns-native-macos::osx-aarch_64'
 
     // Spring Batch
     implementation 'org.springframework.boot:spring-boot-starter-batch'

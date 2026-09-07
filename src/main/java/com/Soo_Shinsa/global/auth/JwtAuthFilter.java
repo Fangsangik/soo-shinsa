@@ -48,58 +48,29 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
 
+        // 인증은 여기 한 곳에서만 한다. 예전에는 같은 일을 두 번 했고,
+        // 두 번째 호출은 토큰이 없어도 실행돼 비로그인 요청마다 ERROR 가 찍혔다.
         String token = getTokenFromRequest(request);
         if (token != null && jwtProvider.validToken(token)) {
-            // ✅ 로그아웃된 JWT인지 확인
             if (jwtBlackListService.isBlackListed(token)) {
-                log.warn("🚨 블랙리스트된 JWT 사용 시도 감지: {}", token);
+                // 토큰 전문을 로그에 남기면 로그가 유출됐을 때 그대로 재사용된다
+                log.warn("🚨 블랙리스트된 JWT 사용 시도 감지: {}...", token.substring(0, Math.min(10, token.length())));
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "로그아웃된 토큰입니다.");
                 return;
             }
 
-            String email = jwtProvider.getUsername(token);
-            log.info("🔍 JwtAuthFilter - JWT에서 추출한 이메일: {}", email);
-
             if (SecurityContextHolder.getContext().getAuthentication() == null) {
-                log.info("🔍 JwtAuthFilter - SecurityContext에 인증 정보 없음. 사용자 인증 진행");
-
+                String email = jwtProvider.getUsername(token);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-                log.info("✅ JwtAuthFilter - SecurityContext 인증 완료: {}", email);
-            } else {
-                log.info("✅ JwtAuthFilter - 이미 인증된 사용자: {}", email);
+                setAuthentication(request, userDetails);
             }
         }
-        authenticate(request, token);
         filterChain.doFilter(request, response);
-    }
-
-    private void authenticate(HttpServletRequest request, String token) {
-        if (!jwtProvider.validAccessToken(token)) {
-            return;
-        }
-
-        String email = jwtProvider.getUsername(token);
-
-        String storedAccessToken = jwtAccessTokenService.getAccessToken(email);
-        if (storedAccessToken == null) {
-            log.warn("Redis에서 AccessToken을 찾을 수 없음! username: {}", email);
-        }
-
-        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-        if (userDetails == null) {
-            log.warn("UserDetails를 찾을 수 없음! username: {}", email);
-            return;
-        }
-        setAuthentication(request, userDetails);
     }
 
     private void setAuthentication(HttpServletRequest request, UserDetails userDetails) {
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                userDetails, userDetails.getPassword(), userDetails.getAuthorities());
+                userDetails, null, userDetails.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }

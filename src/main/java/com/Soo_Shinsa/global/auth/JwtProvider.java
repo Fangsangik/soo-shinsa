@@ -11,6 +11,7 @@ import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.UUID;
 
 /**
  * JWT 제공자.
@@ -40,6 +41,9 @@ public class JwtProvider {
 
         return Jwts.builder()
                 .subject(email)
+                // 클레임이 (email, iat, exp)뿐이면 같은 초에 발급된 토큰이 전부 같은 문자열이 된다.
+                // 그러면 한 세션을 로그아웃(블랙리스트)했을 때 다른 세션 토큰까지 같이 죽는다.
+                .id(UUID.randomUUID().toString())
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8)), Jwts.SIG.HS256)
@@ -58,10 +62,11 @@ public class JwtProvider {
         try {
             return !getClaims(token).getExpiration().before(new Date());
         } catch (ExpiredJwtException e) {
-            log.error("JWT token is expired: {}", e.getMessage());
+            // 만료·비정상 토큰은 매일 있는 정상 트래픽이다. ERROR 로 찍으면 진짜 장애가 묻힌다.
+            log.debug("JWT token is expired: {}", e.getMessage());
             return false;
         } catch (JwtException e) {
-            log.error("Invalid JWT token: {}", e.getMessage());
+            log.debug("Invalid JWT token: {}", e.getMessage());
             return false;
         }
     }
