@@ -1,9 +1,6 @@
 package com.Soo_Shinsa.coupon.model;
 
 import com.Soo_Shinsa.global.constant.CouponType;
-import com.Soo_Shinsa.global.exception.ErrorCode;
-import com.Soo_Shinsa.global.exception.InternalServerException;
-import com.Soo_Shinsa.global.exception.InvalidInputException;
 import com.Soo_Shinsa.product.model.Product;
 import jakarta.persistence.*;
 import lombok.Builder;
@@ -42,8 +39,9 @@ public class Coupon {
 
     private boolean isUsed;
 
-    private Integer maxCount; // 쿠폰 발급 최대 수량
-    private Integer issuedCount; // 쿠폰 발급 수량
+    private Integer maxCount; // 발급 정원. 만들어진 뒤 바뀌지 않는다
+    private Integer issuedCount; // 지금까지 발급된 수
+    private Integer remainingCount; // 아직 쓸 수 있는 수
 
     private LocalDate expirationDate;
     private LocalDate issueDate;
@@ -60,6 +58,15 @@ public class Coupon {
         this.issueDate = LocalDate.now();
         this.maxCount = maxCount;
         this.issuedCount = 0;
+        this.remainingCount = maxCount;
+    }
+
+    /**
+     * 아직 쓸 수 있는 수.
+     * remainingCount 도입 전에 만들어진 쿠폰은 값이 없으므로 정원으로 간주한다.
+     */
+    public Integer getRemainingCount() {
+        return remainingCount != null ? remainingCount : maxCount;
     }
 
     public String createCouponNumber() {
@@ -70,19 +77,4 @@ public class Coupon {
         return LocalDate.now().isAfter(expirationDate);
     }
 
-    // 재고 감소 메서드
-    public void decreaseMaxCount(int amount) {
-        if (this.maxCount != null && this.maxCount >= amount) {
-            this.maxCount -= amount;
-        } else {
-            throw new InternalServerException(ErrorCode.COUPON_OUT_OF_STOCK);
-        }
-    }
-
-    public void issueCoupon() {
-        if (this.issuedCount >= this.maxCount) {
-            throw new InvalidInputException(ErrorCode.COUPON_OUT_OF_STOCK);
-        }
-        this.issuedCount++;
-    }
 }

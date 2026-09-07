@@ -253,4 +253,25 @@ class CouponServiceImplTest extends IntegrationTestSupport {
         // 발급마다 relation 을 만들던 버그가 있었다
         assertEquals(before, couponBrandRelationRepository.count());
     }
+
+    @Test
+    void 발급해도_정원과_잔여수량은_그대로다() {
+        // 예전에는 maxCount 가 정원이자 잔여 수량이라 쓸수록 정원이 줄었다
+        couponService.issue(coupon.getId(), testUser);
+
+        Coupon after = couponRepository.findByIdOrElseThrow(coupon.getId());
+        assertEquals(10, after.getMaxCount(), "정원은 발급으로 바뀌지 않는다");
+        assertEquals(10, after.getRemainingCount(), "발급은 사용이 아니므로 잔여도 그대로다");
+        assertEquals(1, after.getIssuedCount());
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional
+    void 잔여수량이_없는_쿠폰도_정원은_유지된다() {
+        couponRepository.decreaseRemainingCount(coupon.getId(), 10);
+
+        Coupon after = couponRepository.findByIdOrElseThrow(coupon.getId());
+        assertEquals(0, after.getRemainingCount());
+        assertEquals(10, after.getMaxCount(), "잔여를 다 써도 정원은 남아 있어야 한다");
+    }
 }

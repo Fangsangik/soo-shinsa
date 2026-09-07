@@ -148,7 +148,7 @@ public class CartItemServiceImpl implements CartItemService {
             coupon = couponRepository.findById(requestDto.getCouponId())
                     .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_COUPON));
 
-            if (coupon.getMaxCount() <= 0) {
+            if (coupon.getRemainingCount() <= 0) {
                 throw new InvalidInputException(ErrorCode.COUPON_OUT_OF_STOCK);
             }
 

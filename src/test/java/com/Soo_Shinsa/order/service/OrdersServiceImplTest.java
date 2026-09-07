@@ -313,7 +313,7 @@ class OrdersServiceImplTest extends IntegrationTestSupport {
                     Coupon updatedCoupon = couponRepository.findByIdOrElseThrow(validCoupon.getId());
 
                     log.info("✅ 주문 성공 - 유저: {}, 남은 재고: {}, 남은 쿠폰 수: {}",
-                            currentUser.getEmail(), updateQuantity.getQuantity(), updatedCoupon.getMaxCount());
+                            currentUser.getEmail(), updateQuantity.getQuantity(), updatedCoupon.getRemainingCount());
                 } catch (Exception e) {
                     log.error("❌ 예외 발생 - 유저: {}, 에러 메시지: {}", currentUser.getEmail(), e.getMessage());
                 } finally {
@@ -329,10 +329,10 @@ class OrdersServiceImplTest extends IntegrationTestSupport {
         ProductOption left = productOptionRepository.findByIdOrElseThrow(productOption.getId());
         Coupon updatedCoupon = couponRepository.findByIdOrElseThrow(validCoupon.getId());
 
-        log.info("✅ 테스트 완료 - 최종 남은 재고: {}, 최종 남은 쿠폰 수: {}", left.getQuantity(), updatedCoupon.getMaxCount());
+        log.info("✅ 테스트 완료 - 최종 남은 재고: {}, 최종 남은 쿠폰 수: {}", left.getQuantity(), updatedCoupon.getRemainingCount());
 
         Assertions.assertEquals(0, left.getQuantity());
-        Assertions.assertEquals(0, updatedCoupon.getMaxCount());
+        Assertions.assertEquals(0, updatedCoupon.getRemainingCount());
     }
 
     /**
@@ -416,7 +416,7 @@ class OrdersServiceImplTest extends IntegrationTestSupport {
                     Coupon updatedCoupon = couponRepository.findByIdOrElseThrow(currentCoupon.getId());
 
                     log.info("✅ 주문 성공 - 카트 아이템 ID: {}, 남은 재고: {}, 남은 쿠폰 수: {}",
-                            currentCartItem.getId(), updatedStock.getQuantity(), updatedCoupon.getMaxCount());
+                            currentCartItem.getId(), updatedStock.getQuantity(), updatedCoupon.getRemainingCount());
                 } catch (Exception e) {
                     log.error("❌ 예외 발생 - 카트 아이템 ID: {}, 에러 메시지: {}", currentCartItem.getId(), e.getMessage());
                 } finally {
@@ -435,8 +435,8 @@ class OrdersServiceImplTest extends IntegrationTestSupport {
 
         for (Coupon coupon : coupons) {
             Coupon updatedCoupon = couponRepository.findByIdOrElseThrow(coupon.getId());
-            log.info("🎟 최종 쿠폰 재고 확인 - 쿠폰 ID: {}, 남은 재고: {}", updatedCoupon.getId(), updatedCoupon.getMaxCount());
-            Assertions.assertEquals(0, updatedCoupon.getMaxCount(),
+            log.info("🎟 최종 쿠폰 재고 확인 - 쿠폰 ID: {}, 남은 재고: {}", updatedCoupon.getId(), updatedCoupon.getRemainingCount());
+            Assertions.assertEquals(0, updatedCoupon.getRemainingCount(),
                     "🚨 쿠폰 ID: " + updatedCoupon.getId() + "의 재고가 예상과 다름!");
         }
     }

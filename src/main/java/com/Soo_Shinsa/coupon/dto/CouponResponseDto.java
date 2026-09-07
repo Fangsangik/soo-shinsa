@@ -21,10 +21,11 @@ public class CouponResponseDto {
     private LocalDate issueDate;
     private CouponType couponType;
     private Integer maxCount;
+    private Integer remainingCount;
     private List<CouponBrandRelationDto> brandRelations;
 
     @Builder
-    public CouponResponseDto(Long id, String couponName, String couponCode, BigDecimal discountRate, LocalDate expirationDate, LocalDate issueDate, Integer maxCount, CouponType couponType, List<CouponBrandRelationDto> brandRelations) {
+    public CouponResponseDto(Long id, String couponName, String couponCode, BigDecimal discountRate, LocalDate expirationDate, LocalDate issueDate, Integer maxCount, Integer remainingCount, CouponType couponType, List<CouponBrandRelationDto> brandRelations) {
         this.id = id;
         this.couponName = couponName;
         this.couponCode = couponCode;
@@ -34,6 +35,7 @@ public class CouponResponseDto {
         this.couponType = couponType;
         this.brandRelations = brandRelations;
         this.maxCount = maxCount;
+        this.remainingCount = remainingCount;
     }
 
     public static CouponResponseDto from(Coupon coupon) {
@@ -46,6 +48,7 @@ public class CouponResponseDto {
                 .issueDate(coupon.getIssueDate())
                 .couponType(coupon.getCouponType())
                 .maxCount(coupon.getMaxCount())
+                .remainingCount(coupon.getRemainingCount())
                 .brandRelations(CouponBrandRelationDto.toDtos(coupon.getCouponBrandRelations()))
                 .build();
     }

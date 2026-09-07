@@ -318,7 +318,7 @@ public class OrdersServiceImpl implements OrdersService {
         // DB 락 제거, 분산락으로 동시성 제어
         Coupon coupon = couponRepository.findByIdOrElseThrow(cartItem.getCoupon().getId());
 
-        log.info("🎟 쿠폰 사용 검증 시작 - 쿠폰 ID: {}, 현재 재고: {}", coupon.getId(), coupon.getMaxCount());
+        log.info("🎟 쿠폰 사용 검증 시작 - 쿠폰 ID: {}, 남은 수량: {}", coupon.getId(), coupon.getRemainingCount());
 
         CouponUser couponUser = couponUserRepository.findByCouponIdAndUserUserId(coupon.getId(), user.getUserId())
                 .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_COUPON));
@@ -330,7 +330,7 @@ public class OrdersServiceImpl implements OrdersService {
             throw new InvalidInputException(ErrorCode.ALREADY_USED_COUPON);
         }
 
-        if (couponRepository.decreaseMaxCount(coupon.getId(), 1) == 0) {
+        if (couponRepository.decreaseRemainingCount(coupon.getId(), 1) == 0) {
             log.error("🚨 쿠폰 사용 불가 - 쿠폰 ID: {}, 재고 부족", coupon.getId());
             throw new InvalidInputException(ErrorCode.COUPON_OUT_OF_STOCK);
         }

@@ -34,9 +34,12 @@ public interface CouponRepository extends JpaRepository<Coupon, Long> {
            "WHERE c.id = :id AND c.issuedCount < c.maxCount")
     int increaseIssuedCount(@Param("id") Long id);
 
-    /** 쿠폰 사용 시 잔여 수량 차감. 0이면 남은 수량 없음. */
+    /**
+     * 쿠폰 사용 시 잔여 수량 차감. 0이면 남은 수량 없음.
+     * remainingCount 도입 전 쿠폰은 값이 없으므로 정원으로 간주한다.
+     */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("UPDATE Coupon c SET c.maxCount = c.maxCount - :amount " +
-           "WHERE c.id = :id AND c.maxCount >= :amount")
-    int decreaseMaxCount(@Param("id") Long id, @Param("amount") int amount);
+    @Query("UPDATE Coupon c SET c.remainingCount = COALESCE(c.remainingCount, c.maxCount) - :amount " +
+           "WHERE c.id = :id AND COALESCE(c.remainingCount, c.maxCount) >= :amount")
+    int decreaseRemainingCount(@Param("id") Long id, @Param("amount") int amount);
 }
