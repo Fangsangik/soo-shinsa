@@ -24,9 +24,12 @@ import com.Soo_Shinsa.product.repository.ProductRepository;
 import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.user.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.Soo_Shinsa.support.TestDataCleaner;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +41,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @Slf4j
 @SpringBootTest
 class CartItemServiceImplTest {
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Autowired
     private UserRepository userRepository;
@@ -82,9 +88,16 @@ class CartItemServiceImplTest {
     @Autowired
     private CartItemService cartItemService;
 
+    @AfterEach
+    void tearDown() {
+        // 실행이 끝나면 자기 픽스처는 DB 에 남기지 않는다
+        TestDataCleaner.clean(jdbcTemplate);
+    }
+
     @BeforeEach
     void setUp() {
         log.info("🛠 setUp");
+        TestDataCleaner.clean(jdbcTemplate);
         user = User.builder()
                 .email("test@test.com")
                 .name("Test User")
@@ -143,6 +156,14 @@ class CartItemServiceImplTest {
                 .quantity(100)
                 .build();
         productOptionRepository.save(productOption);
+
+        // cartItem 필드가 선언만 되어 있고 만들어지지 않아 테스트가 NPE 로 죽었다
+        cartItem = CartItem.builder()
+                .product(product)
+                .user(user)
+                .quantity(1)
+                .build();
+        cartItemRepository.save(cartItem);
 
         validCoupon = Coupon.builder()
                 .couponName("나이키 10% 할인")

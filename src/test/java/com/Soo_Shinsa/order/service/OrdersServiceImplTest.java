@@ -27,9 +27,12 @@ import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.user.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.Soo_Shinsa.support.TestDataCleaner;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.math.BigDecimal;
@@ -42,6 +45,9 @@ import java.util.concurrent.Executors;
 @Slf4j
 @SpringBootTest
 class OrdersServiceImplTest {
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Autowired
     private UserRepository userRepository;
@@ -95,14 +101,18 @@ class OrdersServiceImplTest {
     @Autowired
     private CartItemService cartItemService;
 
+    @AfterEach
+    void tearDown() {
+        // 실행이 끝나면 자기 픽스처는 DB 에 남기지 않는다
+        TestDataCleaner.clean(jdbcTemplate);
+    }
+
     @BeforeEach
     void setUp() {
         log.info("🛠 setUp");
+        TestDataCleaner.clean(jdbcTemplate);
 
-        couponBrandRelationRepository.deleteAll();
-        couponRepository.deleteAll();
-        cartItemRepository.deleteAll();
-        ordersRepository.deleteAll();
+        // 전역 deleteAll 은 다른 데이터까지 지우다 FK 에 걸린다. 정리는 TestDataCleaner 가 범위 안에서 한다.
 
 
         user = User.builder()
@@ -333,7 +343,6 @@ class OrdersServiceImplTest {
      */
     @Test
     void applyDifferentCouponsAndCreateOrderConcurrently() throws InterruptedException {
-        couponRepository.deleteAll();
         int threadCount = 10; // ✅ 스레드 수를 10으로 설정하여 병렬 처리
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
         CountDownLatch countDownLatch = new CountDownLatch(threadCount);
