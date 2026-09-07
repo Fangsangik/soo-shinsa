@@ -21,6 +21,17 @@ public class SubCategoryServiceImpl implements SubCategoryService {
     private final SubCategoryRepository subCategoryRepository;
     private final CategoryRepository categoryRepository;
 
+    /** 브랜드 등록 화면에서 서브 카테고리를 고르려면 목록이 필요하다. 조회는 공개. */
+    @Transactional(readOnly = true)
+    @Override
+    public java.util.List<SubCategoryResponseDto> findAll(Long categoryId) {
+        java.util.List<com.Soo_Shinsa.category.model.SubCategory> found =
+                (categoryId == null)
+                        ? subCategoryRepository.findAll()
+                        : subCategoryRepository.findAllByCategoryId(categoryId);
+        return found.stream().map(SubCategoryResponseDto::toDto).toList();
+    }
+
     @Transactional
     @Override
     public SubCategoryResponseDto createSubCategory(User user, SubCategoryRequestDto dto) {

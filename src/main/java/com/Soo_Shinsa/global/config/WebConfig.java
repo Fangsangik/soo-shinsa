@@ -69,7 +69,9 @@ public class WebConfig {
                         .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.INCLUDE, DispatcherType.ERROR).permitAll()
                         .requestMatchers(ADMIN_INTERCEPTOR_LIST).hasRole("ADMIN")
                         .requestMatchers(VENDOR_INTERCEPTOR_LIST).hasRole("VENDOR")
-                        .requestMatchers(CUSTOMER_INTERCEPTOR_LIST).hasRole("CUSTOMER")
+                        // /users/** 는 "내 정보"다. 고객 전용으로 묶어 두는 바람에 업주는
+                        // 자기 정보를 조회/수정/탈퇴할 수 없었다(403). 로그인만 하면 된다.
+                        .requestMatchers(CUSTOMER_INTERCEPTOR_LIST).authenticated()
                         .requestMatchers(HttpMethod.GET, CUSTOMER_DENY_INTERCEPTOR_LIST).hasRole("CUSTOMER")
                         .anyRequest().authenticated()
                 )

@@ -6,9 +6,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.test.context.support.WithMockUser;
+import jakarta.servlet.ServletException;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static com.Soo_Shinsa.global.constant.UrlConst.API;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -64,6 +67,25 @@ class SecurityRuleTest extends IntegrationTestSupport {
     @Test
     void 주문_조회는_비로그인을_막는다() throws Exception {
         mvc.perform(get(API + "/orders/1")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void 내_정보는_역할과_무관하게_로그인만_하면_된다() throws Exception {
+        // /users/** 를 hasRole("CUSTOMER") 로 묶어 둬서 업주/관리자가 403 이었다
+        mvc.perform(get(API + "/users")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(roles = "VENDOR")
+    void 업주는_내_정보_경로에서_인가에_막히지_않는다() {
+        // 보려는 것은 "필터 체인이 403 으로 끊지 않는다"는 것 하나다.
+        // @WithMockUser 가 넣는 principal 은 UserDetailsImp 가 아니라서 컨트롤러 안에서
+        // 캐스팅에 실패하는데, 그 예외가 났다는 것 자체가 컨트롤러까지 도달했다는 뜻이다.
+        // /users/** 를 다시 hasRole("CUSTOMER") 로 묶으면 예외 없이 403 이 떨어져 이 테스트가 깨진다.
+        ServletException e = assertThrows(ServletException.class,
+                () -> mvc.perform(get(API + "/users")));
+        assertInstanceOf(ClassCastException.class, e.getCause(),
+                "인가가 아니라 컨트롤러에서 난 예외여야 한다");
     }
 
     @Test

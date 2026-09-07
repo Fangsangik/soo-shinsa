@@ -406,6 +406,42 @@
                 gap: 10px;
             }
         }
+
+        /* 로그인 / 회원가입 / 역할별 메뉴 */
+        .auth-area { display:flex; align-items:center; gap:8px; margin-left:12px; white-space:nowrap; }
+        .auth-btn {
+            padding:8px 14px; border:1px solid #ddd; border-radius:20px; background:#fff;
+            font-size:13px; cursor:pointer;
+        }
+        .auth-btn.primary { background:#111; color:#fff; border-color:#111; }
+        .auth-user { font-size:13px; color:#333; }
+        .role-tag {
+            font-size:11px; padding:2px 8px; border-radius:10px; background:#eee; color:#555; margin-left:4px;
+        }
+        .modal-backdrop {
+            position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex;
+            align-items:center; justify-content:center; z-index:100; padding:16px;
+        }
+        .modal {
+            background:#fff; border-radius:12px; padding:24px; width:100%; max-width:460px;
+            max-height:85vh; overflow:auto;
+        }
+        .modal h3 { margin:0 0 4px; font-size:18px; }
+        .modal .hint { font-size:12px; color:#777; margin:0 0 16px; line-height:1.5; }
+        .modal label { display:block; font-size:13px; margin:10px 0 4px; color:#444; }
+        .modal input, .modal select {
+            width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:8px; font-size:14px;
+        }
+        .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:18px; }
+        .modal-msg { font-size:13px; margin-top:12px; min-height:18px; }
+        .modal-msg.error { color:#b71c1c; }
+        .modal-msg.ok { color:#1b5e20; }
+        .pending-row {
+            display:flex; align-items:center; gap:8px; padding:10px 0; border-bottom:1px solid #eee;
+            font-size:14px;
+        }
+        .pending-row .grow { flex:1; }
+        .nav-link.active { font-weight:700; text-decoration:underline; }
     </style>
 </head>
 <body>
@@ -421,12 +457,9 @@
         <div class="container">
             <nav class="nav">
                 <a href="#" class="logo">수신사</a>
-                <div class="nav-menu">
-                    <a href="#" class="nav-link">홈</a>
-                    <a href="#brands" class="nav-link">브랜드관</a>
-                    <a href="#" class="nav-link">카테고리</a>
-                    <a href="#" class="nav-link">베스트</a>
-                    <a href="#" class="nav-link">이벤트</a>
+                <div class="nav-menu" id="nav-menu">
+                    <a href="#" class="nav-link" data-nav="home">홈</a>
+                    <!-- 카테고리는 /api/v1/categories 에서 채운다 -->
                 </div>
                 <div class="search-wrap">
                     <div class="search-box">
@@ -437,6 +470,8 @@
                     </div>
                     <ul class="suggest-list" id="suggestList" role="listbox" aria-label="상품명 추천" hidden></ul>
                 </div>
+                <!-- 역할은 회원가입 때 서버가 정한다. 로그인 후 그 역할에 맞는 메뉴만 나온다. -->
+                <div class="auth-area" id="auth-area"></div>
             </nav>
         </div>
     </header>
@@ -456,8 +491,8 @@
     <section class="brands-section" id="brands">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">🏷️ 인기 브랜드관</h2>
-                <a href="#" class="view-all">전체보기 &gt;</a>
+                <h2 class="section-title" id="section-title">🏷️ 인기 브랜드관</h2>
+                <a href="#" class="view-all" id="view-all">전체보기 &gt;</a>
             </div>
             
             <!-- 로딩 상태 -->
@@ -476,17 +511,13 @@
 
             <!-- 빈 상태 -->
             <div id="empty-state" class="empty-state" style="display: none;">
-                <h3>🔍 등록된 브랜드가 없습니다</h3>
-                <p>곧 다양한 브랜드가 입점될 예정이니 조금만 기다려주세요!</p>
+                <h3 id="empty-title">🔍 등록된 브랜드가 없습니다</h3>
+                <p id="empty-desc">곧 다양한 브랜드가 입점될 예정이니 조금만 기다려주세요!</p>
             </div>
         </div>
     </section>
 
-    <!-- 관리자 액세스 -->
-    <div class="admin-access">
-        <button class="btn admin-btn admin" onclick="alert('관리자 기능 준비 중')">관리자</button>
-        <button class="btn admin-btn vendor" onclick="alert('업주 기능 준비 중')">업주</button>
-    </div>
+    <div id="modal-root"></div>
 
     <script>
         // API 설정
@@ -536,7 +567,7 @@
                         <p class="brand-description">${description}</p>
                         <div class="brand-footer">
                             <span class="status-badge ${status.class}">${status.text}</span>
-                            <button class="shop-btn" onclick="alert('${brand.name} 상품 보러가기!')">쇼핑하기</button>
+                            <button class="shop-btn" onclick="showBrandProducts(${brand.id}, '${(brand.name || '').replace(/'/g, "\\'")}')">쇼핑하기</button>
                         </div>
                     </div>
                 </div>
@@ -620,8 +651,9 @@
 
         // 페이지 로드 시 브랜드 로드
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('페이지 로드됨. 브랜드 로딩 시작...');
             loadBrands();
+            loadCategories();
+            refreshAuth();
         });
 
 
@@ -638,8 +670,8 @@
                         <h3 class="brand-name">${p.name}</h3>
                         <p class="brand-description">${price}원</p>
                         <div class="brand-footer">
-                            <span class="status-badge status-open">${p.productStatus || ''}</span>
-                            <button class="shop-btn" onclick="alert('${p.name} 상세 준비 중')">보러가기</button>
+                            <span class="status-badge status-open">${p.status || ''}</span>
+                            <button class="shop-btn" onclick="showProductDetail(${p.id})">보러가기</button>
                         </div>
                     </div>
                 </div>
@@ -662,17 +694,8 @@
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 const data = await response.json();
-                const products = data.data?.content || [];
-
-                loadingEl.style.display = 'none';
-                errorEl.style.display = 'none';
-                if (products.length === 0) {
-                    emptyStateEl.style.display = 'block';
-                    brandsGridEl.innerHTML = '';
-                    return;
-                }
-                emptyStateEl.style.display = 'none';
-                brandsGridEl.innerHTML = products.map(createProductCard).join('');
+                renderProducts(data.data?.content || [], `🔍 "${term}" 검색 결과`);
+                markNav(null);
             } catch (error) {
                 console.error('상품 검색 실패:', error);
                 showError();
@@ -828,6 +851,414 @@
                 behavior: 'smooth' 
             });
         });
+
+        // ===================================================================
+        // 인증 · 카테고리 · 브랜드/상품 탐색 · 역할별 메뉴
+        //
+        // 역할은 회원가입 때 서버가 정한다(관리자 키를 주면 ADMIN,
+        // 사업자등록번호를 주면 VENDOR, 아무것도 없으면 CUSTOMER).
+        // 그래서 화면에 "관리자/업주" 진입 버튼을 따로 두지 않는다.
+        // 로그인한 사람의 역할에 해당하는 메뉴만 헤더에 나온다.
+        // ===================================================================
+        const TOKEN_KEY = 'soo_shinsa_token';
+        let me = null;   // { name, role }
+
+        const token = () => localStorage.getItem(TOKEN_KEY);
+        const authHeaders = () => token() ? { Authorization: `Bearer ${token()}` } : {};
+
+        async function api(path, options = {}) {
+            const res = await fetch(`${API_BASE_URL}${path}`, {
+                ...options,
+                headers: {
+                    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+                    ...authHeaders(),
+                    ...(options.headers || {})
+                }
+            });
+            const text = await res.text();
+            const body = text ? JSON.parse(text) : null;
+            if (!res.ok) {
+                throw new Error(body?.message || `HTTP ${res.status}`);
+            }
+            return body;
+        }
+
+        // ---------- 인증 상태 ----------
+        async function refreshAuth() {
+            if (!token()) { me = null; renderAuthArea(); return; }
+            try {
+                const body = await api('/users');
+                me = body.data;
+            } catch (e) {
+                // 토큰이 만료됐거나 잘못됐다
+                localStorage.removeItem(TOKEN_KEY);
+                me = null;
+            }
+            renderAuthArea();
+        }
+
+        function renderAuthArea() {
+            const el = document.getElementById('auth-area');
+            if (!me) {
+                el.innerHTML = `
+                    <button class="auth-btn" onclick="showLogin()">로그인</button>
+                    <button class="auth-btn primary" onclick="showSignup()">회원가입</button>`;
+                return;
+            }
+            const roleLabel = { ADMIN: '관리자', VENDOR: '업주', CUSTOMER: '고객' }[me.role] || me.role;
+            // 역할에 맞는 메뉴만 붙인다
+            const roleMenu =
+                me.role === 'ADMIN'  ? `<button class="auth-btn" onclick="showAdminPanel()">승인 대기</button>` :
+                me.role === 'VENDOR' ? `<button class="auth-btn" onclick="showVendorPanel()">내 브랜드</button>` : '';
+            el.innerHTML = `
+                <span class="auth-user">${me.name}<span class="role-tag">${roleLabel}</span></span>
+                ${roleMenu}
+                <button class="auth-btn" onclick="logout()">로그아웃</button>`;
+        }
+
+        async function logout() {
+            try { await api('/users/logout', { method: 'POST' }); } catch (e) { /* 토큰이 이미 죽었어도 지운다 */ }
+            localStorage.removeItem(TOKEN_KEY);
+            me = null;
+            renderAuthArea();
+        }
+
+        // ---------- 모달 ----------
+        function openModal(html) {
+            document.getElementById('modal-root').innerHTML =
+                `<div class="modal-backdrop" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`;
+        }
+        function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
+        function modalMsg(text, ok) {
+            const el = document.getElementById('modal-msg');
+            if (el) { el.textContent = text; el.className = 'modal-msg ' + (ok ? 'ok' : 'error'); }
+        }
+
+        function showLogin() {
+            openModal(`
+                <h3>로그인</h3>
+                <p class="hint">가입한 이메일과 비밀번호를 입력하세요.</p>
+                <label>이메일</label><input id="login-email" type="email" autocomplete="username">
+                <label>비밀번호</label><input id="login-password" type="password" autocomplete="current-password">
+                <div id="modal-msg" class="modal-msg"></div>
+                <div class="modal-actions">
+                    <button class="auth-btn" onclick="closeModal()">닫기</button>
+                    <button class="auth-btn primary" onclick="doLogin()">로그인</button>
+                </div>`);
+        }
+
+        async function doLogin() {
+            try {
+                const body = await api('/users/login', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        email: document.getElementById('login-email').value.trim(),
+                        password: document.getElementById('login-password').value
+                    })
+                });
+                localStorage.setItem(TOKEN_KEY, body.data.accessToken);
+                await refreshAuth();
+                closeModal();
+            } catch (e) {
+                modalMsg(e.message, false);
+            }
+        }
+
+        function showSignup() {
+            openModal(`
+                <h3>회원가입</h3>
+                <p class="hint">
+                    역할은 입력값에 따라 서버가 정합니다.<br>
+                    · 아무것도 안 넣으면 <b>일반 고객</b><br>
+                    · 사업자등록번호(123-45-67890)를 넣으면 <b>업주</b><br>
+                    · 관리자 키를 넣으면 <b>관리자</b>
+                </p>
+                <label>이메일</label><input id="su-email" type="email">
+                <label>이름</label><input id="su-name" type="text">
+                <label>전화번호 (010-1234-5678)</label><input id="su-phone" type="text" placeholder="010-1234-5678">
+                <label>비밀번호 (8자 이상, 대소문자·숫자·특수문자 @$!%*?&#)</label>
+                <input id="su-password" type="password">
+                <label>사업자등록번호 <span style="color:#999">(업주로 가입할 때만)</span></label>
+                <input id="su-business" type="text" placeholder="123-45-67890">
+                <label>관리자 키 <span style="color:#999">(관리자로 가입할 때만)</span></label>
+                <input id="su-adminkey" type="password">
+                <div id="modal-msg" class="modal-msg"></div>
+                <div class="modal-actions">
+                    <button class="auth-btn" onclick="closeModal()">닫기</button>
+                    <button class="auth-btn primary" onclick="doSignup()">가입하기</button>
+                </div>`);
+        }
+
+        async function doSignup() {
+            const payload = {
+                email: document.getElementById('su-email').value.trim(),
+                name: document.getElementById('su-name').value.trim(),
+                phoneNum: document.getElementById('su-phone').value.trim(),
+                password: document.getElementById('su-password').value
+            };
+            const business = document.getElementById('su-business').value.trim();
+            const adminKey = document.getElementById('su-adminkey').value;
+            if (business) payload.businessNumber = business;
+            if (adminKey) payload.adminKey = adminKey;
+
+            try {
+                await api('/users/signin', { method: 'POST', body: JSON.stringify(payload) });
+                modalMsg('가입되었습니다. 로그인해 주세요.', true);
+                setTimeout(showLogin, 800);
+            } catch (e) {
+                modalMsg(e.message, false);
+            }
+        }
+
+        // ---------- 카테고리 ----------
+        let categories = [];
+
+        async function loadCategories() {
+            try {
+                const body = await api('/categories?page=0&size=200');
+                const all = body.data?.content || [];
+                // 상품이 하나도 없는 카테고리는 눌러도 빈 화면이라 내비에 올리지 않는다.
+                // 같은 이름이 여러 개면 상품이 가장 많은 것 하나만 남긴다.
+                const byName = new Map();
+                for (const c of all.filter(c => (c.totalCount || 0) > 0)) {
+                    const prev = byName.get(c.name);
+                    if (!prev || (c.totalCount || 0) > (prev.totalCount || 0)) byName.set(c.name, c);
+                }
+                categories = [...byName.values()]
+                    .sort((a, b) => (b.totalCount || 0) - (a.totalCount || 0))
+                    .slice(0, 6);
+            } catch (e) {
+                console.warn('카테고리 로딩 실패', e);
+                return;
+            }
+            const nav = document.getElementById('nav-menu');
+            nav.innerHTML = `<a href="#" class="nav-link" data-nav="home" onclick="goHome();return false;">홈</a>` +
+                categories.map(c =>
+                    `<a href="#" class="nav-link" data-cat="${c.id}"
+                        onclick="showCategoryProducts(${c.id}, '${(c.name || '').replace(/'/g, "\\'")}');return false;">${c.name}</a>`
+                ).join('');
+        }
+
+        function markNav(categoryId) {
+            document.querySelectorAll('#nav-menu .nav-link').forEach(a => {
+                a.classList.toggle('active',
+                    (categoryId == null && a.dataset.nav === 'home') ||
+                    (categoryId != null && a.dataset.cat === String(categoryId)));
+            });
+        }
+
+        // ---------- 목록 렌더 ----------
+        function setEmptyText(title, desc) {
+            document.getElementById('empty-title').textContent = title;
+            document.getElementById('empty-desc').textContent = desc;
+        }
+
+        function renderProducts(products, title) {
+            document.getElementById('section-title').textContent = title;
+            loadingEl.style.display = 'none';
+            errorEl.style.display = 'none';
+            if (!products.length) {
+                setEmptyText('🔍 등록된 상품이 없습니다', '다른 브랜드나 카테고리를 골라보세요.');
+                emptyStateEl.style.display = 'block';
+                brandsGridEl.innerHTML = '';
+                return;
+            }
+            emptyStateEl.style.display = 'none';
+            brandsGridEl.innerHTML = products.map(createProductCard).join('');
+        }
+
+        function goHome() {
+            markNav(null);
+            document.getElementById('section-title').textContent = '🏷️ 인기 브랜드관';
+            setEmptyText('🔍 등록된 브랜드가 없습니다', '곧 다양한 브랜드가 입점될 예정이니 조금만 기다려주세요!');
+            loadBrands();
+        }
+
+        async function showBrandProducts(brandId, brandName) {
+            markNav(null);
+            try {
+                showLoading();
+                const body = await api(`/products/brands/${brandId}?page=0&size=20`);
+                renderProducts(body.data?.content || [], `🏷️ ${brandName}`);
+            } catch (e) {
+                console.error('브랜드 상품 조회 실패', e);
+                showError();
+            }
+        }
+
+        async function showCategoryProducts(categoryId, name) {
+            markNav(categoryId);
+            try {
+                showLoading();
+                const body = await api(`/products/search?categoryId=${categoryId}&page=0&size=20`);
+                renderProducts(body.data?.content || [], `📂 ${name}`);
+            } catch (e) {
+                console.error('카테고리 상품 조회 실패', e);
+                showError();
+            }
+        }
+
+        async function showProductDetail(productId) {
+            try {
+                const body = await api(`/products/${productId}`);
+                const p = body.data || {};
+                const price = Number(p.price || 0).toLocaleString('ko-KR');
+                openModal(`
+                    <h3>${p.name || '상품'}</h3>
+                    <p class="hint">${price}원</p>
+                    ${(p.options || []).length
+                        ? `<label>옵션</label><ul style="margin:0;padding-left:18px;font-size:14px;">` +
+                          p.options.map(o => `<li>${o.size ?? o.name ?? '-'} · 재고 ${o.quantity ?? '-'}</li>`).join('') +
+                          `</ul>`
+                        : `<p class="hint">등록된 옵션이 없습니다.</p>`}
+                    <div class="modal-actions"><button class="auth-btn" onclick="closeModal()">닫기</button></div>`);
+            } catch (e) {
+                openModal(`<h3>상품을 불러오지 못했습니다</h3><p class="hint">${e.message}</p>
+                    <div class="modal-actions"><button class="auth-btn" onclick="closeModal()">닫기</button></div>`);
+            }
+        }
+
+        // ---------- 업주 ----------
+        async function showVendorPanel() {
+            openModal(`<h3>내 브랜드</h3><p class="hint">불러오는 중...</p>`);
+            let brands = [];
+            try {
+                const body = await api('/brands/vendor');
+                brands = body.data || [];
+            } catch (e) {
+                openModal(`<h3>내 브랜드</h3><p class="hint">${e.message}</p>
+                    <div class="modal-actions"><button class="auth-btn" onclick="closeModal()">닫기</button></div>`);
+                return;
+            }
+            const rows = brands.length
+                ? brands.map(b => `
+                    <div class="pending-row">
+                        <span class="grow">${b.name}</span>
+                        <button class="auth-btn" onclick="showProductForm(${b.id}, '${(b.name || '').replace(/'/g, "\\'")}')">상품 등록</button>
+                    </div>`).join('')
+                : `<p class="hint">아직 등록한 브랜드가 없습니다. 아래에서 신청하세요. 관리자 승인 후 노출됩니다.</p>`;
+
+            const subOptions = await subCategoryOptions();
+            openModal(`
+                <h3>내 브랜드</h3>
+                ${rows}
+                <h3 style="margin-top:20px;">브랜드 신청</h3>
+                <p class="hint">신청하면 승인 대기 상태가 되고, 관리자가 승인해야 매장에 노출됩니다.</p>
+                <label>브랜드명</label><input id="br-name" type="text">
+                <label>사업자등록번호</label><input id="br-regnum" type="text" placeholder="123-45-67890">
+                <label>브랜드 소개</label><input id="br-context" type="text">
+                <label>서브 카테고리</label><select id="br-subcat">${subOptions}</select>
+                <div id="modal-msg" class="modal-msg"></div>
+                <div class="modal-actions">
+                    <button class="auth-btn" onclick="closeModal()">닫기</button>
+                    <button class="auth-btn primary" onclick="createBrand()">신청하기</button>
+                </div>`);
+        }
+
+        // 서브 카테고리 전체를 그냥 뿌리면 예전 부하테스트가 만든 것까지 200개가 나온다.
+        // 내비에 쓰는 "상품이 있는 카테고리"에 속한 것만 카테고리별로 묶어서 보여준다.
+        async function subCategoryOptions() {
+            try {
+                if (categories.length) {
+                    const groups = await Promise.all(categories.map(async c => {
+                        const body = await api(`/sub-categories?categoryId=${c.id}`);
+                        const opts = (body.data || [])
+                            .map(sc => `<option value="${sc.id}">${sc.name}</option>`).join('');
+                        return opts ? `<optgroup label="${c.name}">${opts}</optgroup>` : '';
+                    }));
+                    const html = groups.join('');
+                    if (html) return html;
+                }
+                const body = await api('/sub-categories');
+                return (body.data || []).map(sc => `<option value="${sc.id}">${sc.name}</option>`).join('');
+            } catch (e) {
+                return '';
+            }
+        }
+
+        async function createBrand() {
+            try {
+                await api('/brands', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name: document.getElementById('br-name').value.trim(),
+                        registrationNum: document.getElementById('br-regnum').value.trim(),
+                        context: document.getElementById('br-context').value.trim(),
+                        subCategoryId: Number(document.getElementById('br-subcat').value)
+                    })
+                });
+                modalMsg('신청되었습니다. 관리자 승인을 기다려 주세요.', true);
+            } catch (e) {
+                modalMsg(e.message, false);
+            }
+        }
+
+        function showProductForm(brandId, brandName) {
+            openModal(`
+                <h3>상품 등록 · ${brandName}</h3>
+                <label>상품명</label><input id="pr-name" type="text">
+                <label>가격</label><input id="pr-price" type="number" min="0">
+                <div id="modal-msg" class="modal-msg"></div>
+                <div class="modal-actions">
+                    <button class="auth-btn" onclick="showVendorPanel()">뒤로</button>
+                    <button class="auth-btn primary" onclick="createProduct(${brandId})">등록</button>
+                </div>`);
+        }
+
+        async function createProduct(brandId) {
+            try {
+                await api(`/products/brands/${brandId}`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name: document.getElementById('pr-name').value.trim(),
+                        price: Number(document.getElementById('pr-price').value),
+                        brandId: brandId,
+                        status: 'AVAILABLE'
+                    })
+                });
+                modalMsg('상품이 등록되었습니다.', true);
+            } catch (e) {
+                modalMsg(e.message, false);
+            }
+        }
+
+        // ---------- 관리자 ----------
+        async function showAdminPanel() {
+            openModal(`<h3>승인 대기 브랜드</h3><p class="hint">불러오는 중...</p>`);
+            try {
+                const body = await api('/brands/admin/pending?page=0&size=20');
+                const pending = body.data?.content || [];
+                const rows = pending.length
+                    ? pending.map(b => `
+                        <div class="pending-row">
+                            <span class="grow">${b.name}<br><span style="color:#888;font-size:12px;">${b.context || ''}</span></span>
+                            <button class="auth-btn primary" onclick="decideBrand(${b.id}, true)">승인</button>
+                            <button class="auth-btn" onclick="decideBrand(${b.id}, false)">거절</button>
+                        </div>`).join('')
+                    : `<p class="hint">대기 중인 신청이 없습니다.</p>`;
+                openModal(`<h3>승인 대기 브랜드</h3>${rows}
+                    <div id="modal-msg" class="modal-msg"></div>
+                    <div class="modal-actions"><button class="auth-btn" onclick="closeModal()">닫기</button></div>`);
+            } catch (e) {
+                openModal(`<h3>승인 대기 브랜드</h3><p class="hint">${e.message}</p>
+                    <div class="modal-actions"><button class="auth-btn" onclick="closeModal()">닫기</button></div>`);
+            }
+        }
+
+        async function decideBrand(brandId, approve) {
+            const reason = approve ? '승인합니다' : (prompt('거절 사유를 입력하세요') || '기준 미달');
+            try {
+                await api(`/brands/admin/${brandId}/${approve ? 'approve' : 'reject'}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify(approve ? { approvalReason: reason } : { rejectionReason: reason })
+                });
+                await showAdminPanel();
+                loadBrands();
+            } catch (e) {
+                modalMsg(e.message, false);
+            }
+        }
+
     </script>
 </body>
 </html>

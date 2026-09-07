@@ -16,6 +16,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/sub-categories")
 @RequiredArgsConstructor
@@ -31,6 +33,14 @@ public class SubCategoryController {
         User user = UserUtils.getUser(userDetails);
         SubCategoryResponseDto responseDto = subCategoryService.createSubCategory(user, requestDto);
         return ResponseEntity.ok(new CommonResponse<>("서브 카테고리가 성공적으로 생성되었습니다.", responseDto));
+    }
+
+    @GetMapping
+    @Operation(summary = "서브 카테고리 목록", description = "categoryId 를 주면 그 카테고리에 속한 것만 반환합니다.")
+    public ResponseEntity<CommonResponse<List<SubCategoryResponseDto>>> findAll(
+            @RequestParam(required = false) Long categoryId) {
+        return ResponseEntity.ok(
+                new CommonResponse<>("서브 카테고리 조회에 성공했습니다.", subCategoryService.findAll(categoryId)));
     }
 
     @GetMapping("/{subCategoryId}")
