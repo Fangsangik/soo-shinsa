@@ -57,6 +57,7 @@ public class ResponseMessage {
     //coupon
     public static final String COUPON_APPLIED = "쿠폰이 적용되었습니다.";
     public static final String COUPON_CREATE_SUCCESS = "쿠폰 생성에 성공했습니다.";
+    public static final String COUPON_ISSUE_SUCCESS = "쿠폰 발급에 성공했습니다.";
     public static final String USER_ACCESS_TOKEN_REFRESHED = "액세스 토큰이 갱신되었습니다.";
 
     public static final String AUTHENTICATION_REQUIRED = "인증이 필요합니다. 로그인 후 이용해주세요.";
