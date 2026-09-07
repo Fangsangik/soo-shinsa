@@ -1,115 +1,92 @@
-# SooShinsa (수신사) 🛍️
+# SooShinsa (수신사)
 
-> **문제 해결 중심의 실전형 이커머스 플랫폼**  
-> 동시성 충돌, 데이터 정합성, 성능 병목 등 실제 운영 환경에서 발생하는 복잡한 문제를 해결한 프로젝트
+브랜드 입점형 이커머스 서버. 회원/브랜드/상품/장바구니/주문/결제/쿠폰/리뷰/통계로 구성돼 있고,
+선착순 쿠폰과 재고 차감처럼 **동시에 들어오면 틀어지는 지점**을 어떻게 막았는지가 이 프로젝트의 중심입니다.
 
-## 📌 프로젝트 개요
+## 기술 스택
 
-**SooShinsa**는 쿠팡 및 무신사와 같은 이커머스를 모티브로 한 온라인 쇼핑몰 프로젝트입니다. 회원가입 및 백오피스 기능을 포함하여, 회원 등급에 따라 포인트 적립, 할인, 포인트 사용이 가능하며, 관리자와 점주는 매출 및 판매 현황을 분석하여 운영 효율성을 높일 수 있습니다. 소비자는 브랜드별 카테고리에서 상품을 탐색 및 구매할 수 있으며, 쿠폰 시스템을 통해 추가적인 할인 혜택을 누릴 수 있습니다.
+| 영역 | 사용 |
+|---|---|
+| 언어 / 프레임워크 | Java 17, Spring Boot 3.3.2 |
+| 데이터 | MySQL 8, Redis 7, JPA + QueryDSL + MyBatis |
+| 스키마 | Flyway (`ddl-auto=validate`) |
+| 인증 | Spring Security, JWT, Kakao OAuth2 |
+| 결제 | Toss Payments |
+| 배치 | Spring Batch (일 단위 매출 통계) |
+| 관측 | Actuator + Micrometer + Prometheus |
+| 테스트 | JUnit 5, Mockito, Testcontainers (MySQL/Redis) |
 
-## 🛠️ 기술 스택
+## 실행
 
-- **Backend**: Java, Spring Boot, JPA, QueryDSL, Socket.IO
-- **Database**: MySQL, Redis
-- **Infra**: AWS (S3, EC2, RDS)
-- **API Management**: Postman, Swagger
-- **Payment**: Toss Payments
-- **Authentication**: SpringSecurity, Kakao OAuth2
-- **CORS**: Simple global configuration so the React frontend can call the API
+MySQL 8과 Redis 7이 필요합니다. 전체를 컨테이너로 띄우려면:
 
-## 🌐 Frontend
+```bash
+docker compose up -d          # mysql, redis, app, prometheus, grafana, nginx
+```
 
-The project ships with a small React based UI under `frontend`. Open `frontend/index.html` directly in your browser and you will be able to log in with your user account and navigate through several screens. Navigation is handled via React Router so no build step is required. From the UI you can look up products, browse categories and brands, view your cart and your past orders.
+로컬에서 앱만 직접 띄우려면 MySQL/Redis를 올린 뒤:
 
----
+```bash
+./gradlew bootRun             # http://localhost:8080, Swagger: /swagger-ui.html
+```
 
-## 🚀 프로젝트 기간
+스키마는 Flyway가 만듭니다(`src/main/resources/db/migration`). 이미 스키마가 있는 DB는
+`baseline-on-migrate`로 V1을 건너뜁니다. 데모용 시드 데이터는 `SEED_DATA=false`로 끕니다.
 
-- **MVP 1**: 2025/01/02 ~ 2025/02/10
-- **MVP 2**: 2025/02/17 ~ 2025/02/25
+민감값은 모두 환경변수입니다: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`,
+`ADMIN_SECRET_KEY`, `TOSS_SECRET_KEY`, `TOSS_CLIENT_KEY`, `AWS_*`.
 
-## 🎯 주요 기능
+## 테스트
 
-### 1. 사용자(User)
+```bash
+./gradlew test                # Docker 필요 (Testcontainers가 MySQL/Redis를 띄웁니다)
+```
 
-- 회원가입, 로그인, 회원 조회, 회원 수정, 로그아웃 기능 제공
-- JWT 기반 인증 및 Refresh Token 관리 추가 예정
-- 카카오톡을 통해 로그인 가능
+테스트는 개발 DB를 건드리지 않고 일회용 컨테이너에서 돕니다. 컨테이너 스키마도 Flyway가
+만들고 Hibernate는 `validate`로 두기 때문에, **마이그레이션과 엔티티가 어긋나면 테스트가 먼저 깨집니다.**
 
-### 2. 브랜드(Brand)
+## 해결한 문제
 
-- 브랜드 생성, 수정, 조회, 브랜드별 점주 조회 기능 제공
+### 선착순 쿠폰이 정원을 넘겨 발급되던 문제
 
-### 3. 카테고리(Category)
+분산 락을 걸었지만 락 해제가 트랜잭션 커밋보다 먼저 일어나서, 정원 10장짜리 쿠폰이 **20장** 나갔습니다.
+락을 걷어내고 조건부 원자 UPDATE(`WHERE issued_count < max_count`)를 DB의 진실로 삼은 뒤,
+Redis 선차단(SETNX + DECR)을 앞단에 두어 정원 초과 요청이 DB까지 오지 않게 했습니다.
+Redis가 죽으면 fail-open으로 통과시키고 DB가 막습니다.
 
-- 카테고리 생성, 조회, 수정 기능
+### 주문해도 재고가 줄지 않던 문제
 
-### 4. 서브 카테고리 (SubCategory)
+락 키의 SpEL이 평가되지 않아 락이 사실상 없었고, 재고 차감 자체가 빠져 있었습니다.
+`UPDATE ... SET quantity = quantity - :n WHERE id = :id AND quantity >= :n` 한 문장으로 바꾸고,
+장바구니 주문은 `productOptionId` 순으로 정렬해 데드락을 피합니다.
 
-- 카테고리와 서브 카테고리 정규화
+### 측정값 (같은 장비, 서비스 계층, 64스레드, 3회 median)
 
-### 5. 장바구니(CartItem)
+| 시나리오 | 개선 전 | 개선 후 |
+|---|---|---|
+| 쿠폰 정원 10 / 요청 2000 — 발급 수 | **20장** (정원 초과) | **10장** |
+| — 처리량 | 1,943 req/s | **3,278 req/s** (+68.7%) |
+| 재고 200 / 주문 200 — 남은 재고 | **200** (차감 안 됨) | **0** |
+| — 처리량 | 210 req/s | **275 req/s** (+31.0%) |
 
-- 장바구니 생성, 날짜별 조회, 수정, 구매 전 쿠폰 적용 기능
+Redis 선차단 A/B: OFF 2,597 → ON 3,710 req/s (+43%).
 
-### 6. 상품(Product)
+### 그 밖에
 
-- 상품 생성, 수정, 조회 (단일 상품 조회, 이름 내림차순 정렬), 삭제 기능
+- 브랜드 관리자 API가 인증 없이 열려 있었습니다(`@PreAuthorize`가 `@EnableMethodSecurity` 없이 무력화). 필터 체인 규칙으로 막고 HTTP 계층 회귀 테스트를 붙였습니다.
+- 결제 취소 경로가 둘인데 한쪽만 재고를 되돌렸습니다. `OrderCancellationService`로 합쳤습니다.
+- 결제사 API 호출이 트랜잭션 안에 있어 네트워크 대기 동안 DB 커넥션을 물고 있었습니다. `verify → call → apply`로 분리했습니다.
+- 미결제 주문이 재고를 영구히 잡고 있었습니다. `PendingOrderSweeper`가 만료된 PENDING 주문을 취소하고 재고를 돌려놓습니다.
+- Spring Batch 메타데이터 테이블이 없어 매일 00:00 통계 배치가 실패하고 있었습니다.
 
-### 7. 리뷰(Review)
+자세한 과정은 [docs/troubleshooting.md](docs/troubleshooting.md),
+[docs/lock-strategy-improvement.md](docs/lock-strategy-improvement.md),
+[docs/coupon-concurrency-test.md](docs/coupon-concurrency-test.md),
+[docs/performance-test.md](docs/performance-test.md),
+[docs/query-optimization.md](docs/query-optimization.md)에 있습니다.
 
-- 리뷰 생성, 조회, 수정, 별점별 조회, 삭제 기능
+## 프론트엔드
 
-### 8. 신고(Report)
-
-- 신고 생성, 상태 변경, 조회, 삭제 기능
-- 신고 접수 후 관리자(Admin) 조치 가능
-
-### 9. 쿠폰(Coupon)
-
-- 쿠폰 생성 시 Redisson 기반 **분산 락** 적용하여 동시성 제어
-- 비관적 락 & 낙관적 락 대비 성능 저하 문제 해결
-- 쿠폰 재고 관리 및 만료일 검증 로직 추가
-- 쿠폰을 브랜드뿐만 아니라 개별 상품에도 적용 가능하도록 정규화 예정
-
-### 10. 결제(Payment)
-
-- Toss Payments API 연동하여 결제 및 취소 기능 구현
-- Base64 인코딩 처리 및 PaymentKey 저장 방식 적용
-- 결제 완료 시 주문 상태 업데이트
-
-### 11. 통계(Static)
-
-- 매출 통계 및 주문 관련 데이터 제공
-
-### **12. 채팅 (Chatting)**
-
-- 관리자에게 채팅으로 문의 가능
-
----
-
-## 🔧 **최근 코드 품질 개선 및 성능 최적화**
-
-### 🚨 **1. 보안 취약점 해결**
-- **민감정보 환경변수 분리**: JWT Secret, AWS 키, 결제 API 키 분리
-- **CORS 보안 강화**: 특정 도메인만 허용하도록 변경
-- **JWT 로그아웃 수정**: 현재 사용자 토큰만 삭제하도록 개선
-
-### ⚡ **2. 성능 문제 해결**
-- **N+1 Query 문제 해결**: Fetch Join으로 한번에 조회
-- **CartItem 성능 최적화**: 연관 엔티티 한 번에 조회
-
-### 🔒 **3. 분산락 + DB락 데드락 문제 해결**
-- **락 전략 단순화**: 분산락만 사용, DB락 제거
-- **격리 수준 최적화**: SERIALIZABLE → READ_COMMITTED
-- **원자적 업데이트**: 경쟁 조건 방지를 위한 단일 쿼리 사용
-
-### 📊 **4. 성능 테스트 환경 구축**
-- **JMeter 테스트**: 동시 사용자 100명, 60초 지속
-- **성능 개선**: TPS 273 → 546 (오류율 50% → 1.43%)
-
----
-
-## 📚 **추가 문서**
-
-상세한 트러블슈팅 내용은 [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)를 참고하세요.
+`src/main/resources/static/`이 앱이 실제로 서빙하는 화면입니다(빌드 단계 없음).
+상품 검색·자동완성, 장바구니, 주문/결제, 브랜드 승인 화면이 들어 있습니다.
+`frontend/`는 같은 화면을 모듈로 쪼개 둔 개발용 사본이라 서빙되지 않습니다.
