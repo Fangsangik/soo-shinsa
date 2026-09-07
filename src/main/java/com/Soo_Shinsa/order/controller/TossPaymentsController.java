@@ -59,8 +59,9 @@ public class TossPaymentsController {
     @Operation(summary = "결제 상세 조회", description = "특정 주문의 결제 정보를 조회합니다.")
     public String home(@PathVariable Long userId,
                        @PathVariable Long orderId,
+                       @AuthenticationPrincipal UserDetails userDetails,
                        Model model) {
-        UserOrderDto item = tossPaymentsService.findItem(userId, orderId);
+        UserOrderDto item = tossPaymentsService.findItem(userId, orderId, UserUtils.getUser(userDetails));
         BigDecimal totalPrice = item.getOrder().getTotalPrice();
 
         String orderName = item.getOrder().getOrderId();
@@ -78,9 +79,10 @@ public class TossPaymentsController {
     @PostMapping("/cancel")
     @Operation(summary = "결제 취소", description = "진행 중인 결제를 취소합니다.")
     public String cancelPayment(@RequestBody PaymentCancelDto dto,
-                                @RequestParam String cancelReason
+                                @RequestParam String cancelReason,
+                                @AuthenticationPrincipal UserDetails userDetails
     ) throws JsonProcessingException {
-        tossPaymentsService.cancelPayment(dto.getPaymentKey(), cancelReason);
+        tossPaymentsService.cancelPayment(dto.getPaymentKey(), cancelReason, UserUtils.getUser(userDetails));
         return "cancel";
     }
 

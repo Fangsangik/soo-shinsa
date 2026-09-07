@@ -32,6 +32,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -44,6 +46,7 @@ class OrderCancelStockTest extends IntegrationTestSupport {
     private static final int STOCK = 5;
 
     @Autowired private OrdersService ordersService;
+    @Autowired private OrderCancellationService orderCancellationService;
     @Autowired private OrdersRepository ordersRepository;
     @Autowired private ProductOptionRepository productOptionRepository;
     @Autowired private ProductRepository productRepository;
@@ -123,6 +126,28 @@ class OrderCancelStockTest extends IntegrationTestSupport {
         assertEquals(STOCK, stock());
 
         assertEquals(0, ordersService.expirePendingOrders(100), "취소된 주문은 만료 대상이 아니다");
+        assertEquals(STOCK, stock());
+    }
+
+    @Test
+    void 결제_취소_경로도_재고를_되돌린다() throws Exception {
+        // 주문 취소는 복원하는데 결제 취소만 복원하지 않아 재고가 사라졌다
+        OrdersResponseDto order = ordersService.createSingleProductOrder(user, option.getId(), 2);
+        assertEquals(STOCK - 2, stock());
+
+        orderCancellationService.cancel(order.getId(), "결제 취소");
+
+        assertEquals(STOCK, stock());
+        assertEquals(OrdersStatus.ORDERCANCEL,
+                ordersRepository.findByIdOrElseThrow(order.getId()).getStatus());
+    }
+
+    @Test
+    void 두_번_취소해도_재고가_두_배로_늘지_않는다() throws Exception {
+        OrdersResponseDto order = ordersService.createSingleProductOrder(user, option.getId(), 2);
+
+        assertTrue(orderCancellationService.cancel(order.getId(), "1회"));
+        assertFalse(orderCancellationService.cancel(order.getId(), "2회"), "이미 취소된 주문");
         assertEquals(STOCK, stock());
     }
 }

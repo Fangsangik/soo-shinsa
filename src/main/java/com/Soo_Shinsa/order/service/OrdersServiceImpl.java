@@ -58,6 +58,7 @@ public class OrdersServiceImpl implements OrdersService {
 
     /** 이 시간이 지나도 결제되지 않은 주문은 되돌린다 */
     private final BusinessMetrics metrics;
+    private final OrderCancellationService orderCancellationService;
 
     @Value("${app.order.pending-timeout:PT30M}")
     private Duration pendingTimeout = Duration.ofMinutes(30);
@@ -394,23 +395,11 @@ public class OrdersServiceImpl implements OrdersService {
 
         if (payment != null && payment.getStatus() == TossPayStatus.PAYMENT) {
             // 결제 완료 상태라면 결제 취소 실행
-            tossPaymentsService.cancelPayment(payment.getPaymentKey(), CANCEL_REASON);
+            tossPaymentsService.cancelPayment(payment.getPaymentKey(), CANCEL_REASON, findUser);
         }
 
-        // 재고 복원. 부분 취소만 복원하고 전체 취소는 하지 않아 재고가 사라지고 있었다.
-        // 이미 취소된 아이템은 부분 취소 때 복원했으므로 건너뛴다.
-        findOrder.getOrderItems().stream()
-                .filter(orderItem -> !orderItem.isCancelled())
-                .forEach(orderItem -> {
-                    restoreStock(orderItem);
-                    orderItem.cancelOrderItem(CANCEL_REASON);
-                });
-
-        // 주문 상태 변경
-        findOrder.updateStatus(OrdersStatus.ORDERCANCEL);
-        ordersRepository.save(findOrder);
-
-        orderCacheService.evictOrderCaches(findOrder.getId(), findUser.getUserId());
+        // 상태 변경과 재고 복원은 결제 취소 경로와 공유한다
+        orderCancellationService.cancel(findOrder.getId(), CANCEL_REASON);
     }
 
     @Transactional

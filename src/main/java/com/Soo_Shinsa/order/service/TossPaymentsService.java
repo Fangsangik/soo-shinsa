@@ -15,7 +15,7 @@ import java.math.BigDecimal;
 public interface TossPaymentsService {
     PaymentResponseDto createPayment(PaymentRequestDto requestDto, User user);
     void approvePayment(String paymentKey, String orderId, Long amount, Model model) throws JsonProcessingException;
-    UserOrderDto findItem(Long userId, Long orderId);
-    void cancelPayment(String paymentKey, String cancelReason) throws JsonProcessingException;
+    UserOrderDto findItem(Long userId, Long orderId, User requester);
+    void cancelPayment(String paymentKey, String cancelReason, User requester) throws JsonProcessingException;
     void partialCancelPayment(String paymentKey, BigDecimal cancelAmount, String cancelReason) throws JsonProcessingException;
 }

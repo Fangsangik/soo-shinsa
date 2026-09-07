@@ -4,6 +4,8 @@ import com.Soo_Shinsa.global.constant.OrdersStatus;
 import com.Soo_Shinsa.global.constant.TossPayMethod;
 import com.Soo_Shinsa.global.constant.TossPayStatus;
 import com.Soo_Shinsa.global.exception.ErrorCode;
+import com.Soo_Shinsa.global.utils.EntityValidator;
+import com.Soo_Shinsa.global.exception.NoAuthorizedException;
 import com.Soo_Shinsa.global.exception.InvalidInputException;
 import com.Soo_Shinsa.order.dto.PayloadRequestDto;
 import com.Soo_Shinsa.order.dto.PaymentRequestDto;
@@ -40,6 +42,7 @@ public class TossPaymentsServiceImpl implements TossPaymentsService {
     private final PaymentRepository paymentRepository;
     private final OrdersRepository ordersRepository;
     private final UserRepository userRepository;
+    private final OrderCancellationService orderCancellationService;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -54,7 +57,9 @@ public class TossPaymentsServiceImpl implements TossPaymentsService {
         Orders order = ordersRepository.findByOrderId(requestDto.getOrderId())
                 .orElseThrow(() -> new IllegalArgumentException("오더가 없습니다"));
 
-        order.updateStatus(OrdersStatus.ORDERCOMPLETED);
+        // 결제 생성은 결제 의사를 등록하는 단계일 뿐이다.
+        // 여기서 완료로 바꾸면 결제하지 않고 이탈해도 주문이 완료로 남아
+        // 미결제 주문 정리 대상에서 빠지고 재고가 영영 묶인다.
 
         Payment payment = new Payment(
                 order.getOrderId(),
@@ -91,7 +96,7 @@ public class TossPaymentsServiceImpl implements TossPaymentsService {
 
     @Transactional
     @Override
-    public void cancelPayment(String paymentKey, String cancelReason) throws JsonProcessingException {
+    public void cancelPayment(String paymentKey, String cancelReason, User requester) throws JsonProcessingException {
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Basic " + Base64.getEncoder().encodeToString((secretKey + ":").getBytes()));
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -101,8 +106,12 @@ public class TossPaymentsServiceImpl implements TossPaymentsService {
         String orderId = findPayment.getOrderId();
         Orders findOrder = ordersRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_ORDER));
-        findOrder.updateStatus(OrdersStatus.ORDERCANCEL);
-        ordersRepository.save(findOrder);
+
+        // paymentKey 만 알면 남의 결제도 취소할 수 있었다
+        EntityValidator.validateAndOrders(findOrder, requester.getUserId());
+
+        // 이 경로만 재고를 되돌리지 않아, 결제 취소로 취소하면 재고가 사라졌다
+        orderCancellationService.cancel(findOrder.getId(), cancelReason);
 
         findPayment.update(TossPayStatus.CANCEL, paymentKey);
         paymentRepository.save(findPayment);
@@ -115,7 +124,11 @@ public class TossPaymentsServiceImpl implements TossPaymentsService {
 
 
     @Transactional
-    public UserOrderDto findItem(Long userId, Long orderId) {
+    public UserOrderDto findItem(Long userId, Long orderId, User requester) {
+        // 경로의 userId 를 그대로 믿으면 남의 주문을 들여다볼 수 있었다
+        if (!requester.getUserId().equals(userId)) {
+            throw new NoAuthorizedException(ErrorCode.NO_AUTHORITY);
+        }
         User user = userRepository.findByIdOrElseThrow(userId);
         Orders order = ordersRepository.findByIdOrElseThrow(orderId);
         return new UserOrderDto(user, order);
