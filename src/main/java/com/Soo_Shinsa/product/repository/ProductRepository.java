@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 import static com.Soo_Shinsa.global.exception.ErrorCode.NOT_FOUND_PRODUCT;
 
 public interface ProductRepository extends JpaRepository<Product, Long>, ProductCustomRepository {
@@ -36,4 +38,10 @@ public interface ProductRepository extends JpaRepository<Product, Long>, Product
            "LEFT JOIN FETCH b.subCategory sc " +
            "ORDER BY FUNCTION('RAND')")
     Page<Product> findRandomProducts(Pageable pageable);
+
+    /** 자동완성: 상품명에 키워드가 포함된 이름을 중복 없이. 앞에서 일치하는 것을 먼저 보여준다. */
+    @Query("SELECT DISTINCT p.name FROM Product p " +
+           "WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "ORDER BY LOCATE(LOWER(:keyword), LOWER(p.name)), p.name")
+    List<String> findNameSuggestions(@Param("keyword") String keyword, Pageable pageable);
 }

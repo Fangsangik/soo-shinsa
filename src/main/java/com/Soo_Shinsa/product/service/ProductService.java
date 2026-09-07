@@ -3,6 +3,8 @@ package com.Soo_Shinsa.product.service;
 import com.Soo_Shinsa.product.dto.*;
 import com.Soo_Shinsa.user.model.User;
 import org.springframework.data.domain.Page;
+
+import java.util.List;
 import org.springframework.web.multipart.MultipartFile;
 
 
@@ -15,6 +17,8 @@ public interface ProductService {
     FindProductResponseDto findProduct(Long productId);
 
     Page<ProductResponseDto> findAllProduct(Long brandId, FindProductRequestDto requestDto, int page, int size);
+
+    List<String> autocomplete(String keyword, int limit);
 
     Page<ProductResponseDto> findUserBasedRecommendation(User user, int page, int size);
 

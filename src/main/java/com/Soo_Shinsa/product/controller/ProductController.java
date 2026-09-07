@@ -16,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
@@ -59,11 +61,30 @@ public class ProductController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @GetMapping("/autocomplete")
+    @Operation(summary = "상품명 자동완성", description = "입력한 키워드가 포함된 상품명을 추천합니다. 2글자 이상부터 동작합니다.")
+    public ResponseEntity<CommonResponse<List<String>>> autocomplete(@RequestParam String keyword,
+                                                                     @RequestParam(defaultValue = "8") int limit) {
+        CommonResponse<List<String>> response =
+                new CommonResponse<>(ResponseMessage.PRODUCT_SELECT_SUCCESS, productService.autocomplete(keyword, limit));
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "상품 통합 검색", description = "브랜드 구분 없이 상품명/가격/카테고리/판매상태로 검색합니다.")
+    public ResponseEntity<CommonResponse<Page<ProductResponseDto>>> searchProducts(@RequestParam(defaultValue = "0") int page,
+                                                                                   @RequestParam(defaultValue = "10") int size,
+                                                                                   @ModelAttribute FindProductRequestDto requestDto) {
+        Page<ProductResponseDto> productResponseDto = productService.findAllProduct(null, requestDto, page, size);
+        CommonResponse<Page<ProductResponseDto>> response = new CommonResponse<>(ResponseMessage.PRODUCT_SELECT_SUCCESS, productResponseDto);
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
     @GetMapping("/brands/{brandId}")
-    @Operation(summary = "브랜드별 상품 리스트 조회", description = "브랜드 ID로 해당 브랜드의 모든 상품을 조회합니다.")
+    @Operation(summary = "브랜드별 상품 리스트 조회", description = "브랜드 ID로 해당 브랜드의 상품을 조회합니다.")
     public ResponseEntity<CommonResponse<Page<ProductResponseDto>>> findAllProductList(@RequestParam(defaultValue = "0") int page,
                                                                                        @RequestParam(defaultValue = "10") int size,
-                                                                                       @RequestBody FindProductRequestDto requestDto,
+                                                                                       @ModelAttribute FindProductRequestDto requestDto,
                                                                                        @PathVariable Long brandId) {
         Page<ProductResponseDto> productResponseDto = productService.findAllProduct(brandId, requestDto, page, size);
         CommonResponse<Page<ProductResponseDto>> response = new CommonResponse<>(ResponseMessage.PRODUCT_SELECT_SUCCESS, productResponseDto);

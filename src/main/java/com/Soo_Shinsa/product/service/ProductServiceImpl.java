@@ -105,6 +105,18 @@ public class ProductServiceImpl implements ProductService {
         return FindProductResponseDto.toDto(product, productOptions);
     }
 
+    /**
+     * 상품명 자동완성. 키워드가 2글자 미만이면 빈 목록 (LIKE '%a%' 전체 스캔 방지).
+     */
+    @Override
+    public List<String> autocomplete(String keyword, int limit) {
+        if (keyword == null || keyword.trim().length() < 2) {
+            return List.of();
+        }
+        int capped = Math.min(Math.max(limit, 1), 20);
+        return productRepository.findNameSuggestions(keyword.trim(), PageRequest.of(0, capped));
+    }
+
     @Override
     public Page<ProductResponseDto> findAllProduct(Long brandId, FindProductRequestDto requestDto, int page, int size) {
          Pageable pageable = PageRequest.of(page, size);

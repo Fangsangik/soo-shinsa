@@ -3,10 +3,12 @@ package com.Soo_Shinsa.product.dto;
 import com.Soo_Shinsa.global.constant.ProductStatus;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 
 @Getter
+@Setter // @ModelAttribute 쿼리파라미터 바인딩용
 @NoArgsConstructor
 public class FindProductRequestDto {
     private String nameKeyword;
