@@ -77,7 +77,8 @@ public enum ErrorCode {
     LOCK_FAILED("락 획득 실패", HttpStatus.BAD_REQUEST),
     ALREADY_CANCEL_ORDER("이미 취소된 주문입니다", HttpStatus.BAD_REQUEST),
     NOT_FOUND_ORDER_ITEM("주문 상품을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
-    CAN_NOT_CANCEL_ORDER("주문을 취소할 수 없습니다", HttpStatus.BAD_REQUEST);
+    CAN_NOT_CANCEL_ORDER("주문을 취소할 수 없습니다", HttpStatus.BAD_REQUEST),
+    INVALID_BRAND_STATUS("처리할 수 없는 브랜드 상태입니다.", HttpStatus.BAD_REQUEST);
 
 
     private final String message;

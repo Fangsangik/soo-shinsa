@@ -22,7 +22,9 @@ public class BrandCustomRepositoryImpl implements BrandCustomRepository{
         List<FindBrandAllResponseDto> content = queryFactory
                 .select(Projections.constructor(FindBrandAllResponseDto.class,
                         brand.id,
-                        brand.name
+                        brand.name,
+                        brand.context,
+                        brand.status
                 ))
                 .from(brand)
                 .orderBy(brand.name.asc())

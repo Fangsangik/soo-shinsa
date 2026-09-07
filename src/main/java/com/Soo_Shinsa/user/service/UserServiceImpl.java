@@ -27,6 +27,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,28 +48,71 @@ public class UserServiceImpl implements UserService {
     private final UserDetailsServiceImp userDetailsService;
     private final JwtBlackListService jwtBlackListService;
     private final KakaoUserRepository kakaoUserRepository;
+    
+    @Value("${app.admin.secret-key}")
+    private String adminSecretKey;
 
     @Transactional
     @Override
     public UserResponseDto create(SignInRequestDto dto) {
-        //검증
-        //중복체크
+        // 1. 이메일 중복 체크
         if (userRepository.existsByEmail(dto.getEmail())) {
-            throw new NoAuthorizedException(ErrorCode.EMAIL_EXIST);
+            throw new DuplicatedException(ErrorCode.EMAIL_EXIST);
         }
 
-        //user 생성
-        User user = dto.toEntity(passwordEncoder.encode(dto.getPassword()));
+        // 2. 역할 결정 로직 (보안 강화)
+        Role determinedRole = determineUserRole(dto);
+        
+        // 3. User 생성
+        User user = dto.toEntity(passwordEncoder.encode(dto.getPassword()), determinedRole);
 
-        //customer 경우 customer grade 생성
+        // 4. Customer인 경우 등급 생성
         if (user.getRole().equals(Role.CUSTOMER)) {
             user.updateUserGrade(createNewUserGrade());
         }
 
-        //저장
+        // 5. 저장
         userRepository.save(user);
-
+        
+        log.info("🟢 새 사용자 생성 완료: {} - 역할: {}", user.getEmail(), user.getRole());
         return new UserResponseDto(user);
+    }
+    
+    /**
+     * 사용자 역할을 안전하게 결정하는 메서드
+     */
+    private Role determineUserRole(SignInRequestDto dto) {
+        // Admin Key 검증
+        if (dto.getAdminKey() != null && !dto.getAdminKey().trim().isEmpty()) {
+            if (adminSecretKey.equals(dto.getAdminKey())) {
+                log.warn("🔑 관리자 계정 생성됨: {}", dto.getEmail());
+                return Role.ADMIN;
+            } else {
+                throw new NoAuthorizedException(ErrorCode.NO_AUTHORITY);
+            }
+        }
+        
+        // 사업자등록번호로 Vendor 판단
+        if (dto.getBusinessNumber() != null && !dto.getBusinessNumber().trim().isEmpty()) {
+            // TODO: 실제로는 사업자등록번호 검증 API 호출
+            if (isValidBusinessNumber(dto.getBusinessNumber())) {
+                log.info("🏬 업주 계정 생성됨: {}", dto.getEmail());
+                return Role.VENDOR;
+            } else {
+                throw new InvalidInputException(ErrorCode.WRONG_REQUEST);
+            }
+        }
+        
+        // 기본값: 일반 고객
+        return Role.CUSTOMER;
+    }
+    
+    /**
+     * 사업자등록번호 유효성 검사 (간단한 형식 체크)
+     */
+    private boolean isValidBusinessNumber(String businessNumber) {
+        // 간단한 형식 체크: XXX-XX-XXXXX
+        return businessNumber.matches("^\\d{3}-\\d{2}-\\d{5}$");
     }
 
     @Transactional

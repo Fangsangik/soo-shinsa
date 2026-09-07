@@ -10,6 +10,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,6 +46,22 @@ public class Brand extends BaseTimeEntity {
     private Integer couponCount;
     private Boolean isCouponLimited = false;
 
+    // 승인 관련 필드들
+    @Column(name = "approval_date")
+    private LocalDateTime approvalDate;
+
+    @Column(name = "approved_by")
+    private Long approvedBy; // 승인한 관리자 ID
+
+    @Column(name = "approval_reason")
+    private String approvalReason;
+
+    @Column(name = "rejection_reason")
+    private String rejectionReason;
+
+    @Column(name = "admin_comment")
+    private String adminComment;
+
     @Builder
     public Brand(String registrationNum, String name, String context, SubCategory subCategory, BrandStatus status, User user, List<CouponBrandRelation> couponBrandRelations, Integer couponCount, Boolean isCouponLimited) {
         this.registrationNum = registrationNum;
@@ -63,6 +80,23 @@ public class Brand extends BaseTimeEntity {
         this.name = name;
         this.context = context;
         this.status = status;
+    }
+
+    // 승인 관련 메소드들
+    public void approve(Long adminId, String approvalReason, String adminComment) {
+        this.status = BrandStatus.OPEN;
+        this.approvalDate = LocalDateTime.now();
+        this.approvedBy = adminId;
+        this.approvalReason = approvalReason;
+        this.adminComment = adminComment;
+    }
+
+    public void reject(Long adminId, String rejectionReason, String adminComment) {
+        this.status = BrandStatus.REJECT;
+        this.approvalDate = LocalDateTime.now();
+        this.approvedBy = adminId;
+        this.rejectionReason = rejectionReason;
+        this.adminComment = adminComment;
     }
 
     // Brand.java

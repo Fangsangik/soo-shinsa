@@ -8,6 +8,7 @@ import com.Soo_Shinsa.global.utils.UserUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -75,5 +76,53 @@ public class BrandController {
         Page<FindBrandAllResponseDto> getAllBrand = brandService.getAll(page, size);
         CommonResponse<Page<FindBrandAllResponseDto>> response = new CommonResponse<>(ResponseMessage.BRAND_SELECT_SUCCESS, getAllBrand);
         return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+    // ========== Admin 전용 엔드포인트들 ==========
+    
+    @PatchMapping("/admin/{brandId}/approve")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "브랜드 승인", description = "관리자가 브랜드 입점을 승인합니다.")
+    public ResponseEntity<CommonResponse<BrandResponseDto>> approveBrand(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long brandId,
+            @Valid @RequestBody BrandApprovalDto approvalDto
+    ) {
+        BrandResponseDto approvedBrand = brandService.approveBrand(
+            UserUtils.getUser(userDetails), 
+            brandId, 
+            approvalDto
+        );
+        CommonResponse<BrandResponseDto> response = new CommonResponse<>("브랜드 승인에 성공했습니다.", approvedBrand);
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/admin/{brandId}/reject")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "브랜드 거절", description = "관리자가 브랜드 입점을 거절합니다.")
+    public ResponseEntity<CommonResponse<BrandResponseDto>> rejectBrand(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long brandId,
+            @Valid @RequestBody BrandRejectionDto rejectionDto
+    ) {
+        BrandResponseDto rejectedBrand = brandService.rejectBrand(
+            UserUtils.getUser(userDetails), 
+            brandId, 
+            rejectionDto
+        );
+        CommonResponse<BrandResponseDto> response = new CommonResponse<>("브랜드 거절에 성공했습니다.", rejectedBrand);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/admin/pending")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "승인 대기 브랜드 조회", description = "승인 대기 중인 브랜드 목록을 조회합니다.")
+    public ResponseEntity<CommonResponse<Page<BrandResponseDto>>> getPendingBrands(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Page<BrandResponseDto> pendingBrands = brandService.getPendingBrands(page, size);
+        CommonResponse<Page<BrandResponseDto>> response = new CommonResponse<>("승인 대기 브랜드 조회에 성공했습니다.", pendingBrands);
+        return ResponseEntity.ok(response);
     }
 }

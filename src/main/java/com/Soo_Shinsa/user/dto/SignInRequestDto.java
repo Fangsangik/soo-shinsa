@@ -27,29 +27,34 @@ public class SignInRequestDto {
     @NotBlank(message = "이름을 입력해주세요.")
     private String name;
 
-    @NotNull(message = "역할을 입력해주세요.")
-    private Role role;
-
+    // Role은 서버에서 결정 - 보안상 클라이언트에서 직접 설정 불가
+    
+    // Admin 가입용 특별 키 (선택사항)
+    private String adminKey;
+    
+    // Vendor 가입용 사업자등록번호 (선택사항)
+    private String businessNumber;
 
     private GradeType grade;
 
-    public SignInRequestDto(String email, String phoneNum, String password, String name, Role role, GradeType grade) {
+    public SignInRequestDto(String email, String phoneNum, String password, String name, String adminKey, String businessNumber, GradeType grade) {
         this.email = email;
         this.phoneNum = phoneNum;
         this.password = password;
         this.name = name;
-        this.role = role;
+        this.adminKey = adminKey;
+        this.businessNumber = businessNumber;
         this.grade = grade;
     }
 
-    public User toEntity(String password) {
+    public User toEntity(String password, Role determinedRole) {
         return User.builder()
                 .email(email)
                 .phoneNum(phoneNum)
                 .password(password)
                 .name(name)
                 .status(UserStatus.ACTIVE)
-                .role(role)
+                .role(determinedRole)
                 .build();
     }
 }
