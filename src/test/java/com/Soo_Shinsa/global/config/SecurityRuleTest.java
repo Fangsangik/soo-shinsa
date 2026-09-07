@@ -8,6 +8,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static com.Soo_Shinsa.global.constant.UrlConst.API;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -28,20 +29,20 @@ class SecurityRuleTest extends IntegrationTestSupport {
 
     @Test
     void 브랜드_관리자_경로는_비로그인을_막는다() throws Exception {
-        mvc.perform(get("/brands/admin/pending")).andExpect(status().isUnauthorized());
-        mvc.perform(patch("/brands/admin/1/approve")).andExpect(status().isUnauthorized());
+        mvc.perform(get(API + "/brands/admin/pending")).andExpect(status().isUnauthorized());
+        mvc.perform(patch(API + "/brands/admin/1/approve")).andExpect(status().isUnauthorized());
     }
 
     @Test
     @WithMockUser(roles = "CUSTOMER")
     void 브랜드_관리자_경로는_고객을_막는다() throws Exception {
-        mvc.perform(get("/brands/admin/pending")).andExpect(status().isForbidden());
+        mvc.perform(get(API + "/brands/admin/pending")).andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser(roles = "VENDOR")
     void 브랜드_승인은_사장도_못한다() throws Exception {
-        mvc.perform(patch("/brands/admin/1/approve")).andExpect(status().isForbidden());
+        mvc.perform(patch(API + "/brands/admin/1/approve")).andExpect(status().isForbidden());
     }
 
     @Test
@@ -51,14 +52,14 @@ class SecurityRuleTest extends IntegrationTestSupport {
 
     @Test
     void 주문_조회는_비로그인을_막는다() throws Exception {
-        mvc.perform(get("/orders/1")).andExpect(status().isUnauthorized());
+        mvc.perform(get(API + "/orders/1")).andExpect(status().isUnauthorized());
     }
 
     @Test
     void 상품_탐색은_비로그인도_열려_있다() throws Exception {
-        mvc.perform(get("/products/search").param("page", "1").param("size", "10"))
+        mvc.perform(get(API + "/products/search").param("page", "1").param("size", "10"))
                 .andExpect(status().isOk());
-        mvc.perform(get("/products/autocomplete").param("keyword", "셔츠"))
+        mvc.perform(get(API + "/products/autocomplete").param("keyword", "셔츠"))
                 .andExpect(status().isOk());
     }
 

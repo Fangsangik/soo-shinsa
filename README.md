@@ -30,6 +30,9 @@ docker compose up -d          # mysql, redis, app, prometheus, grafana, nginx
 ./gradlew bootRun             # http://localhost:8080, Swagger: /swagger-ui.html
 ```
 
+REST API는 모두 `/api/v1` 아래에 있습니다(`ApiPathConfig`가 컨트롤러에 접두사를 붙입니다).
+예외는 토스가 직접 호출하는 결제 콜백 `/api/success`, `/api/fail` 두 개뿐입니다.
+
 스키마는 Flyway가 만듭니다(`src/main/resources/db/migration`). 이미 스키마가 있는 DB는
 `baseline-on-migrate`로 V1을 건너뜁니다. 데모용 시드 데이터는 `SEED_DATA=false`로 끕니다.
 
