@@ -12,6 +12,7 @@ import static com.Soo_Shinsa.global.constant.UrlConst.API;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -46,8 +47,18 @@ class SecurityRuleTest extends IntegrationTestSupport {
     }
 
     @Test
-    void 결제_취소는_비로그인을_막는다() throws Exception {
-        mvc.perform(post("/api/cancel")).andExpect(status().isUnauthorized());
+    void 결제_API_는_비로그인을_막는다() throws Exception {
+        mvc.perform(post(API + "/payments/cancel")).andExpect(status().isUnauthorized());
+        mvc.perform(get(API + "/payments/checkout/1")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void 결제사_콜백은_로그인_없이_들어와_결과_페이지로_보낸다() throws Exception {
+        // 토스가 브라우저를 돌려보내는 주소라 인증이 없다. 예전에는 templates 가 없어
+        // 뷰 이름을 못 찾고 500 으로 끝났다.
+        mvc.perform(get("/api/fail").param("orderId", "order-1").param("message", "사용자 취소"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("/?payment=fail*"));
     }
 
     @Test

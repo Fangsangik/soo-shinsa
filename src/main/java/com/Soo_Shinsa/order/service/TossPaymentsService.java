@@ -6,7 +6,6 @@ import com.Soo_Shinsa.order.dto.PaymentResponseDto;
 import com.Soo_Shinsa.order.dto.UserOrderDto;
 import com.Soo_Shinsa.user.model.User;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.springframework.ui.Model;
 
 import java.math.BigDecimal;
 
@@ -14,7 +13,7 @@ import java.math.BigDecimal;
 
 public interface TossPaymentsService {
     PaymentResponseDto createPayment(PaymentRequestDto requestDto, User user);
-    void approvePayment(String paymentKey, String orderId, Long amount, Model model) throws JsonProcessingException;
+    void approvePayment(String paymentKey, String orderId, Long amount) throws JsonProcessingException;
     UserOrderDto findItem(Long userId, Long orderId, User requester);
     void cancelPayment(String paymentKey, String cancelReason, User requester) throws JsonProcessingException;
     void partialCancelPayment(String paymentKey, BigDecimal cancelAmount, String cancelReason) throws JsonProcessingException;

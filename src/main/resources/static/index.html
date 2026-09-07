@@ -409,6 +409,8 @@
     </style>
 </head>
 <body>
+<!-- 결제 콜백(/api/success, /api/fail)이 결과를 붙여 이 페이지로 돌려보낸다 -->
+<div id="payment-result" role="status" style="display:none;padding:12px 16px;text-align:center;font-weight:600;"></div>
     <!-- 헤더 -->
     <header class="header">
         <div class="top-bar">
@@ -489,6 +491,21 @@
     <script>
         // API 설정
         const API_BASE_URL = '/api/v1';
+
+        // 결제 결과 표시 (결제사 콜백이 ?payment=success|fail 로 돌려보낸다)
+        (function showPaymentResult() {
+            const params = new URLSearchParams(location.search);
+            const result = params.get('payment');
+            if (!result) return;
+            const el = document.getElementById('payment-result');
+            const ok = result === 'success';
+            el.textContent = ok
+                ? `결제가 완료되었습니다. (주문번호 ${params.get('orderId') || '-'})`
+                : `결제에 실패했습니다. ${params.get('message') || ''}`;
+            el.style.background = ok ? '#e8f5e9' : '#fdecea';
+            el.style.color = ok ? '#1b5e20' : '#b71c1c';
+            el.style.display = 'block';
+        })();
         
         // DOM 요소
         const loadingEl = document.getElementById('loading');

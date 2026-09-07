@@ -36,7 +36,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     // "users/logout" 처럼 슬래시가 빠져 있어 매칭되지 않던 항목이 있었다.
     private final List<String> WHITE_LIST = List.of(
             API + "/users/login", API + "/users/signin", API + "/users/logout", API + "/auth/**",
-            "/api/home/**", "/api/success", "/api/fail",
+            "/api/success", "/api/fail",
             "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/api/chat/**");
 
     @Override

@@ -81,6 +81,7 @@ Redis 선차단 A/B: OFF 2,597 → ON 3,710 req/s (+43%).
 - 결제사 API 호출이 트랜잭션 안에 있어 네트워크 대기 동안 DB 커넥션을 물고 있었습니다. `verify → call → apply`로 분리했습니다.
 - 미결제 주문이 재고를 영구히 잡고 있었습니다. `PendingOrderSweeper`가 만료된 PENDING 주문을 취소하고 재고를 돌려놓습니다.
 - Spring Batch 메타데이터 테이블이 없어 매일 00:00 통계 배치가 실패하고 있었습니다.
+- 결제 콜백이 존재하지 않는 Thymeleaf 뷰 이름을 반환해 승인 직후 500으로 끝났습니다. 결과를 붙여 화면으로 돌려보냅니다.
 
 자세한 과정은 [docs/troubleshooting.md](docs/troubleshooting.md),
 [docs/lock-strategy-improvement.md](docs/lock-strategy-improvement.md),
@@ -90,6 +91,9 @@ Redis 선차단 A/B: OFF 2,597 → ON 3,710 req/s (+43%).
 
 ## 프론트엔드
 
-`src/main/resources/static/`이 앱이 실제로 서빙하는 화면입니다(빌드 단계 없음).
-상품 검색·자동완성, 장바구니, 주문/결제, 브랜드 승인 화면이 들어 있습니다.
-`frontend/`는 같은 화면을 모듈로 쪼개 둔 개발용 사본이라 서빙되지 않습니다.
+`src/main/resources/static/index.html` 한 장이 앱이 서빙하는 화면입니다(빌드 단계 없음).
+브랜드 목록, 상품 검색·자동완성, 결제 결과 표시가 들어 있습니다.
+
+`frontend/`는 같은 도메인을 모듈로 쪼갠 별도 화면(로그인, 브랜드 승인 대시보드)입니다.
+서버가 서빙하지 않으므로 `frontend/index.html`을 브라우저로 직접 열어서 씁니다.
+API 주소는 `frontend/js/config.js`의 `BASE_URL`에 있습니다.

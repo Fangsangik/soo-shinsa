@@ -27,7 +27,6 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.ui.Model;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
@@ -84,7 +83,7 @@ public class TossPaymentsServiceImpl implements TossPaymentsService {
      * 예전에는 호출 전에 이미 "결제 완료"로 기록했다.
      */
     @Override
-    public void approvePayment(String paymentKey, String orderId, Long amount, Model model) throws JsonProcessingException {
+    public void approvePayment(String paymentKey, String orderId, Long amount) throws JsonProcessingException {
         paymentStateWriter.verifyApprovable(orderId, amount);
 
         PayloadRequestDto payload = new PayloadRequestDto(orderId, String.valueOf(amount));

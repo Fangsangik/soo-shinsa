@@ -44,3 +44,6 @@ node_modules/
 .DS_Store
 dump.rdb
 .omc/
+
+# playwright MCP 스냅샷
+.playwright-mcp/
