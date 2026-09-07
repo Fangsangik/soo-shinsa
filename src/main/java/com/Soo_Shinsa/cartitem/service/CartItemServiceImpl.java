@@ -131,35 +131,29 @@ public class CartItemServiceImpl implements CartItemService {
     public ApplyCouponCartResponseDto applyCoupon(Long cartId, ApplyCouponCartRequestDto requestDto, User user) {
         CartItem cartItem = cartItemRepository.findByIdOrElseThrow(cartId);
 
-        Optional<CouponUser> existingCouponUser = couponUserRepository.findByCouponIdAndUserUserId(requestDto.getCouponId(), user.getUserId());
-        if (existingCouponUser.isPresent() && existingCouponUser.get().isUsed()) {
+        // 예전에는 "쓰지 않은 쿠폰"을 사용자 구분 없이 찾아서,
+        // 다른 사람이 발급받은 쿠폰을 자기 장바구니에 적용할 수 있었다.
+        Coupon coupon = couponRepository.findById(requestDto.getCouponId())
+                .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_COUPON));
+
+        CouponUser couponUser = couponUserRepository
+                .findByCouponIdAndUserUserId(requestDto.getCouponId(), user.getUserId())
+                .orElse(null);
+
+        if (couponUser != null && couponUser.isUsed()) {
             throw new InvalidInputException(ErrorCode.ALREADY_USED_COUPON);
         }
 
-        // 사용되지 않은 쿠폰이 있는지 확인
-        Coupon coupon;
-        CouponUser couponUser;
-
-        Optional<CouponUser> optionalCouponUser = couponUserRepository.findUnusedCouponByCouponId(requestDto.getCouponId());
-        if (optionalCouponUser.isPresent()) {
-            couponUser = optionalCouponUser.get();
-            coupon = couponUser.getCoupon();
-        } else {
-            coupon = couponRepository.findById(requestDto.getCouponId())
-                    .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_COUPON));
-
+        if (couponUser == null) {
             if (coupon.getRemainingCount() <= 0) {
                 throw new InvalidInputException(ErrorCode.COUPON_OUT_OF_STOCK);
             }
-
-            couponUser = CouponUser.builder()
+            couponUser = couponUserRepository.saveAndFlush(CouponUser.builder()
                     .coupon(coupon)
                     .user(user)
                     .isUsed(false)
                     .usedAt(null)
-                    .build();
-
-            couponUserRepository.saveAndFlush(couponUser);
+                    .build());
         }
 
         if (coupon.isExpired()) {

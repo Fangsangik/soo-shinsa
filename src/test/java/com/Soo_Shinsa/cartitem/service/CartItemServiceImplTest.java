@@ -38,6 +38,7 @@ import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Slf4j
 @SpringBootTest
@@ -72,6 +73,9 @@ class CartItemServiceImplTest extends IntegrationTestSupport {
 
     @Autowired
     private CouponBrandRelationRepository couponBrandRelationRepository;
+
+    @Autowired
+    private com.Soo_Shinsa.coupon.repository.CouponUserRepository couponUserRepository;
 
     private User user;
     private Category category;
@@ -246,5 +250,31 @@ class CartItemServiceImplTest extends IntegrationTestSupport {
         assertEquals(ErrorCode.NOT_APPLICABLE_COUPON.getMessage(), exception.getMessage());
 
         log.info("✅ inValidCoupon 테스트 완료");
+    }
+
+    @Test
+    void 남이_발급받은_쿠폰을_쓸_수_없다() {
+        // 예전에는 사용자 구분 없이 "안 쓴 쿠폰"을 찾아서
+        // 다른 사람 쿠폰을 자기 장바구니에 적용할 수 있었다
+        User other = userRepository.save(User.builder()
+                .email("test77@test.com").password("p").name("남")
+                .phoneNum("01077777777").role(Role.CUSTOMER).status(UserStatus.ACTIVE).build());
+
+        ApplyCouponCartRequestDto requestDto = ApplyCouponCartRequestDto.builder()
+                .couponId(validCoupon.getId()).build();
+
+        // 본인이 먼저 발급받아 둔다
+        cartItemService.applyCoupon(cartItem.getId(), requestDto, user);
+
+        long before = couponUserRepository.countByCouponId(validCoupon.getId());
+
+        CartItem otherCart = cartItemRepository.save(CartItem.builder()
+                .product(product).user(other).quantity(1).build());
+        cartItemService.applyCoupon(otherCart.getId(), requestDto, other);
+
+        // 남의 발급분을 재사용하지 않고 자기 것을 새로 받아야 한다
+        assertEquals(before + 1, couponUserRepository.countByCouponId(validCoupon.getId()));
+        assertTrue(couponUserRepository
+                .findByCouponIdAndUserUserId(validCoupon.getId(), other.getUserId()).isPresent());
     }
 }

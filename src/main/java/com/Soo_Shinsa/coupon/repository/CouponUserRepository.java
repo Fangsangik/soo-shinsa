@@ -20,11 +20,6 @@ public interface CouponUserRepository extends JpaRepository<CouponUser, Long> {
 
     Optional<CouponUser> findByCouponIdAndUserUserId(Long couponId, Long userId);
 
-    // 모든 사용자에 대해 특정 쿠폰을 조회 (isUsed가 false인 항목만 반환)
-    @Query("SELECT cu FROM CouponUser cu WHERE cu.coupon.id = :couponId AND cu.isUsed = false")
-    Optional<CouponUser> findUnusedCouponByCouponId(@Param("couponId") Long couponId);
-
-
     boolean existsByCouponAndUser(Coupon coupon, User user);
 
     /** 특정 쿠폰의 발급 건수. 전역 count 는 다른 데이터에 오염되므로 쓰지 않는다. */

@@ -172,11 +172,9 @@ public class OrdersServiceImpl implements OrdersService {
             }
         }
 
-        try {
-            isUsedCoupon(user, cartItem);
-        } catch (Exception e) {
-            log.warn("⚠️ 쿠폰 적용 중 오류 발생. 카트 아이템 ID: {}", cartItem.getId());
-        }
+        // 예외를 삼키면 쿠폰이 소진되지 않은 채 할인가로 결제되거나,
+        // 반대로 할인 없이 결제된다. 실패하면 주문을 중단한다.
+        isUsedCoupon(user, cartItem);
 
         // ✅ 총 가격을 0으로 초기화
         BigDecimal totalPrice = BigDecimal.ZERO;
@@ -260,12 +258,8 @@ public class OrdersServiceImpl implements OrdersService {
                 // decreaseStock 이 salesCount 까지 처리한다 (stale 엔티티 재저장 금지)
             }
 
-            try {
-                log.info("🎟 쿠폰 적용 시도 - 카트 아이템 ID: {}", cartItem.getId());
-                isUsedCoupon(user, cartItem);
-            } catch (Exception e) {
-                log.warn("⚠️ 쿠폰 적용 중 오류 발생. 카트 아이템 ID: {}", cartItem.getId());
-            }
+            log.info("🎟 쿠폰 적용 시도 - 카트 아이템 ID: {}", cartItem.getId());
+            isUsedCoupon(user, cartItem);
 
             for (ProductOption option : productOptions) {
                 BigDecimal optionPrice = option.getProduct().getPrice().multiply(BigDecimal.valueOf(quantity));
