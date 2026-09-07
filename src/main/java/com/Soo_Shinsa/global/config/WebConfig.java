@@ -12,6 +12,7 @@ import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -24,6 +25,7 @@ import static com.Soo_Shinsa.global.constant.UrlConst.*;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class WebConfig {
 
@@ -54,8 +56,15 @@ public class WebConfig {
                 .authorizeHttpRequests(auth -> auth
                         // ✅ 정적 리소스 경로를 완전히 허용
                         .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
-                        .requestMatchers("/static/**", "/stylesheets/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
+                        .requestMatchers("/", "/index.html", "/static/**", "/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
                         .requestMatchers(WHITE_LIST).permitAll()
+                        // 브랜드: 관리자 전용 경로가 먼저, 그 다음 공개 조회만 허용
+                        .requestMatchers("/brands/admin/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/brands/vendor").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/brands", "/brands/*").permitAll()
+                        // 상품: 비로그인 탐색/검색 허용 (등록·수정·삭제는 아래 규칙으로 인증 필요)
+                        .requestMatchers(HttpMethod.GET, "/products/search", "/products/autocomplete", "/products/*", "/products/brands/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/categories", "/categories/**", "/sub-categories", "/sub-categories/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.INCLUDE, DispatcherType.ERROR).permitAll()
                         .requestMatchers(ADMIN_INTERCEPTOR_LIST).hasRole("ADMIN")
