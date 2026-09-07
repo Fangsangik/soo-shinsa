@@ -42,13 +42,16 @@ public class TossPaymentsServiceImpl implements TossPaymentsService {
     private final PaymentRepository paymentRepository;
     private final OrdersRepository ordersRepository;
     private final UserRepository userRepository;
-    private final OrderCancellationService orderCancellationService;
+    private final PaymentStateWriter paymentStateWriter;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${toss.secret_api_key}")
     private String secretKey;
+
+    @Value("${toss.base-url}")
+    private String tossBaseUrl;
 
 
     @Transactional
@@ -75,53 +78,43 @@ public class TossPaymentsServiceImpl implements TossPaymentsService {
     }
 
 
-    @Transactional
+    /**
+     * 결제 승인.
+     * 토스 호출을 트랜잭션 밖에서 하고, 성공한 뒤에만 DB 에 반영한다.
+     * 예전에는 호출 전에 이미 "결제 완료"로 기록했다.
+     */
+    @Override
     public void approvePayment(String paymentKey, String orderId, Long amount, Model model) throws JsonProcessingException {
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Basic " + Base64.getEncoder().encodeToString((secretKey + ":").getBytes()));
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        Payment findPayment = paymentRepository.findByOrderId(orderId);
-        findPayment.update(TossPayStatus.PAYMENT, paymentKey);
-        paymentRepository.save(findPayment);
+        paymentStateWriter.verifyApprovable(orderId, amount);
 
         PayloadRequestDto payload = new PayloadRequestDto(orderId, String.valueOf(amount));
-        HttpEntity<String> request = new HttpEntity<>(objectMapper.writeValueAsString(payload), headers);
-        restTemplate.postForEntity("https://api.tosspayments.com/v1/payments/" + paymentKey, request, JsonNode.class);
-        Orders findOrder = ordersRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_ORDER));
-        findOrder.updateStatus(ORDERCOMPLETED);
+        callToss("/" + paymentKey, payload);
+
+        paymentStateWriter.applyApproval(orderId, paymentKey);
     }
 
-    @Transactional
+    /**
+     * 결제 취소.
+     * 토스 호출을 트랜잭션 밖에서 하고, 성공한 뒤에만 주문 취소와 재고 복원을 반영한다.
+     */
     @Override
     public void cancelPayment(String paymentKey, String cancelReason, User requester) throws JsonProcessingException {
+        Long orderId = paymentStateWriter.verifyCancellable(paymentKey, requester);
+
+        callToss("/" + paymentKey + "/cancel", new PayloadRequestDto(cancelReason));
+
+        paymentStateWriter.applyCancellation(paymentKey, orderId, cancelReason);
+    }
+
+    /** 토스 API 호출. 실패하면 예외가 올라와 DB 반영이 일어나지 않는다. */
+    private void callToss(String path, PayloadRequestDto payload) throws JsonProcessingException {
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Basic " + Base64.getEncoder().encodeToString((secretKey + ":").getBytes()));
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        Payment findPayment = paymentRepository.findByPaymentKey(paymentKey);
-
-        String orderId = findPayment.getOrderId();
-        Orders findOrder = ordersRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_ORDER));
-
-        // paymentKey 만 알면 남의 결제도 취소할 수 있었다
-        EntityValidator.validateAndOrders(findOrder, requester.getUserId());
-
-        // 이 경로만 재고를 되돌리지 않아, 결제 취소로 취소하면 재고가 사라졌다
-        orderCancellationService.cancel(findOrder.getId(), cancelReason);
-
-        findPayment.update(TossPayStatus.CANCEL, paymentKey);
-        paymentRepository.save(findPayment);
-
-        PayloadRequestDto payload = new PayloadRequestDto(cancelReason);
         HttpEntity<String> request = new HttpEntity<>(objectMapper.writeValueAsString(payload), headers);
-
-      restTemplate.postForEntity("https://api.tosspayments.com/v1/payments/" + paymentKey + "/cancel", request, JsonNode.class);
+        restTemplate.postForEntity(tossBaseUrl + "/payments" + path, request, JsonNode.class);
     }
-
 
     @Transactional
     public UserOrderDto findItem(Long userId, Long orderId, User requester) {
@@ -136,19 +129,20 @@ public class TossPaymentsServiceImpl implements TossPaymentsService {
 
     @Transactional
     @Override
+    /**
+     * 부분 취소 호출.
+     * DB 를 건드리지 않는데 트랜잭션이 걸려 있어 결제사 응답을 기다리는 동안
+     * 커넥션만 붙잡고 있었다. 조회해 온 결제 정보도 쓰이지 않았다.
+     */
     public void partialCancelPayment(String paymentKey, BigDecimal cancelAmount, String cancelReason) throws JsonProcessingException {
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Basic " + Base64.getEncoder().encodeToString((secretKey + ":").getBytes()));
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        Payment findPayment = paymentRepository.findByPaymentKey(paymentKey);
-
-        // 부분 취소를 위한 payload 생성 (취소 금액 포함)
         String requestBody = objectMapper.writeValueAsString(new PartialCancelRequest(cancelAmount, cancelReason));
         HttpEntity<String> request = new HttpEntity<>(requestBody, headers);
 
-        // Toss Payments 부분 취소 API 호출
-        restTemplate.postForEntity("https://api.tosspayments.com/v1/payments/" + paymentKey + "/cancel", request, JsonNode.class);
+        restTemplate.postForEntity(tossBaseUrl + "/payments/" + paymentKey + "/cancel", request, JsonNode.class);
     }
 
     // 부분 취소 요청을 위한 내부 클래스

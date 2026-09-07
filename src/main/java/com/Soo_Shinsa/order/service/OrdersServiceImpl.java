@@ -59,6 +59,7 @@ public class OrdersServiceImpl implements OrdersService {
     /** 이 시간이 지나도 결제되지 않은 주문은 되돌린다 */
     private final BusinessMetrics metrics;
     private final OrderCancellationService orderCancellationService;
+    private final PaymentStateWriter paymentStateWriter;
 
     @Value("${app.order.pending-timeout:PT30M}")
     private Duration pendingTimeout = Duration.ofMinutes(30);
@@ -377,29 +378,23 @@ public class OrdersServiceImpl implements OrdersService {
         return OrdersResponseDto.toDto(savedOrder);
     }
 
-    @Transactional
+    /**
+     * 주문 취소.
+     * 토스 호출이 트랜잭션 안에 있으면 결제사가 느려질 때 DB 커넥션을 붙잡는다.
+     * 검증과 반영만 트랜잭션으로 감싸고 외부 호출은 그 사이에서 한다.
+     */
     public void cancelOrder(User user, Long orderId) throws JsonProcessingException {
-        // 사용자 및 주문 조회
-        User findUser = userRepository.findByIdOrElseThrow(user.getUserId());
-        Orders findOrder = ordersRepository.findByIdOrElseThrow(orderId);
+        // 검증은 lazy 연관을 건드리므로 트랜잭션 안에서
+        String paidPaymentKey = paymentStateWriter.verifyOrderCancellable(orderId, user);
 
-        // 주문이 해당 사용자에게 속하는지 검증
-        EntityValidator.validateAndOrders(findOrder, findUser.getUserId());
-
-        if (findOrder.getStatus() == OrdersStatus.ORDERCANCEL) {
-            throw new InvalidInputException(ErrorCode.ALREADY_CANCEL_ORDER);
+        if (paidPaymentKey != null) {
+            // 결제 취소가 주문 취소와 재고 복원까지 함께 반영한다
+            tossPaymentsService.cancelPayment(paidPaymentKey, CANCEL_REASON, user);
+            return;
         }
 
-        // 결제 정보 조회
-        Payment payment = paymentRepository.findByOrderId(findOrder.getOrderId());
-
-        if (payment != null && payment.getStatus() == TossPayStatus.PAYMENT) {
-            // 결제 완료 상태라면 결제 취소 실행
-            tossPaymentsService.cancelPayment(payment.getPaymentKey(), CANCEL_REASON, findUser);
-        }
-
-        // 상태 변경과 재고 복원은 결제 취소 경로와 공유한다
-        orderCancellationService.cancel(findOrder.getId(), CANCEL_REASON);
+        // 결제 전이면 바로 취소한다
+        orderCancellationService.cancel(orderId, CANCEL_REASON);
     }
 
     @Transactional
