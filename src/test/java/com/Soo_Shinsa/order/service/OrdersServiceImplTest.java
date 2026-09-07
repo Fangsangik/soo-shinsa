@@ -142,7 +142,7 @@ class OrdersServiceImplTest extends IntegrationTestSupport {
                 .name("나이키")
                 .subCategory(subCategory)
                 .isCouponLimited(true)
-                .couponCount(5)
+                .couponCount(100) // 브랜드 한도는 이 테스트의 검증 대상이 아니다
                 .registrationNum("123-45-67890")
                 .status(BrandStatus.OPEN)
                 .build();
@@ -153,7 +153,7 @@ class OrdersServiceImplTest extends IntegrationTestSupport {
                 .name("아디다스")
                 .subCategory(subCategory)
                 .isCouponLimited(true)
-                .couponCount(5)
+                .couponCount(100) // 브랜드 한도는 이 테스트의 검증 대상이 아니다
                 .registrationNum("123-45-67890")
                 .status(BrandStatus.OPEN)
                 .build();

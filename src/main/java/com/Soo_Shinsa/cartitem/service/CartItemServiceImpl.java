@@ -47,6 +47,7 @@ public class CartItemServiceImpl implements CartItemService {
     private final ProductRepository productRepository;
     private final CouponUserRepository couponUserRepository;
     private final CouponRepository couponRepository;
+    private final com.Soo_Shinsa.coupon.service.CouponService couponService;
     private final CouponBrandRelationRepository couponBrandRelationRepository;
     private final CartItemProductOptionRepository cartItemProductOptionRepository;
 
@@ -129,15 +130,14 @@ public class CartItemServiceImpl implements CartItemService {
 
     @Transactional
     public ApplyCouponCartResponseDto applyCoupon(Long cartId, ApplyCouponCartRequestDto requestDto, User user) {
-        CartItem cartItem = cartItemRepository.findByIdOrElseThrow(cartId);
+        Long couponId = requestDto.getCouponId();
 
-        // 예전에는 "쓰지 않은 쿠폰"을 사용자 구분 없이 찾아서,
-        // 다른 사람이 발급받은 쿠폰을 자기 장바구니에 적용할 수 있었다.
-        Coupon coupon = couponRepository.findById(requestDto.getCouponId())
-                .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_COUPON));
-
+        // 예전에는 "쓰지 않은 쿠폰"을 사용자 구분 없이 찾아서
+        // 다른 사람이 발급받은 쿠폰을 자기 장바구니에 적용할 수 있었고,
+        // 여기서 직접 CouponUser 를 만들었기 때문에 선착순 정원(issuedCount)도 우회됐다.
+        // 발급은 CouponService.issue 한 곳에서만 일어나게 한다.
         CouponUser couponUser = couponUserRepository
-                .findByCouponIdAndUserUserId(requestDto.getCouponId(), user.getUserId())
+                .findByCouponIdAndUserUserId(couponId, user.getUserId())
                 .orElse(null);
 
         if (couponUser != null && couponUser.isUsed()) {
@@ -145,16 +145,16 @@ public class CartItemServiceImpl implements CartItemService {
         }
 
         if (couponUser == null) {
-            if (coupon.getRemainingCount() <= 0) {
-                throw new InvalidInputException(ErrorCode.COUPON_OUT_OF_STOCK);
-            }
-            couponUser = couponUserRepository.saveAndFlush(CouponUser.builder()
-                    .coupon(coupon)
-                    .user(user)
-                    .isUsed(false)
-                    .usedAt(null)
-                    .build());
+            // 정원, 1인 1매, 브랜드 잔여 수량 검증은 발급 로직이 담당한다
+            couponService.issue(couponId, user);
+            couponUser = couponUserRepository.findByCouponIdAndUserUserId(couponId, user.getUserId())
+                    .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_COUPON));
         }
+
+        // 발급 과정에서 영속성 컨텍스트가 비워지므로 이후 엔티티는 여기서 읽는다
+        CartItem cartItem = cartItemRepository.findByIdOrElseThrow(cartId);
+        Coupon coupon = couponRepository.findById(couponId)
+                .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_COUPON));
 
         if (coupon.isExpired()) {
             throw new InvalidInputException(ErrorCode.EXPIRED_COUPON);

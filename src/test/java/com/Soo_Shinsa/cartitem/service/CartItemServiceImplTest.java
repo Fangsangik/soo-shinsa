@@ -129,7 +129,7 @@ class CartItemServiceImplTest extends IntegrationTestSupport {
                 .name("나이키")
                 .subCategory(subCategory)
                 .isCouponLimited(true)
-                .couponCount(5)
+                .couponCount(100) // 브랜드 한도는 이 테스트의 검증 대상이 아니다
                 .registrationNum("123-45-67890")
                 .status(BrandStatus.OPEN)
                 .build();
@@ -140,7 +140,7 @@ class CartItemServiceImplTest extends IntegrationTestSupport {
                 .name("아디다스")
                 .subCategory(subCategory)
                 .isCouponLimited(true)
-                .couponCount(5)
+                .couponCount(100) // 브랜드 한도는 이 테스트의 검증 대상이 아니다
                 .registrationNum("123-45-67890")
                 .status(BrandStatus.OPEN)
                 .build();
@@ -221,7 +221,9 @@ class CartItemServiceImplTest extends IntegrationTestSupport {
         ApplyCouponCartResponseDto response = cartItemService.applyCoupon(cartItem.getId(), requestDto, user);
         log.info("✅ 쿠폰 적용 결과 : {}", response);
 
-        assertEquals(BigDecimal.valueOf(4500000.0), response.getDiscountedPrice());
+        // BigDecimal 은 스케일까지 비교하므로 값으로 비교한다 (4500000.0 vs 4500000.0000)
+        assertEquals(0, BigDecimal.valueOf(4500000.0).compareTo(response.getDiscountedPrice()),
+                "실제: " + response.getDiscountedPrice());
         log.info("✅ 쿠폰 적용 결과 : {}", response.getDiscountedPrice());
     }
 
@@ -276,5 +278,34 @@ class CartItemServiceImplTest extends IntegrationTestSupport {
         assertEquals(before + 1, couponUserRepository.countByCouponId(validCoupon.getId()));
         assertTrue(couponUserRepository
                 .findByCouponIdAndUserUserId(validCoupon.getId(), other.getUserId()).isPresent());
+    }
+
+    @Test
+    void 장바구니_적용으로_선착순_정원을_넘길_수_없다() {
+        // 예전에는 applyCoupon 이 CouponUser 를 직접 만들어서
+        // 발급 정원(issuedCount)을 거치지 않고 얼마든지 쿠폰을 가질 수 있었다
+        Coupon limited = couponRepository.save(Coupon.builder()
+                .couponName("정원 1개").couponType(CouponType.SPECIFIC_BRAND)
+                .discountRate(BigDecimal.valueOf(10.0)).maxCount(1).build());
+        couponBrandRelationRepository.save(CouponBrandRelation.builder()
+                .coupon(limited).brand(brand).build());
+
+        ApplyCouponCartRequestDto requestDto = ApplyCouponCartRequestDto.builder()
+                .couponId(limited.getId()).build();
+
+        cartItemService.applyCoupon(cartItem.getId(), requestDto, user);
+
+        User second = userRepository.save(User.builder()
+                .email("test88@test.com").password("p").name("두번째")
+                .phoneNum("01088888888").role(Role.CUSTOMER).status(UserStatus.ACTIVE).build());
+        CartItem secondCart = cartItemRepository.save(CartItem.builder()
+                .product(product).user(second).quantity(1).build());
+
+        assertThrows(InvalidInputException.class,
+                () -> cartItemService.applyCoupon(secondCart.getId(), requestDto, second));
+
+        assertEquals(1, couponUserRepository.countByCouponId(limited.getId()),
+                "정원 1개인데 두 명이 가지면 안 된다");
+        assertEquals(1, couponRepository.findByIdOrElseThrow(limited.getId()).getIssuedCount());
     }
 }
