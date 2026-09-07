@@ -114,7 +114,11 @@ public class ProductServiceImpl implements ProductService {
             return List.of();
         }
         int capped = Math.min(Math.max(limit, 1), 20);
-        return productRepository.findNameSuggestions(keyword.trim(), PageRequest.of(0, capped));
+        String raw = keyword.trim();
+        // BOOLEAN MODE 는 + - * " ( ) ~ < > @ 를 연산자로 해석한다.
+        // 따옴표로 감싸 구문 검색으로 만들고, 입력에 든 따옴표는 제거한다.
+        String phrase = "\"" + raw.replace("\"", " ") + "\"";
+        return productRepository.findNameSuggestions(phrase, raw, capped);
     }
 
     @Override
