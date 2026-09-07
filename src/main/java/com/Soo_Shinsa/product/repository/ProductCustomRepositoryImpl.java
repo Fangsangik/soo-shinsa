@@ -6,6 +6,7 @@ import com.Soo_Shinsa.category.model.QSubCategory;
 import com.Soo_Shinsa.product.model.QProduct;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -16,6 +17,9 @@ import org.springframework.data.domain.Pageable;
 
 @RequiredArgsConstructor
 public class ProductCustomRepositoryImpl implements ProductCustomRepository {
+
+    /** MySQL ngram 파서의 기본 토큰 길이 */
+    private static final int NGRAM_TOKEN_SIZE = 2;
 
     private final JPAQueryFactory queryFactory;
 
@@ -34,7 +38,7 @@ public class ProductCustomRepositoryImpl implements ProductCustomRepository {
             return builder;
         }
         if (dto.getNameKeyword() != null && !dto.getNameKeyword().isBlank()) {
-            builder.and(product.name.containsIgnoreCase(dto.getNameKeyword()));
+            builder.and(nameMatches(product, dto.getNameKeyword().trim()));
         }
         if (dto.getMinPrice() != null) {
             builder.and(product.price.goe(dto.getMinPrice()));
@@ -54,6 +58,22 @@ public class ProductCustomRepositoryImpl implements ProductCustomRepository {
                             .where(subCategory.category.id.eq(dto.getCategoryId()))));
         }
         return builder;
+    }
+
+    /**
+     * 상품명 검색 조건.
+     *
+     * LIKE '%키워드%' 는 인덱스를 타지 못해 전체 스캔이므로 FULLTEXT(ngram) 을 쓴다.
+     * ngram 토큰 최소 길이가 2라 한 글자는 잡히지 않으므로 그때만 LIKE 로 떨어뜨린다.
+     */
+    static BooleanExpression nameMatches(QProduct product, String keyword) {
+        if (keyword.length() < NGRAM_TOKEN_SIZE) {
+            return product.name.containsIgnoreCase(keyword);
+        }
+        // BOOLEAN MODE 연산자(+ - * " ( ) ~)를 무력화하려고 구문으로 감싼다
+        String phrase = "\"" + keyword.replace("\"", " ") + "\"";
+        return Expressions.numberTemplate(Double.class,
+                "function('match_against', {0}, {1})", product.name, phrase).gt(0);
     }
 
     @Override

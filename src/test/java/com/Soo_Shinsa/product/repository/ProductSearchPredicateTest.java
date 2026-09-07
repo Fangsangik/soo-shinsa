@@ -2,6 +2,7 @@ package com.Soo_Shinsa.product.repository;
 
 import com.Soo_Shinsa.global.constant.ProductStatus;
 import com.Soo_Shinsa.product.dto.FindProductRequestDto;
+import com.Soo_Shinsa.product.model.QProduct;
 import com.querydsl.core.BooleanBuilder;
 import org.junit.jupiter.api.Test;
 
@@ -22,6 +23,19 @@ class ProductSearchPredicateTest {
                 null, new FindProductRequestDto("셔츠", null, null, null, null));
         assertFalse(b.toString().contains("brand.id"), b.toString());
         assertTrue(b.toString().contains("셔츠"), b.toString());
+    }
+
+    @Test
+    void 두글자_이상은_FULLTEXT_로_검색한다() {
+        String s = ProductCustomRepositoryImpl.nameMatches(QProduct.product, "셔츠").toString();
+        assertTrue(s.contains("match_against"), s);
+        assertTrue(s.contains("\"셔츠\""), "BOOLEAN MODE 연산자를 막으려면 구문으로 감싸야 한다: " + s);
+    }
+
+    @Test
+    void 한글자는_ngram_이_잡지_못하므로_LIKE_로_떨어진다() {
+        String s = ProductCustomRepositoryImpl.nameMatches(QProduct.product, "셔").toString();
+        assertFalse(s.contains("match_against"), s);
     }
 
     @Test
