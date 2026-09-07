@@ -63,7 +63,7 @@ public class WebConfig {
                         .requestMatchers(HttpMethod.GET, "/brands/vendor").authenticated()
                         .requestMatchers(HttpMethod.GET, "/brands", "/brands/*").permitAll()
                         // 상품: 비로그인 탐색/검색 허용 (등록·수정·삭제는 아래 규칙으로 인증 필요)
-                        .requestMatchers(HttpMethod.GET, "/products/search", "/products/autocomplete", "/products/*", "/products/brands/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/products/search", "/products/search/popular", "/products/autocomplete", "/products/*", "/products/brands/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/categories", "/categories/**", "/sub-categories", "/sub-categories/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.INCLUDE, DispatcherType.ERROR).permitAll()

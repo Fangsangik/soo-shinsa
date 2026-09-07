@@ -34,6 +34,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
 
+    private final SearchKeywordRanking searchKeywordRanking;
+
     private final BrandRepository brandRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
@@ -123,8 +125,17 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Page<ProductResponseDto> findAllProduct(Long brandId, FindProductRequestDto requestDto, int page, int size) {
-         Pageable pageable = PageRequest.of(page, size);
-         return productRepository.findAllProduct(brandId, requestDto, pageable);
+        // 자동완성은 키 입력마다 호출되므로 집계하지 않고, 실제 검색만 센다
+        if (requestDto != null) {
+            searchKeywordRanking.record(requestDto.getNameKeyword());
+        }
+        Pageable pageable = PageRequest.of(page, size);
+        return productRepository.findAllProduct(brandId, requestDto, pageable);
+    }
+
+    @Override
+    public List<String> popularKeywords(int limit) {
+        return searchKeywordRanking.popularKeywords(limit);
     }
 
     @Transactional

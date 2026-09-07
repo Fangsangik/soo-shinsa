@@ -109,6 +109,12 @@
             display: none;
         }
 
+        .suggest-head {
+            padding: 6px 12px;
+            font-size: 12px;
+            color: #999;
+        }
+
         .suggest-item {
             padding: 8px 12px;
             font-size: 14px;
@@ -678,8 +684,12 @@
                 input.setAttribute('aria-expanded', 'false');
             }
 
+            function optionNodes() {
+                return [...list.querySelectorAll('.suggest-item')];
+            }
+
             function highlight(active_) {
-                [...list.children].forEach((el, i) =>
+                optionNodes().forEach((el, i) =>
                     el.setAttribute('aria-selected', String(i === active_)));
             }
 
@@ -701,6 +711,27 @@
                 }).join('');
                 list.hidden = false;
                 input.setAttribute('aria-expanded', 'true');
+            }
+
+            async function loadPopular() {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/products/search/popular?limit=8`);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+                    const names = data.data || [];
+                    if (names.length === 0) {
+                        closeSuggestions();
+                        return;
+                    }
+                    items = names;
+                    active = -1;
+                    list.innerHTML = '<li class="suggest-head">인기 검색어</li>' + names.map((name) =>
+                        `<li class="suggest-item" role="option" aria-selected="false">${escapeHtml(name)}</li>`).join('');
+                    list.hidden = false;
+                    input.setAttribute('aria-expanded', 'true');
+                } catch (error) {
+                    closeSuggestions();
+                }
             }
 
             async function loadSuggestions(keyword) {
@@ -732,6 +763,10 @@
                 timer = setTimeout(() => loadSuggestions(input.value), 200);
             });
 
+            input.addEventListener('focus', () => {
+                if (!input.value.trim()) loadPopular();
+            });
+
             input.addEventListener('keydown', (e) => {
                 if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
                     if (items.length === 0) return;
@@ -756,7 +791,7 @@
                 const item = e.target.closest('.suggest-item');
                 if (!item) return;
                 e.preventDefault(); // blur 보다 먼저 처리
-                commit(items[[...list.children].indexOf(item)]);
+                commit(items[optionNodes().indexOf(item)]);
             });
 
             input.addEventListener('blur', () => setTimeout(closeSuggestions, 100));

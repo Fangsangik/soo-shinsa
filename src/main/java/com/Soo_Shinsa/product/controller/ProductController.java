@@ -70,6 +70,15 @@ public class ProductController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @GetMapping("/search/popular")
+    @Operation(summary = "인기 검색어", description = "오늘 많이 찾은 검색어를 반환합니다.")
+    public ResponseEntity<CommonResponse<List<String>>> popularKeywords(
+            @RequestParam(defaultValue = "10") int limit) {
+        CommonResponse<List<String>> response =
+                new CommonResponse<>(ResponseMessage.PRODUCT_SELECT_SUCCESS, productService.popularKeywords(limit));
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
     @GetMapping("/search")
     @Operation(summary = "상품 통합 검색", description = "브랜드 구분 없이 상품명/가격/카테고리/판매상태로 검색합니다.")
     public ResponseEntity<CommonResponse<Page<ProductResponseDto>>> searchProducts(@RequestParam(defaultValue = "0") int page,

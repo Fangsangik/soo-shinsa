@@ -20,6 +20,9 @@ public interface ProductService {
 
     List<String> autocomplete(String keyword, int limit);
 
+    /** 오늘 많이 찾은 검색어 */
+    List<String> popularKeywords(int limit);
+
     Page<ProductResponseDto> findUserBasedRecommendation(User user, int page, int size);
 
     void deleteProduct(Long productId, User user);
