@@ -12,7 +12,6 @@ import com.Soo_Shinsa.global.constant.Role;
 import com.Soo_Shinsa.global.constant.UserStatus;
 import com.Soo_Shinsa.product.model.Product;
 import com.Soo_Shinsa.product.repository.ProductRepository;
-import com.Soo_Shinsa.product.repository.ProductSearchIndexInitializer;
 import com.Soo_Shinsa.support.IntegrationTestSupport;
 import com.Soo_Shinsa.support.TestDataCleaner;
 import com.Soo_Shinsa.user.model.User;
@@ -75,8 +74,8 @@ class ProductAutocompleteIntegrationTest extends IntegrationTestSupport {
         Integer count = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM information_schema.STATISTICS " +
                 "WHERE table_schema = DATABASE() AND table_name = 'product' AND index_name = ?",
-                Integer.class, ProductSearchIndexInitializer.INDEX_NAME);
-        assertEquals(1, count, "자동완성 쿼리가 의존하는 인덱스가 없다");
+                Integer.class, "ft_product_name");
+        assertEquals(1, count, "V1 마이그레이션이 만들어야 할 인덱스가 없다");
     }
 
     @Test

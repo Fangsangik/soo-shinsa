@@ -40,8 +40,8 @@ public abstract class IntegrationTestSupport {
         registry.add("spring.data.redis.host", REDIS::getHost);
         registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
 
-        // 빈 DB 이므로 스키마를 만들어야 한다
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "update");
+        // 빈 DB 의 스키마는 Flyway 가 만든다. ddl-auto 는 운영과 같이 validate 로 두어
+        // 마이그레이션이 엔티티와 어긋나면 테스트가 먼저 깨지게 한다.
         registry.add("spring.batch.jdbc.initialize-schema", () -> "always");
     }
 }
