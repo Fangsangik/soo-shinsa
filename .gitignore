@@ -39,3 +39,8 @@ out/
 
 src/resources/application.properties
 src/resources/application-local.properties
+node_modules/
+*.log
+.DS_Store
+dump.rdb
+.omc/

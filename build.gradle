@@ -94,4 +94,11 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    // @SpringBootTest 도 ApplicationRunner 를 실행하므로 테스트 DB에 시드가 섞이지 않게 막는다
+    systemProperty 'app.seed.enabled', 'false'
+}
+
+// 프론트엔드 개발용 파일은 jar에 넣지 않는다 (13MB node_modules가 /node_modules/** 로 공개 서빙되던 문제)
+tasks.named('processResources') {
+    exclude 'static/node_modules/**', 'static/package.json', 'static/package-lock.json', 'static/**/*.log'
 }
