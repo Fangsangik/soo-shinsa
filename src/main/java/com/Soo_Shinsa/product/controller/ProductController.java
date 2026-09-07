@@ -55,8 +55,12 @@ public class ProductController {
 
     @GetMapping("/{productId}")
     @Operation(summary = "상품 조회", description = "특정 상품을 조회합니다.")
-    public ResponseEntity<CommonResponse<FindProductResponseDto>> findProduct(@PathVariable Long productId) {
-        FindProductResponseDto productResponseDto = productService.findProduct(productId);
+    public ResponseEntity<CommonResponse<FindProductResponseDto>> findProduct(
+            @PathVariable Long productId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        // 비로그인도 볼 수 있는 화면이라 userDetails 가 null 일 수 있다
+        User viewer = userDetails == null ? null : UserUtils.getUser(userDetails);
+        FindProductResponseDto productResponseDto = productService.findProduct(productId, viewer);
         CommonResponse<FindProductResponseDto> response = new CommonResponse<>(ResponseMessage.PRODUCT_SELECT_SUCCESS, productResponseDto);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }

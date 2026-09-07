@@ -26,6 +26,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -99,10 +103,21 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public FindProductResponseDto findProduct(Long productId) {
+        return findProduct(productId, null);
+    }
+
+    @Transactional
+    @Override
+    public FindProductResponseDto findProduct(Long productId, User viewer) {
 
         Product product = productRepository.findByIdOrElseThrow(productId);
 
         List<ProductOption> productOptions = productOptionRepository.findProductOptionByProductId(productId);
+
+        // 조회 이력을 아무도 기록하지 않아 추천이 늘 랜덤으로 빠지고 있었다
+        if (viewer != null) {
+            userProductViewRepository.save(new UserProductView(viewer, product, LocalDate.now()));
+        }
 
         return FindProductResponseDto.toDto(product, productOptions);
     }
@@ -151,31 +166,36 @@ public class ProductServiceImpl implements ProductService {
         productRepository.delete(product);
     }
 
+    // DTO 변환이 lazy 연관(brand)을 건드리므로 세션이 필요하다
+    @Transactional(readOnly = true)
     @Override
     public Page<ProductResponseDto> findUserBasedRecommendation(User user, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
 
-        List<UserProductView> viewedOptions = userProductViewRepository.findRecentlyViewedProductOptions(user.getUserId(), pageable);
+        List<Long> viewedProductIds = userProductViewRepository.findViewedProductIds(user.getUserId());
 
-        if (!viewedOptions.isEmpty()) {
-            Set<Long> viewedProductIds = viewedOptions.stream()
-                    .map(option -> option.getProductOption().getProduct().getId())
-                    .collect(Collectors.toSet());
+        if (!viewedProductIds.isEmpty()) {
+            // 내가 본 상품을 똑같이 본 사람들이 그 밖에 무엇을 봤는지
+            List<Long> coViewed = userProductViewRepository.findCoViewedProductIds(
+                    user.getUserId(), viewedProductIds, (page + 1) * size);
 
-            Page<Product> recommendations = productRepository.findByBrandAndProductId(
-                    viewedOptions.get(0).getProductOption().getProduct().getBrand().getId(),
-                    viewedOptions.get(0).getProductOption().getProduct().getId(),
-                    pageable
-            );
+            if (!coViewed.isEmpty()) {
+                List<Long> pageIds = coViewed.stream().skip((long) page * size).limit(size).toList();
+                Map<Long, Product> byId = productRepository.findAllById(pageIds).stream()
+                        .collect(Collectors.toMap(Product::getId, Function.identity()));
 
-            List<ProductResponseDto> filteredList = recommendations.getContent().stream()
-                    .filter(product -> !viewedProductIds.contains(product.getId()))
-                    .map(ProductResponseDto::toDto)
-                    .toList();
+                // 함께 본 횟수 순서를 유지한다
+                List<ProductResponseDto> ordered = pageIds.stream()
+                        .map(byId::get)
+                        .filter(Objects::nonNull)
+                        .map(ProductResponseDto::toDto)
+                        .toList();
 
-            return new PageImpl<>(filteredList, pageable, recommendations.getTotalElements());
+                return new PageImpl<>(ordered, pageable, coViewed.size());
+            }
         }
 
+        // 이력이 없거나 함께 본 사람이 없으면 베스트셀러로 채운다
         return findBestSellersOrRandom(pageable);
     }
 

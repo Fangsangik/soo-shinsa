@@ -16,6 +16,9 @@ public interface ProductService {
 
     FindProductResponseDto findProduct(Long productId);
 
+    /** 상품 조회 + 조회 이력 기록. viewer 가 null 이면(비로그인) 기록하지 않는다. */
+    FindProductResponseDto findProduct(Long productId, User viewer);
+
     Page<ProductResponseDto> findAllProduct(Long brandId, FindProductRequestDto requestDto, int page, int size);
 
     List<String> autocomplete(String keyword, int limit);
