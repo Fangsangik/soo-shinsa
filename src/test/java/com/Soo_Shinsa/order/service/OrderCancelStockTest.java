@@ -18,6 +18,7 @@ import com.Soo_Shinsa.product.model.Product;
 import com.Soo_Shinsa.product.model.ProductOption;
 import com.Soo_Shinsa.product.repository.ProductOptionRepository;
 import com.Soo_Shinsa.product.repository.ProductRepository;
+import com.Soo_Shinsa.support.IntegrationTestSupport;
 import com.Soo_Shinsa.support.TestDataCleaner;
 import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.user.repository.UserRepository;
@@ -38,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * 부분 취소만 복원하고 전체 취소는 복원하지 않아 재고가 사라지고 있었다.
  */
 @SpringBootTest(properties = "app.order.pending-timeout=PT0S")
-class OrderCancelStockTest {
+class OrderCancelStockTest extends IntegrationTestSupport {
 
     private static final int STOCK = 5;
 

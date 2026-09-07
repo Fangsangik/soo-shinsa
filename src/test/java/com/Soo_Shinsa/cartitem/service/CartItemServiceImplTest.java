@@ -27,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.Soo_Shinsa.support.IntegrationTestSupport;
 import com.Soo_Shinsa.support.TestDataCleaner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -40,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Slf4j
 @SpringBootTest
-class CartItemServiceImplTest {
+class CartItemServiceImplTest extends IntegrationTestSupport {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;

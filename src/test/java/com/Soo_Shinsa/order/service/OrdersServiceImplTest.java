@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.Soo_Shinsa.support.IntegrationTestSupport;
 import com.Soo_Shinsa.support.TestDataCleaner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -44,7 +45,7 @@ import java.util.concurrent.Executors;
 
 @Slf4j
 @SpringBootTest
-class OrdersServiceImplTest {
+class OrdersServiceImplTest extends IntegrationTestSupport {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;

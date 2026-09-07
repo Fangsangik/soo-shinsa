@@ -14,6 +14,7 @@ import com.Soo_Shinsa.category.repository.SubCategoryRepository;
 import com.Soo_Shinsa.global.constant.BrandStatus;
 import com.Soo_Shinsa.global.constant.Role;
 import com.Soo_Shinsa.global.constant.UserStatus;
+import com.Soo_Shinsa.support.IntegrationTestSupport;
 import com.Soo_Shinsa.support.TestDataCleaner;
 import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.user.repository.UserRepository;
@@ -45,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @Slf4j
 @SpringBootTest(properties = "app.coupon.prefilter-enabled=false")
-class CouponIssueLoadNoPrefilterTest {
+class CouponIssueLoadNoPrefilterTest extends IntegrationTestSupport {
 
     private static final int CAPACITY = 10;
     private static final int REQUESTS = 2000;

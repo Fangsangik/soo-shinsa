@@ -57,30 +57,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: code-quality
     
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: test123
-          MYSQL_DATABASE: soo_shinsa_test
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-          
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-    
+    # MySQL / Redis 는 Testcontainers 가 테스트 실행 중에 직접 띄운다.
+    # (ubuntu-latest 러너에는 Docker 가 이미 있다)
+
     steps:
     - name: 📥 체크아웃
       uses: actions/checkout@v4
@@ -109,15 +88,9 @@ jobs:
       env:
         SPRING_PROFILES_ACTIVE: test
         
-    - name: 🧪 단위 테스트 실행
+    - name: 🧪 테스트 실행
+      # 접속 정보는 Testcontainers 가 주입하므로 DB/Redis 환경변수가 필요 없다
       run: ./gradlew test
-      env:
-        SPRING_PROFILES_ACTIVE: test
-        DB_URL: jdbc:mysql://localhost:3306/soo_shinsa_test
-        DB_USERNAME: root
-        DB_PASSWORD: test123
-        REDIS_HOST: localhost
-        REDIS_PORT: 6379
         JWT_SECRET: test_jwt_secret_key_for_testing_minimum_32_characters
         
     - name: 📊 테스트 결과 업로드
