@@ -37,6 +37,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.beans.factory.annotation.Value;
+import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.Instant;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -50,6 +54,11 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class OrdersServiceImpl implements OrdersService {
+
+    /** 이 시간이 지나도 결제되지 않은 주문은 되돌린다 */
+    @Value("${app.order.pending-timeout:PT30M}")
+    private Duration pendingTimeout = Duration.ofMinutes(30);
+
     private final OrdersRepository ordersRepository;
     private final CartItemRepository cartItemRepository;
     private final UserRepository userRepository;
@@ -378,17 +387,32 @@ public class OrdersServiceImpl implements OrdersService {
         // 주문이 해당 사용자에게 속하는지 검증
         EntityValidator.validateAndOrders(findOrder, findUser.getUserId());
 
+        if (findOrder.getStatus() == OrdersStatus.ORDERCANCEL) {
+            throw new InvalidInputException(ErrorCode.ALREADY_CANCEL_ORDER);
+        }
+
         // 결제 정보 조회
         Payment payment = paymentRepository.findByOrderId(findOrder.getOrderId());
 
         if (payment != null && payment.getStatus() == TossPayStatus.PAYMENT) {
             // 결제 완료 상태라면 결제 취소 실행
-            tossPaymentsService.cancelPayment(payment.getPaymentKey(), "사용자 주문 취소");
+            tossPaymentsService.cancelPayment(payment.getPaymentKey(), CANCEL_REASON);
         }
+
+        // 재고 복원. 부분 취소만 복원하고 전체 취소는 하지 않아 재고가 사라지고 있었다.
+        // 이미 취소된 아이템은 부분 취소 때 복원했으므로 건너뛴다.
+        findOrder.getOrderItems().stream()
+                .filter(orderItem -> !orderItem.isCancelled())
+                .forEach(orderItem -> {
+                    restoreStock(orderItem);
+                    orderItem.cancelOrderItem(CANCEL_REASON);
+                });
 
         // 주문 상태 변경
         findOrder.updateStatus(OrdersStatus.ORDERCANCEL);
         ordersRepository.save(findOrder);
+
+        orderCacheService.evictOrderCaches(findOrder.getId(), findUser.getUserId());
     }
 
     @Transactional
@@ -475,6 +499,50 @@ public class OrdersServiceImpl implements OrdersService {
                 .message("선택된 상품의 부분 취소가 완료되었습니다.")
                 .build();
     }
+
+    private static final String CANCEL_REASON = "사용자 주문 취소";
+    private static final String EXPIRE_REASON = "결제 시간 초과";
+
+    /**
+     * 결제되지 않은 채 방치된 주문을 되돌린다.
+     *
+     * 주문 생성 시점에 재고를 차감하는데 결제하지 않은 주문을 되돌리는 경로가 없어서,
+     * 장바구니만 담고 이탈하면 재고가 영영 묶였다.
+     * 결제가 완료된 주문은 상태 반영이 늦은 것일 수 있으므로 건드리지 않는다.
+     */
+    @Transactional
+    @Override
+    public int expirePendingOrders(int batchSize) {
+        Timestamp threshold = Timestamp.from(Instant.now().minus(pendingTimeout));
+        List<Orders> expired = ordersRepository.findExpired(
+                OrdersStatus.PENDING, threshold, PageRequest.of(0, Math.max(batchSize, 1)));
+
+        int reverted = 0;
+        for (Orders order : expired) {
+            Payment payment = paymentRepository.findByOrderId(order.getOrderId());
+            if (payment != null && payment.getStatus() == TossPayStatus.PAYMENT) {
+                log.warn("결제는 완료됐는데 주문이 PENDING 입니다. 만료 대상에서 제외 - 주문 ID: {}", order.getId());
+                continue;
+            }
+
+            order.getOrderItems().stream()
+                    .filter(orderItem -> !orderItem.isCancelled())
+                    .forEach(orderItem -> {
+                        restoreStock(orderItem);
+                        orderItem.cancelOrderItem(EXPIRE_REASON);
+                    });
+            order.updateStatus(OrdersStatus.ORDERCANCEL);
+            ordersRepository.save(order);
+            orderCacheService.evictOrderCaches(order.getId(), order.getUser().getUserId());
+            reverted++;
+        }
+
+        if (reverted > 0) {
+            log.info("미결제 주문 {}건 취소, 재고 반환 완료", reverted);
+        }
+        return reverted;
+    }
+
 
     private void restoreStock(OrderItem orderItem) {
         // 재고 복원

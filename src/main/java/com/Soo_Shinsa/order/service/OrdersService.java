@@ -13,6 +13,12 @@ public interface OrdersService {
     OrdersResponseDto createAllOrderFromCart(User user);
     OrdersResponseDto createSingleOrderCartItem(User user, OrderCreateRequestDto requestDto);
     void cancelOrder(User user, Long orderId) throws JsonProcessingException;
+
+    /**
+     * 결제되지 않은 채 방치된 주문을 취소하고 재고를 되돌린다.
+     * @return 되돌린 주문 수
+     */
+    int expirePendingOrders(int batchSize);
     PartialCancelResponseDto partialCancelOrder(User user, Long orderId, PartialCancelRequestDto requestDto) throws JsonProcessingException;
     OrdersResponseDto updateOrder (User user, Long orderId, OrdersStatus status);
 

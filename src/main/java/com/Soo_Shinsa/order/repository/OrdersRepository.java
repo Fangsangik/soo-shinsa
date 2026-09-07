@@ -1,6 +1,7 @@
 package com.Soo_Shinsa.order.repository;
 
 import com.Soo_Shinsa.global.exception.NotFoundException;
+import com.Soo_Shinsa.global.constant.OrdersStatus;
 import com.Soo_Shinsa.order.model.Orders;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,6 +24,12 @@ public interface OrdersRepository extends JpaRepository<Orders, Long>, OrderCust
     }
     
     Optional<Orders> findByOrderId(String orderId);
+
+    /** 결제되지 않은 채 방치된 주문. 재고를 물고 있으므로 되돌려야 한다. */
+    @Query("SELECT o FROM Orders o WHERE o.status = :status AND o.createdAt < :threshold ORDER BY o.createdAt ASC")
+    List<Orders> findExpired(@Param("status") OrdersStatus status,
+                             @Param("threshold") Timestamp threshold,
+                             Pageable pageable);
 
     // 🚀 성능 최적화: N+1 문제 해결을 위한 Fetch Join
     @Query("SELECT DISTINCT o FROM Orders o " +
