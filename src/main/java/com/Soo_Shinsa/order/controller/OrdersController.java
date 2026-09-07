@@ -43,7 +43,7 @@ public class OrdersController {
     @GetMapping("/users")
     @Operation(summary = "사용자 전체 주문 조회", description = "특정 사용자의 모든 주문을 조회합니다.")
     public ResponseEntity<CommonResponse<Page<OrdersResponseDto>>> getOrderByAll(@AuthenticationPrincipal UserDetails userDetails,
-                                                                 @RequestBody OrderDateRequestDto dateRequestDto,
+                                                                 @ModelAttribute OrderDateRequestDto dateRequestDto,
                                                                  @RequestParam (defaultValue = "0") int page,
                                                                  @RequestParam (defaultValue = "10") int size) {
         User user = UserUtils.getUser(userDetails);
@@ -58,7 +58,7 @@ public class OrdersController {
     public ResponseEntity<CommonResponse<OrdersResponseDto>> createSingleProductOrder(@AuthenticationPrincipal UserDetails userDetails,
                                                                       @Valid @RequestBody SingleProductOrderRequestDto requestDto) {
         User user = UserUtils.getUser(userDetails);
-        OrdersResponseDto response = ordersService.createSingleProductOrder(user, requestDto.getProductId(), requestDto.getQuantity());
+        OrdersResponseDto response = ordersService.createSingleProductOrder(user, requestDto.getProductOptionId(), requestDto.getQuantity());
         CommonResponse<OrdersResponseDto> commonResponse = new CommonResponse<>(ResponseMessage.ORDER_CREATE_SUCCESS, response);
         return ResponseEntity.status(HttpStatus.CREATED).body(commonResponse);
     }
@@ -137,7 +137,7 @@ public class OrdersController {
     @Operation(summary = "최적화된 주문 요약 목록", description = "경량 DTO를 사용한 빠른 주문 목록 조회입니다.")
     public ResponseEntity<CommonResponse<Page<OrderSummaryDto>>> getOrderSummariesOptimized(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody OrderDateRequestDto dateRequestDto,
+            @ModelAttribute OrderDateRequestDto dateRequestDto,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         User user = UserUtils.getUser(userDetails);
@@ -150,7 +150,7 @@ public class OrdersController {
     @Operation(summary = "최적화된 주문 전체 목록", description = "2단계 조회를 사용한 빠른 주문 목록 조회입니다.")
     public ResponseEntity<CommonResponse<Page<OrdersResponseDto>>> getOrdersByUserOptimized(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody OrderDateRequestDto dateRequestDto,
+            @ModelAttribute OrderDateRequestDto dateRequestDto,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         User user = UserUtils.getUser(userDetails);

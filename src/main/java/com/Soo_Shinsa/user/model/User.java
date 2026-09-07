@@ -66,8 +66,13 @@ public class User {
     }
 
     public void update(UserUpdateRequestDto userUpdateRequestDto) {
-        this.name = userUpdateRequestDto.getName();
-        this.phoneNum = userUpdateRequestDto.getPhoneNum();
+        // 보내지 않은 항목은 그대로 둔다. 예전에는 비밀번호만 바꿔도 이름/전화가 null 로 지워졌다.
+        if (userUpdateRequestDto.getName() != null) {
+            this.name = userUpdateRequestDto.getName();
+        }
+        if (userUpdateRequestDto.getPhoneNum() != null) {
+            this.phoneNum = userUpdateRequestDto.getPhoneNum();
+        }
     }
     public void updatePassword(String password) {
         this.password = password;

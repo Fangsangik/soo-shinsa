@@ -1,6 +1,5 @@
 package com.Soo_Shinsa.user.dto;
 
-import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -9,9 +8,8 @@ import lombok.NoArgsConstructor;
 public class UserUpdateRequestDto {
     private String name;
     private String phoneNum;
-    @NotBlank(message = "기존 비밀번호를 입력해주세요.")
+    // 비밀번호는 바꿀 때만 채운다. 필수로 두는 바람에 이름/전화만 고치는 것이 불가능했다.
     private String oldPassword;
-    @NotBlank(message = "새로운 비밀번호를 입력해주세요.")
     private String newPassword;
 
     public UserUpdateRequestDto(String name, String phoneNum, String oldPassword, String newPassword) {

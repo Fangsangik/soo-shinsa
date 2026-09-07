@@ -16,6 +16,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -29,12 +30,29 @@ public class ReviewController {
 
     private final ReviewService reviewService;
 
-    @Operation(summary = "리뷰 생성", description = "주문한 상품에 대한 리뷰를 작성합니다.")
-    @PostMapping("/order-item/{orderItemId}")
+    @Operation(summary = "리뷰 생성(이미지 포함)", description = "이미지와 함께 리뷰를 작성합니다.")
+    @PostMapping(value = "/order-item/{orderItemId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CommonResponse<ReviewResponseDto>> createReview(@PathVariable Long orderItemId,
                                                                           @Valid @RequestPart ReviewRequestDto requestDto,
                                                                           @RequestPart(required = false) MultipartFile imageFile,
                                                                           @AuthenticationPrincipal UserDetailsImp userDetails) {
+        return created(orderItemId, requestDto, userDetails, imageFile);
+    }
+
+    /** 이미지는 선택이다. multipart 만 받으면 JSON 으로 부를 때 500 이 났다. */
+    @Operation(summary = "리뷰 생성", description = "이미지 없이 리뷰를 작성합니다.")
+    @PostMapping(value = "/order-item/{orderItemId}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<CommonResponse<ReviewResponseDto>> createReviewWithoutImage(
+            @PathVariable Long orderItemId,
+            @Valid @RequestBody ReviewRequestDto requestDto,
+            @AuthenticationPrincipal UserDetailsImp userDetails) {
+        return created(orderItemId, requestDto, userDetails, null);
+    }
+
+    private ResponseEntity<CommonResponse<ReviewResponseDto>> created(Long orderItemId,
+                                                                     ReviewRequestDto requestDto,
+                                                                     UserDetailsImp userDetails,
+                                                                     MultipartFile imageFile) {
         User user = UserUtils.getUser(userDetails);
         ReviewResponseDto review = reviewService.createReview(orderItemId, requestDto, user, imageFile);
         CommonResponse<ReviewResponseDto> response = new CommonResponse<>(ResponseMessage.REVIEW_CREATE_SUCCESS, review);

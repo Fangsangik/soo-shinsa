@@ -60,7 +60,7 @@ public class ProductOptionController {
 
     @GetMapping
     @Operation(summary = "상품 옵션 리스트 조회", description = "옵션 조건을 기반으로 상품 리스트를 조회합니다.")
-    public ResponseEntity<CommonResponse<Page<ProductOptionResponseDto>>> findOptionListByProductId(@RequestBody FindProductOptionRequestDto requestDto,
+    public ResponseEntity<CommonResponse<Page<ProductOptionResponseDto>>> findOptionListByProductId(@ModelAttribute FindProductOptionRequestDto requestDto,
                                                                                     @RequestParam(defaultValue = "0") int page,
                                                                                     @RequestParam(defaultValue = "10") int size) {
         Page<ProductOptionResponseDto> productOptionResponseDto = productOptionService.findProductsByOptionalSizeAndColor(requestDto, page, size);

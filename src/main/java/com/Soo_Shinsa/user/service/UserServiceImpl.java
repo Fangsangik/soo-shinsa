@@ -191,13 +191,20 @@ public class UserServiceImpl implements UserService {
     public UserDetailResponseDto updateUser(User user, UserUpdateRequestDto userUpdateRequestDto) {
         //user 검증
         User userById = userRepository.findByIdOrElseThrow(user.getUserId());
-        if (!passwordEncoder.matches(userUpdateRequestDto.getOldPassword(), userById.getPassword())) {
+
+        // 비밀번호 변경은 선택이다. 새 비밀번호를 보냈을 때만 기존 비밀번호를 확인하고 바꾼다.
+        String newPassword = userUpdateRequestDto.getNewPassword();
+        boolean changingPassword = newPassword != null && !newPassword.isBlank();
+        if (changingPassword
+                && !passwordEncoder.matches(userUpdateRequestDto.getOldPassword(), userById.getPassword())) {
             throw new NoAuthorizedException(WRONG_PASSWORD);
         }
 
         //user 업데이트
         userById.update(userUpdateRequestDto);
-        userById.updatePassword(passwordEncoder.encode(userUpdateRequestDto.getNewPassword()));
+        if (changingPassword) {
+            userById.updatePassword(passwordEncoder.encode(newPassword));
+        }
 
         return new UserDetailResponseDto(userById);
 

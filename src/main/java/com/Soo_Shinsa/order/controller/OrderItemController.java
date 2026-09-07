@@ -41,7 +41,7 @@ public class OrderItemController {
     @GetMapping
     @Operation(summary = "모든 주문 아이템 조회", description = "특정 사용자의 모든 주문 아이템을 조회합니다.")
     public ResponseEntity<CommonResponse<Page<OrderItemResponseDto>>> readOrderItem(@AuthenticationPrincipal UserDetails userDetails,
-                                                                    @RequestBody OrderDateRequestDto dateRequestDto,
+                                                                    @ModelAttribute OrderDateRequestDto dateRequestDto,
                                                                     @RequestParam(defaultValue = "0") int page,
                                                                     @RequestParam(defaultValue = "10") int size) {
         User user = UserUtils.getUser(userDetails);

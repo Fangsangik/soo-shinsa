@@ -52,7 +52,7 @@ public class CartItemController {
     @GetMapping("/users")
     @Operation(summary = "사용자 장바구니 조회", description = "사용자의 모든 장바구니 상품을 조회합니다.")
     public ResponseEntity<CommonResponse<Page<CartItemResponseDto>>> findByIdAll(@AuthenticationPrincipal UserDetails userDetails,
-                                                                                 @RequestBody CartItemDateRequestDto requestDto,
+                                                                                 @ModelAttribute CartItemDateRequestDto requestDto,
                                                                                  @RequestParam(defaultValue = "0") int page,
                                                                                  @RequestParam(defaultValue = "10") int size) {
 

@@ -4,12 +4,14 @@ import com.Soo_Shinsa.global.constant.PeriodType;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.List;
 
 @Getter
+@Setter // @ModelAttribute 쿼리파라미터 바인딩용
 @AllArgsConstructor
 @NoArgsConstructor
 public class StatisticsRequestDto {

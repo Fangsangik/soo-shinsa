@@ -65,6 +65,8 @@ public class WebConfig {
                         // 상품: 비로그인 탐색/검색 허용 (등록·수정·삭제는 아래 규칙으로 인증 필요)
                         .requestMatchers(HttpMethod.GET, API + "/products/search", API + "/products/search/popular", API + "/products/autocomplete", API + "/products/*", API + "/products/brands/*").permitAll()
                         .requestMatchers(HttpMethod.GET, API + "/categories", API + "/categories/**", API + "/sub-categories", API + "/sub-categories/**").permitAll()
+                        // 상품 상세에 딸린 옵션·리뷰도 비로그인에게 보여야 한다
+                        .requestMatchers(HttpMethod.GET, API + "/options", API + "/options/*", API + "/reviews/*", API + "/reviews/products/*").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.INCLUDE, DispatcherType.ERROR).permitAll()
                         .requestMatchers(ADMIN_INTERCEPTOR_LIST).hasRole("ADMIN")

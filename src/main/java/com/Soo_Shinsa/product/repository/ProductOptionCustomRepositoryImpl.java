@@ -41,12 +41,15 @@ public class ProductOptionCustomRepositoryImpl implements ProductOptionCustomRep
 
         // 페이징된 데이터 가져오기
         List<ProductOptionResponseDto> content = queryFactory
+                // 생성자는 6개를 받는데 5개만 넘겨서 조회할 때마다 500 이 났다.
+                // 재고는 옵션 목록에서 꼭 필요한 값이라 같이 채운다.
                 .select(Projections.constructor(ProductOptionResponseDto.class,
                         productOption.id,
                         productOption.size,
                         productOption.color,
                         productOption.productStatus,
-                        productOption.product.id
+                        productOption.product.id,
+                        productOption.quantity
                 ))
                 .from(productOption)
                 .where(builder)

@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -28,25 +29,61 @@ public class ProductController {
 
     private final ProductService productService;
 
-    @PostMapping("/brands/{brandId}")
-    @Operation(summary = "상품 생성", description = "새로운 상품을 생성합니다.")
+    /**
+     * 이미지를 같이 올릴 때(multipart).
+     * multipart 만 받게 해 두는 바람에 JSON 으로 부르면 500(MultipartException)이 났다.
+     * 이미지는 선택 항목이므로 아래 JSON 전용 핸들러를 따로 둔다.
+     */
+    @PostMapping(value = "/brands/{brandId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "상품 생성(이미지 포함)", description = "이미지와 함께 상품을 생성합니다.")
     public ResponseEntity<CommonResponse<ProductResponseDto>> createProduct(@AuthenticationPrincipal UserDetails userDetails,
                                                                             @Valid @RequestPart ProductRequestDto productRequestDto,
                                                                             @RequestPart(required = false) MultipartFile imageFile,
                                                                             @PathVariable Long brandId) {
+        return created(userDetails, productRequestDto, brandId, imageFile);
+    }
 
+    @PostMapping(value = "/brands/{brandId}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "상품 생성", description = "이미지 없이 상품을 생성합니다.")
+    public ResponseEntity<CommonResponse<ProductResponseDto>> createProductWithoutImage(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody ProductRequestDto productRequestDto,
+            @PathVariable Long brandId) {
+        return created(userDetails, productRequestDto, brandId, null);
+    }
+
+    private ResponseEntity<CommonResponse<ProductResponseDto>> created(UserDetails userDetails,
+                                                                      ProductRequestDto dto,
+                                                                      Long brandId,
+                                                                      MultipartFile imageFile) {
         User user = UserUtils.getUser(userDetails);
-        ProductResponseDto product = productService.createProduct(user, productRequestDto, brandId, imageFile);
+        ProductResponseDto product = productService.createProduct(user, dto, brandId, imageFile);
         CommonResponse<ProductResponseDto> response = new CommonResponse<>(ResponseMessage.PRODUCT_CREATE_SUCCESS, product);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PatchMapping("/{productId}")
-    @Operation(summary = "상품 수정", description = "기존 상품을 수정합니다.")
+    @PatchMapping(value = "/{productId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "상품 수정(이미지 포함)", description = "이미지와 함께 상품을 수정합니다.")
     public ResponseEntity<CommonResponse<ProductUpdateDto>> updateProduct(@AuthenticationPrincipal UserDetails userDetails,
                                                                           @RequestPart ProductUpdateDto productUpdateDto,
                                                                           @RequestPart(required = false) MultipartFile imageFile,
                                                                           @PathVariable Long productId) {
+        return updated(userDetails, productUpdateDto, productId, imageFile);
+    }
+
+    @PatchMapping(value = "/{productId}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "상품 수정", description = "이미지 없이 상품을 수정합니다.")
+    public ResponseEntity<CommonResponse<ProductUpdateDto>> updateProductWithoutImage(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody ProductUpdateDto productUpdateDto,
+            @PathVariable Long productId) {
+        return updated(userDetails, productUpdateDto, productId, null);
+    }
+
+    private ResponseEntity<CommonResponse<ProductUpdateDto>> updated(UserDetails userDetails,
+                                                                    ProductUpdateDto productUpdateDto,
+                                                                    Long productId,
+                                                                    MultipartFile imageFile) {
         User user = UserUtils.getUser(userDetails);
         ProductUpdateDto productResponseDto = productService.updateProduct(user, productUpdateDto, productId, imageFile);
         CommonResponse<ProductUpdateDto> response = new CommonResponse<>(ResponseMessage.PRODUCT_UPDATE_SUCCESS, productResponseDto);

@@ -41,13 +41,18 @@ public class OrderItemCustomRepositoryImpl implements OrderItemCustomRepository{
 
         // 실제 데이터를 가져옴
         List<OrderItemResponseDto> content = queryFactory
+                // 생성자는 9개를 받는데 6개만 넘겨서 조회할 때마다 500 이 났다.
+                // 취소 상태도 목록에서 보여야 하므로 나머지도 같이 채운다.
                 .select(Projections.constructor(OrderItemResponseDto.class,
                         orderItem.id,
                         product.id,
                         product.name,
                         orderItem.quantity,
                         orderItem.price,          // 할인 전 가격
-                        orderItem.discountPrice   // 할인된 가격 추가
+                        orderItem.discountPrice,  // 할인된 가격
+                        orderItem.status,
+                        orderItem.cancelledAt,
+                        orderItem.cancelReason
                 ))
                 .from(orderItem)
                 .leftJoin(orders).on(orderItem.order.id.eq(orders.id))
