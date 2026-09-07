@@ -17,7 +17,11 @@ public class UrlConst {
 
     //로그인 필터 화이트 리스트
     public static final String[] WHITE_LIST =
-            {API + "/users/login", API + "/users/signin", API + "/users/logout",
+            {API + "/users/login", API + "/users/signin",
+                    // 갱신은 액세스 토큰이 만료된 뒤에 부르는 것이므로 인증을 요구하면 안 된다
+                    API + "/users/refresh",
+                    // 주의: /users/logout 은 여기 넣으면 안 된다. 토큰을 파싱해야
+                    // 블랙리스트에 올릴 수 있는데, 화이트리스트면 파싱을 건너뛴다.
                     API + "/auth/**",
                     "/v3/api-docs/**", "/oauth2/**", "/swagger-ui/**", "/swagger-ui.html",
                     "/api/chat/**", "/ws/**", "/stylesheets/**",

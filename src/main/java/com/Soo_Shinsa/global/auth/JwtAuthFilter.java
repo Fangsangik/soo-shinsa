@@ -35,7 +35,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     // 여기 걸리면 JWT 파싱 자체를 건너뛴다. 인가는 SecurityFilterChain 이 따로 본다.
     // "users/logout" 처럼 슬래시가 빠져 있어 매칭되지 않던 항목이 있었다.
     private final List<String> WHITE_LIST = List.of(
-            API + "/users/login", API + "/users/signin", API + "/users/logout", API + "/auth/**",
+            API + "/users/login", API + "/users/signin", API + "/users/refresh", API + "/auth/**",
             "/api/success", "/api/fail",
             "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/api/chat/**");
 

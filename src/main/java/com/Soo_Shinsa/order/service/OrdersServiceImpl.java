@@ -369,10 +369,8 @@ public class OrdersServiceImpl implements OrdersService {
     @Override
     public OrdersResponseDto updateOrder(User user, Long orderId, OrdersStatus status) {
 
-        User findUser = userRepository.findByIdOrElseThrow(user.getUserId());
+        // 컨트롤러에서 관리자만 들어온다. 관리자는 남의 주문을 다루므로 소유권 검증을 하지 않는다.
         Orders findOrder = ordersRepository.findByIdOrElseThrow(orderId);
-
-        EntityValidator.validateAndOrders(findOrder, findUser.getUserId());
         findOrder.updateStatus(status);
         Orders savedOrder = ordersRepository.save(findOrder);
         return OrdersResponseDto.toDto(savedOrder);
@@ -433,15 +431,13 @@ public class OrdersServiceImpl implements OrdersService {
                 .map(OrderItem::getTotalPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // 주문 아이템 취소 처리
+        // 취소 상태 변경과 응답 조립을 먼저, 재고 복원(벌크 UPDATE)을 맨 뒤에 한다.
+        // increaseStock 은 clearAutomatically=true 라 영속성 컨텍스트를 비우는데,
+        // 복원을 먼저 하면 그 뒤의 cancelOrderItem() 이 detach 된 엔티티에 쓰여 사라지고
+        // item.getProduct() 는 LazyInitializationException 으로 500 이 났다.
         List<PartialCancelResponseDto.CancelledOrderItemDto> cancelledItemDtos = orderItemsToCancel.stream()
                 .map(item -> {
-                    // 재고 복원
-                    restoreStock(item);
-                    
-                    // 주문 아이템 취소
                     item.cancelOrderItem(requestDto.getCancelReason());
-                    
                     return PartialCancelResponseDto.CancelledOrderItemDto.builder()
                             .orderItemId(item.getId())
                             .productName(item.getProduct().getName())
@@ -453,6 +449,9 @@ public class OrdersServiceImpl implements OrdersService {
                             .build();
                 })
                 .collect(Collectors.toList());
+
+        // flushAutomatically=true 이므로 벌크 UPDATE 직전에 위 상태 변경이 먼저 flush 된다
+        orderItemsToCancel.forEach(this::restoreStock);
 
         // 부분 결제 취소 처리
         String refundStatus = processPartialRefund(findOrder, totalCancelAmount, requestDto.getCancelReason());

@@ -68,12 +68,29 @@ public class ReviewController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
-    @Operation(summary = "리뷰 수정", description = "작성한 리뷰를 수정합니다.")
-    @PatchMapping("/{reviewId}")
+    @Operation(summary = "리뷰 수정(이미지 포함)", description = "이미지와 함께 리뷰를 수정합니다.")
+    @PatchMapping(value = "/{reviewId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CommonResponse<ReviewUpdateDto>> updateReview(@PathVariable Long reviewId,
                                                                         @Valid @RequestPart ReviewUpdateDto updateDto,
                                                                         @RequestPart(required = false) MultipartFile imageFile,
                                                                         @AuthenticationPrincipal UserDetailsImp userDetails) {
+        return updated(reviewId, updateDto, userDetails, imageFile);
+    }
+
+    /** 이미지는 선택이다. multipart 만 받으면 JSON 으로 부를 때 500 이 났다. */
+    @Operation(summary = "리뷰 수정", description = "이미지 없이 리뷰를 수정합니다.")
+    @PatchMapping(value = "/{reviewId}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<CommonResponse<ReviewUpdateDto>> updateReviewWithoutImage(
+            @PathVariable Long reviewId,
+            @Valid @RequestBody ReviewUpdateDto updateDto,
+            @AuthenticationPrincipal UserDetailsImp userDetails) {
+        return updated(reviewId, updateDto, userDetails, null);
+    }
+
+    private ResponseEntity<CommonResponse<ReviewUpdateDto>> updated(Long reviewId,
+                                                                   ReviewUpdateDto updateDto,
+                                                                   UserDetailsImp userDetails,
+                                                                   MultipartFile imageFile) {
         User user = UserUtils.getUser(userDetails);
         ReviewUpdateDto review = reviewService.updateReview(reviewId, updateDto, user, imageFile);
         CommonResponse<ReviewUpdateDto> response = new CommonResponse<>(ResponseMessage.REVIEW_UPDATE_SUCCESS, review);

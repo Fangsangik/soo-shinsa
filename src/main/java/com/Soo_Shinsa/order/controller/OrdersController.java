@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -74,8 +75,11 @@ public class OrdersController {
     }
 
     //오더 수정
+    // 고객이 결제 없이 자기 주문을 완료로 바꾸거나 취소를 되돌릴 수 있었다.
+    // 완료는 결제 승인이, 취소는 cancel 엔드포인트가 담당하므로 이건 관리자 운영용이다.
     @PatchMapping
-    @Operation(summary = "주문 수정", description = "주문의 상태를 수정합니다.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "주문 수정(관리자)", description = "관리자가 주문의 상태를 수정합니다.")
     public ResponseEntity<CommonResponse<OrdersResponseDto>> updateOrder(@AuthenticationPrincipal UserDetails userDetails,
                                                          @Valid @RequestBody OrdersUpdateRequestDto requestDto) {
         User user = UserUtils.getUser(userDetails);

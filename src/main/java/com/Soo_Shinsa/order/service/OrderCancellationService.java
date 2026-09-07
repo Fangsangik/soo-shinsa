@@ -6,6 +6,8 @@ import com.Soo_Shinsa.order.model.Orders;
 import com.Soo_Shinsa.order.repository.OrdersRepository;
 import com.Soo_Shinsa.product.repository.ProductOptionRepository;
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,15 +41,17 @@ public class OrderCancellationService {
             return false;
         }
 
-        order.getOrderItems().stream()
+        // 상태 변경을 먼저, 재고 복원을 나중에 한다.
+        // increaseStock 은 clearAutomatically=true 벌크 UPDATE 라 영속성 컨텍스트를 비운다.
+        // 복원을 먼저 하면 뒤의 cancelOrderItem() 이 detach 된 엔티티에 쓰여 조용히 사라진다.
+        // (flushAutomatically=true 이므로 벌크 UPDATE 직전에 상태 변경이 먼저 flush 된다)
+        List<OrderItem> toCancel = order.getOrderItems().stream()
                 .filter(orderItem -> !orderItem.isCancelled())
-                .forEach(orderItem -> {
-                    restoreStock(orderItem);
-                    orderItem.cancelOrderItem(reason);
-                });
-
+                .toList();
+        toCancel.forEach(orderItem -> orderItem.cancelOrderItem(reason));
         order.updateStatus(OrdersStatus.ORDERCANCEL);
         ordersRepository.save(order);
+        toCancel.forEach(this::restoreStock);
         orderCacheService.evictOrderCaches(order.getId(), order.getUser().getUserId());
         return true;
     }

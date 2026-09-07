@@ -177,6 +177,9 @@ public class UserServiceImpl implements UserService {
         log.info("🟢 AccessToken 생성 완료: {}", SecurityLogger.maskToken(accessToken));
 
         jwtAccessTokenService.saveAccessToken(accessToken, user.getEmail(), jwtProvider.getExpiryMillis());
+        // 갱신 때 이 저장값과 비교한다. 저장하는 곳이 없어서 /users/refresh 가 항상
+        // "유효하지 않은 토큰"으로 실패하고 있었다.
+        jwtRefreshTokenService.saveRefreshToken(user.getEmail(), refreshToken, jwtProvider.getRefreshExpiryMillis());
 
         return new JwtAuthResponseDto(AuthenticationScheme.BEARER.getName(), refreshToken, jwtProvider.getRefreshExpiryMillis(), accessToken, user.getEmail());
     }
