@@ -1,0 +1,70 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "SooShinsa 실시간 성능 모니터링",
+    "tags": ["performance"],
+    "timezone": "browser",
+    "refresh": "1s",
+    "time": {
+      "from": "now-5m",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "TPS (Transaction Per Second)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(http_server_requests_seconds_count{application=\"soo-shinsa\"}[30s])",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "min": 0
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "평균 응답시간 (ms)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(http_server_requests_seconds_sum{application=\"soo-shinsa\"}[30s]) / rate(http_server_requests_seconds_count{application=\"soo-shinsa\"}[30s]) * 1000",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "min": 0
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "실시간 TPS 그래프",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(http_server_requests_seconds_count{application=\"soo-shinsa\"}[30s])",
+            "legendFormat": "TPS",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "min": 0
+          }
+        },
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8}
+      }
+    ]
+  }
+}

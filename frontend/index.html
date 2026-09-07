@@ -1,16 +1,310 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>Soo Shinsa Frontend</title>
-  <link rel="stylesheet" href="style.css">
-  <script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
-  <script crossorigin src="https://unpkg.com/react-router-dom@5/umd/react-router-dom.min.js"></script>
-  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>수신사 - 프리미엄 쇼핑몰</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div id="root"></div>
-  <script type="text/babel" src="app.js"></script>
+    <!-- 네비게이션 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand" onclick="showShoppingHome()">
+                <h2>🏪 수신사</h2>
+                <span class="nav-subtitle">Premium Shopping Mall</span>
+            </div>
+            <div class="nav-menu">
+                <a href="#" class="nav-link" onclick="showShoppingHome()">홈</a>
+                <a href="#" class="nav-link" onclick="showAllBrands()">브랜드</a>
+                <a href="#" class="nav-link" onclick="showCart()">장바구니</a>
+                <a href="#" class="nav-link" onclick="showLogin()">로그인</a>
+                <div class="user-profile" id="userProfile" style="display: none;">
+                    <span id="userName"></span>
+                    <button onclick="logout()" class="btn-secondary">로그아웃</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 메인 컨테이너 -->
+    <main class="main-container">
+        <!-- 쇼핑몰 메인 페이지 -->
+        <section class="shopping-home" id="shoppingHome">
+            <!-- 히어로 섹션 -->
+            <div class="hero-banner">
+                <div class="hero-content">
+                    <h1>수신사에서 만나는<br>프리미엄 브랜드</h1>
+                    <p>엄선된 브랜드들의 특별한 상품을 만나보세요</p>
+                    <button class="cta-button" onclick="scrollToProducts()">쇼핑 시작하기</button>
+                </div>
+                <div class="hero-image">
+                    <div class="hero-placeholder">🛍️</div>
+                </div>
+            </div>
+            
+            <!-- 카테고리 섹션 -->
+            <section class="categories-section">
+                <div class="container">
+                    <h2>카테고리</h2>
+                    <div class="category-grid">
+                        <div class="category-card" onclick="filterByCategory('fashion')">
+                            <div class="category-icon">👕</div>
+                            <h3>패션</h3>
+                            <p>의류, 신발, 액세서리</p>
+                        </div>
+                        <div class="category-card" onclick="filterByCategory('beauty')">
+                            <div class="category-icon">💄</div>
+                            <h3>뷰티</h3>
+                            <p>화장품, 스킨케어</p>
+                        </div>
+                        <div class="category-card" onclick="filterByCategory('lifestyle')">
+                            <div class="category-icon">🏠</div>
+                            <h3>생활용품</h3>
+                            <p>홈데코, 생활잡화</p>
+                        </div>
+                        <div class="category-card" onclick="filterByCategory('food')">
+                            <div class="category-icon">🍯</div>
+                            <h3>식품</h3>
+                            <p>건강식품, 간식</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 인기 브랜드 섹션 -->
+            <section class="featured-brands" id="featuredBrands">
+                <div class="container">
+                    <h2>인기 브랜드</h2>
+                    <div class="brand-showcase" id="brandShowcase">
+                        <!-- 브랜드들이 여기에 동적으로 추가됩니다 -->
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 관리자/업주 접근 링크 -->
+            <div class="admin-access">
+                <button onclick="showAdminOptions()" class="admin-link">관리자</button>
+                <button onclick="showVendorDashboard()" class="vendor-link">업주</button>
+            </div>
+        </section>
+
+        <!-- 업주 대시보드 -->
+        <section class="dashboard vendor-dashboard" id="vendorDashboard" style="display: none;">
+            <div class="container">
+                <div class="dashboard-header">
+                    <h2>업주 대시보드</h2>
+                    <button onclick="showDashboardSelector()" class="btn-back">← 돌아가기</button>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">📝</div>
+                        <h3>총 신청 브랜드</h3>
+                        <p class="stat-number" id="totalBrands">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⏳</div>
+                        <h3>대기 중</h3>
+                        <p class="stat-number" id="pendingBrands">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">✅</div>
+                        <h3>승인됨</h3>
+                        <p class="stat-number" id="approvedBrands">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">❌</div>
+                        <h3>거절됨</h3>
+                        <p class="stat-number" id="rejectedBrands">0</p>
+                    </div>
+                </div>
+
+                <div class="action-section">
+                    <button onclick="showBrandForm()" class="btn-primary">
+                        + 새 브랜드 신청
+                    </button>
+                </div>
+
+                <div class="brand-list" id="vendorBrandList">
+                    <!-- 브랜드 목록이 여기에 동적으로 추가됩니다 -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 관리자 대시보드 -->
+        <section class="dashboard admin-dashboard" id="adminDashboard" style="display: none;">
+            <div class="container">
+                <div class="dashboard-header">
+                    <h2>관리자 대시보드</h2>
+                    <button onclick="showDashboardSelector()" class="btn-back">← 돌아가기</button>
+                </div>
+
+                <div class="admin-stats">
+                    <div class="stat-card urgent">
+                        <div class="stat-icon">🔥</div>
+                        <h3>승인 대기</h3>
+                        <p class="stat-number" id="adminPendingCount">0</p>
+                        <small>즉시 처리 필요</small>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <h3>이번달 처리</h3>
+                        <p class="stat-number" id="monthlyProcessed">0</p>
+                    </div>
+                </div>
+
+                <div class="pending-brands" id="adminPendingBrands">
+                    <!-- 승인 대기 브랜드들이 여기에 표시됩니다 -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 일반 사용자 대시보드 -->
+        <section class="dashboard user-dashboard" id="userDashboard" style="display: none;">
+            <div class="container">
+                <div class="dashboard-header">
+                    <h2>브랜드 탐색</h2>
+                    <button onclick="showDashboardSelector()" class="btn-back">← 돌아가기</button>
+                </div>
+
+                <div class="search-section">
+                    <input type="text" id="brandSearch" placeholder="브랜드명으로 검색..." class="search-input">
+                    <button onclick="searchBrands()" class="btn-primary">검색</button>
+                </div>
+
+                <div class="brand-grid" id="userBrandGrid">
+                    <!-- 승인된 브랜드들이 여기에 표시됩니다 -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 모달들 -->
+    <div id="loginModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('loginModal')">&times;</span>
+            <h2>로그인</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>이메일</label>
+                    <input type="email" id="loginEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>비밀번호</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button type="submit" class="btn-primary">로그인</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="adminOptionsModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('adminOptionsModal')">&times;</span>
+            <h2>관리자 옵션</h2>
+            <div class="admin-options">
+                <button onclick="showAdminLogin()" class="btn-primary">관리자 로그인</button>
+                <button onclick="showAdminSignup()" class="btn-secondary">관리자 계정 생성</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="adminLoginModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('adminLoginModal')">&times;</span>
+            <h2>관리자 로그인</h2>
+            <form id="adminLoginForm">
+                <div class="form-group">
+                    <label>이메일</label>
+                    <input type="email" id="adminLoginEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>비밀번호</label>
+                    <input type="password" id="adminLoginPassword" required>
+                </div>
+                <button type="submit" class="btn-primary">로그인</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="adminSignupModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('adminSignupModal')">&times;</span>
+            <h2>⚠️ 관리자 계정 생성</h2>
+            <p style="color: #ef4444; margin-bottom: 1rem;">관리자 비밀키가 필요합니다.</p>
+            <form id="adminSignupForm">
+                <div class="form-group">
+                    <label>이메일</label>
+                    <input type="email" id="adminSignupEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>이름</label>
+                    <input type="text" id="adminSignupName" required>
+                </div>
+                <div class="form-group">
+                    <label>전화번호</label>
+                    <input type="text" id="adminSignupPhone" placeholder="010-1234-5678" required>
+                </div>
+                <div class="form-group">
+                    <label>비밀번호</label>
+                    <input type="password" id="adminSignupPassword" placeholder="대소문자, 숫자, 특수문자 포함 8자 이상" required>
+                </div>
+                <div class="form-group">
+                    <label>🔑 관리자 비밀키</label>
+                    <input type="password" id="adminSecretKey" placeholder="관리자 비밀키를 입력하세요" required>
+                    <small style="color: #64748b;">환경변수에 설정된 관리자 비밀키가 필요합니다.</small>
+                </div>
+                <button type="submit" class="btn-primary">관리자 계정 생성</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="brandFormModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('brandFormModal')">&times;</span>
+            <h2>브랜드 신청</h2>
+            <form id="brandForm">
+                <div class="form-group">
+                    <label>사업자등록번호</label>
+                    <input type="text" id="registrationNum" placeholder="예: 123-45-67890" required>
+                </div>
+                <div class="form-group">
+                    <label>브랜드명</label>
+                    <input type="text" id="brandName" placeholder="브랜드명을 입력하세요" required>
+                </div>
+                <div class="form-group">
+                    <label>브랜드 소개</label>
+                    <textarea id="brandContext" placeholder="브랜드에 대해 소개해주세요" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>카테고리</label>
+                    <select id="subCategoryId" required>
+                        <option value="">카테고리를 선택하세요</option>
+                        <option value="1">패션</option>
+                        <option value="2">뷰티</option>
+                        <option value="3">생활용품</option>
+                        <option value="4">식품</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary">신청하기</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 알림 시스템 -->
+    <div id="notification" class="notification"></div>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>

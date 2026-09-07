@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>수신사 - 온라인 쇼핑몰</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+            line-height: 1.4;
+            color: #333;
+            background: #fff;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+
+        /* 헤더 */
+        .header {
+            background: #fff;
+            border-bottom: 1px solid #e5e5e5;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .top-bar {
+            background: #f8f8f8;
+            font-size: 12px;
+            padding: 5px 0;
+            text-align: right;
+            color: #666;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #e53e3e;
+            text-decoration: none;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+            font-size: 16px;
+            padding: 5px 0;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .nav-link:hover {
+            color: #e53e3e;
+            border-bottom-color: #e53e3e;
+        }
+
+        .search-wrap {
+            position: relative;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            border: 2px solid #e53e3e;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .suggest-list {
+            position: absolute;
+            top: calc(100% + 2px);
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid #e5e5e5;
+            border-radius: 3px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, .12);
+            list-style: none;
+            margin: 0;
+            padding: 4px 0;
+            max-height: 280px;
+            overflow-y: auto;
+            z-index: 200;
+        }
+
+        .suggest-list[hidden] {
+            display: none;
+        }
+
+        .suggest-item {
+            padding: 8px 12px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .suggest-item:hover,
+        .suggest-item[aria-selected="true"] {
+            background: #fdeaea;
+        }
+
+        .suggest-item mark {
+            background: none;
+            color: #e53e3e;
+            font-weight: 700;
+        }
+
+        .search-input {
+            padding: 8px 12px;
+            border: none;
+            outline: none;
+            width: 200px;
+            font-size: 14px;
+        }
+
+        .search-btn {
+            background: #e53e3e;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        /* 메인 배너 */
+        .main-banner {
+            background: #e53e3e;
+            color: white;
+            padding: 60px 0;
+            text-align: center;
+            position: relative;
+        }
+
+        .banner-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .banner-title {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .banner-subtitle {
+            font-size: 18px;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        .cta-btn {
+            background: white;
+            color: #e53e3e;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .cta-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* 브랜드 섹션 */
+        .brands-section {
+            padding: 50px 0;
+            background: #fafafa;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .view-all {
+            color: #e53e3e;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .brands-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .brand-card {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .brand-card:hover {
+            border-color: #e53e3e;
+            box-shadow: 0 4px 12px rgba(229, 62, 62, 0.15);
+        }
+
+        .brand-image {
+            width: 100%;
+            height: 160px;
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 24px;
+            font-weight: bold;
+            position: relative;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .brand-info {
+            padding: 20px;
+        }
+
+        .brand-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .brand-description {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 15px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .brand-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-open {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-apply {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-refuse {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .shop-btn {
+            background: #e53e3e;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .shop-btn:hover {
+            background: #c53030;
+        }
+
+        /* 로딩/에러 상태 */
+        .loading, .error, .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #e53e3e;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        /* 하단 관리자 버튼 */
+        .admin-access {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 50;
+        }
+
+        .admin-btn {
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .admin-btn.admin {
+            background: #dc3545;
+            color: white;
+        }
+
+        .admin-btn.vendor {
+            background: #666;
+            color: white;
+        }
+
+        .admin-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* 반응형 */
+        @media (max-width: 768px) {
+            .banner-title {
+                font-size: 28px;
+            }
+
+            .nav-menu {
+                gap: 15px;
+            }
+
+            .search-input {
+                width: 150px;
+            }
+
+            .brands-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 헤더 -->
+    <header class="header">
+        <div class="top-bar">
+            <div class="container">
+                회원가입시 즉시 5% 할인쿠폰 지급! | 무료배송 | 고객센터: 1588-0000
+            </div>
+        </div>
+        <div class="container">
+            <nav class="nav">
+                <a href="#" class="logo">수신사</a>
+                <div class="nav-menu">
+                    <a href="#" class="nav-link">홈</a>
+                    <a href="#brands" class="nav-link">브랜드관</a>
+                    <a href="#" class="nav-link">카테고리</a>
+                    <a href="#" class="nav-link">베스트</a>
+                    <a href="#" class="nav-link">이벤트</a>
+                </div>
+                <div class="search-wrap">
+                    <div class="search-box">
+                        <input type="text" class="search-input" placeholder="상품명을 입력하세요"
+                               role="combobox" aria-autocomplete="list" aria-expanded="false"
+                               aria-controls="suggestList" autocomplete="off">
+                        <button class="search-btn">검색</button>
+                    </div>
+                    <ul class="suggest-list" id="suggestList" role="listbox" aria-label="상품명 추천" hidden></ul>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- 메인 배너 -->
+    <section class="main-banner">
+        <div class="container">
+            <div class="banner-content">
+                <h1 class="banner-title">🎉 신규회원 특가 세일 🎉</h1>
+                <p class="banner-subtitle">전 상품 최대 70% 할인! 지금 바로 만나보세요</p>
+                <a href="#brands" class="cta-btn">특가상품 보러가기</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 브랜드 섹션 -->
+    <section class="brands-section" id="brands">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">🏷️ 인기 브랜드관</h2>
+                <a href="#" class="view-all">전체보기 &gt;</a>
+            </div>
+            
+            <!-- 로딩 상태 -->
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>브랜드를 불러오는 중입니다...</p>
+            </div>
+
+            <!-- 에러 상태 -->
+            <div id="error" class="error" style="display: none;">
+                <p>⚠️ 일시적인 오류가 발생했습니다. 새로고침해주세요.</p>
+            </div>
+
+            <!-- 브랜드 그리드 -->
+            <div id="brands-grid" class="brands-grid"></div>
+
+            <!-- 빈 상태 -->
+            <div id="empty-state" class="empty-state" style="display: none;">
+                <h3>🔍 등록된 브랜드가 없습니다</h3>
+                <p>곧 다양한 브랜드가 입점될 예정이니 조금만 기다려주세요!</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 관리자 액세스 -->
+    <div class="admin-access">
+        <button class="btn admin-btn admin" onclick="alert('관리자 기능 준비 중')">관리자</button>
+        <button class="btn admin-btn vendor" onclick="alert('업주 기능 준비 중')">업주</button>
+    </div>
+
+    <script>
+        // API 설정
+        const API_BASE_URL = '';
+        
+        // DOM 요소
+        const loadingEl = document.getElementById('loading');
+        const errorEl = document.getElementById('error');
+        const brandsGridEl = document.getElementById('brands-grid');
+        const emptyStateEl = document.getElementById('empty-state');
+
+        // 브랜드 상태별 정보
+        const statusInfo = {
+            'OPEN': { class: 'status-open', text: '승인됨' },
+            'APPLY': { class: 'status-apply', text: '승인 대기' },
+            'REJECT': { class: 'status-refuse', text: '거절됨' }
+        };
+
+        // 브랜드 카드 생성 (홈쇼핑 스타일)
+        function createBrandCard(brand) {
+            const status = statusInfo[brand.status] || { class: 'status-apply', text: '알 수 없음' };
+            const firstLetter = brand.name ? brand.name.charAt(0).toUpperCase() : 'B';
+            const description = brand.context || `${brand.name}의 다양한 상품을 만나보세요! 특가 할인 진행 중입니다.`;
+            
+            return `
+                <div class="brand-card">
+                    <div class="brand-image">
+                        ${firstLetter}
+                    </div>
+                    <div class="brand-info">
+                        <h3 class="brand-name">${brand.name}</h3>
+                        <p class="brand-description">${description}</p>
+                        <div class="brand-footer">
+                            <span class="status-badge ${status.class}">${status.text}</span>
+                            <button class="shop-btn" onclick="alert('${brand.name} 상품 보러가기!')">쇼핑하기</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 브랜드 데이터 로드
+        async function loadBrands() {
+            try {
+                showLoading();
+                
+                const response = await fetch(`${API_BASE_URL}/brands`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('API Response:', data);
+                
+                let brands = [];
+                
+                // 응답 구조 파악 - API는 CommonResponse<Page<FindBrandAllResponseDto>> 형태로 응답
+                if (data.data && data.data.content) {
+                    // 페이징된 응답
+                    brands = data.data.content;
+                } else if (data.data && Array.isArray(data.data)) {
+                    // 배열 응답
+                    brands = data.data;
+                } else if (Array.isArray(data)) {
+                    // 직접 배열
+                    brands = data;
+                } else {
+                    console.warn('Unexpected response structure:', data);
+                    brands = [];
+                }
+                
+                console.log('Processed brands:', brands);
+                
+                // 승인된 브랜드만 필터링
+                const approvedBrands = brands.filter(brand => brand.status === 'OPEN');
+                
+                displayBrands(approvedBrands);
+                
+            } catch (error) {
+                console.error('브랜드 로딩 실패:', error);
+                showError();
+            }
+        }
+
+        // 로딩 상태 표시
+        function showLoading() {
+            loadingEl.style.display = 'block';
+            errorEl.style.display = 'none';
+            brandsGridEl.innerHTML = '';
+            emptyStateEl.style.display = 'none';
+        }
+
+        // 에러 상태 표시
+        function showError() {
+            loadingEl.style.display = 'none';
+            errorEl.style.display = 'block';
+            brandsGridEl.innerHTML = '';
+            emptyStateEl.style.display = 'none';
+        }
+
+        // 브랜드 표시
+        function displayBrands(brands) {
+            loadingEl.style.display = 'none';
+            errorEl.style.display = 'none';
+            
+            if (brands.length === 0) {
+                emptyStateEl.style.display = 'block';
+                brandsGridEl.innerHTML = '';
+                return;
+            }
+            
+            emptyStateEl.style.display = 'none';
+            brandsGridEl.innerHTML = brands.map(createBrandCard).join('');
+        }
+
+        // 페이지 로드 시 브랜드 로드
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('페이지 로드됨. 브랜드 로딩 시작...');
+            loadBrands();
+        });
+
+
+        // ===== 상품 통합 검색 =====
+        function createProductCard(p) {
+            const price = Number(p.price || 0).toLocaleString('ko-KR');
+            const image = p.imageUrl
+                ? `<img src="${p.imageUrl}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;">`
+                : (p.name ? p.name.charAt(0).toUpperCase() : 'P');
+            return `
+                <div class="brand-card">
+                    <div class="brand-image">${image}</div>
+                    <div class="brand-info">
+                        <h3 class="brand-name">${p.name}</h3>
+                        <p class="brand-description">${price}원</p>
+                        <div class="brand-footer">
+                            <span class="status-badge status-open">${p.productStatus || ''}</span>
+                            <button class="shop-btn" onclick="alert('${p.name} 상세 준비 중')">보러가기</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function searchProducts(keyword) {
+            const term = (keyword || '').trim();
+            // 검색어를 비우면 브랜드 목록으로 되돌린다
+            if (!term) {
+                loadBrands();
+                return;
+            }
+
+            try {
+                showLoading();
+                const params = new URLSearchParams({ nameKeyword: term, page: 0, size: 20 });
+                const response = await fetch(`${API_BASE_URL}/products/search?${params}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                const data = await response.json();
+                const products = data.data?.content || [];
+
+                loadingEl.style.display = 'none';
+                errorEl.style.display = 'none';
+                if (products.length === 0) {
+                    emptyStateEl.style.display = 'block';
+                    brandsGridEl.innerHTML = '';
+                    return;
+                }
+                emptyStateEl.style.display = 'none';
+                brandsGridEl.innerHTML = products.map(createProductCard).join('');
+            } catch (error) {
+                console.error('상품 검색 실패:', error);
+                showError();
+            }
+        }
+
+        // ===== 검색창 + 자동완성 =====
+        (() => {
+            const input = document.querySelector('.search-input');
+            const button = document.querySelector('.search-btn');
+            const list = document.getElementById('suggestList');
+            if (!input) return;
+
+            let timer;
+            let items = [];
+            let active = -1;
+
+            const escapeHtml = (t) => t.replace(/[&<>"']/g,
+                (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+            function closeSuggestions() {
+                items = [];
+                active = -1;
+                list.hidden = true;
+                list.innerHTML = '';
+                input.setAttribute('aria-expanded', 'false');
+            }
+
+            function highlight(active_) {
+                [...list.children].forEach((el, i) =>
+                    el.setAttribute('aria-selected', String(i === active_)));
+            }
+
+            function renderSuggestions(names, keyword) {
+                items = names;
+                active = -1;
+                if (names.length === 0) {
+                    closeSuggestions();
+                    return;
+                }
+                const safeKeyword = escapeHtml(keyword);
+                list.innerHTML = names.map((name) => {
+                    const safe = escapeHtml(name);
+                    const at = safe.toLowerCase().indexOf(safeKeyword.toLowerCase());
+                    const label = at < 0 ? safe
+                        : safe.slice(0, at) + '<mark>' + safe.slice(at, at + safeKeyword.length) + '</mark>'
+                          + safe.slice(at + safeKeyword.length);
+                    return `<li class="suggest-item" role="option" aria-selected="false">${label}</li>`;
+                }).join('');
+                list.hidden = false;
+                input.setAttribute('aria-expanded', 'true');
+            }
+
+            async function loadSuggestions(keyword) {
+                // 2글자 미만은 서버도 빈 목록을 주므로 호출하지 않는다
+                if (keyword.trim().length < 2) {
+                    closeSuggestions();
+                    return;
+                }
+                try {
+                    const params = new URLSearchParams({ keyword: keyword.trim(), limit: 8 });
+                    const response = await fetch(`${API_BASE_URL}/products/autocomplete?${params}`);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+                    renderSuggestions(data.data || [], keyword.trim());
+                } catch (error) {
+                    console.error('자동완성 실패:', error);
+                    closeSuggestions();
+                }
+            }
+
+            function commit(value) {
+                input.value = value;
+                closeSuggestions();
+                searchProducts(value);
+            }
+
+            input.addEventListener('input', () => {
+                clearTimeout(timer);
+                timer = setTimeout(() => loadSuggestions(input.value), 200);
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    if (items.length === 0) return;
+                    e.preventDefault();
+                    active = e.key === 'ArrowDown'
+                        ? (active + 1) % items.length
+                        : (active - 1 + items.length) % items.length;
+                    highlight(active);
+                    return;
+                }
+                if (e.key === 'Enter') {
+                    clearTimeout(timer);
+                    commit(active >= 0 ? items[active] : input.value);
+                    return;
+                }
+                if (e.key === 'Escape') {
+                    closeSuggestions();
+                }
+            });
+
+            list.addEventListener('mousedown', (e) => {
+                const item = e.target.closest('.suggest-item');
+                if (!item) return;
+                e.preventDefault(); // blur 보다 먼저 처리
+                commit(items[[...list.children].indexOf(item)]);
+            });
+
+            input.addEventListener('blur', () => setTimeout(closeSuggestions, 100));
+
+            if (button) {
+                button.addEventListener('click', () => {
+                    clearTimeout(timer);
+                    commit(input.value);
+                });
+            }
+        })();
+
+        // 브랜드 섹션으로 스크롤
+        document.querySelector('a[href="#brands"]')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('brands').scrollIntoView({ 
+                behavior: 'smooth' 
+            });
+        });
+    </script>
+</body>
+</html>

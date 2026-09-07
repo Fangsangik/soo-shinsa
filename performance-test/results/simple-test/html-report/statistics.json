@@ -1,0 +1,50 @@
+{
+  "관리자 로그인" : {
+    "transaction" : "관리자 로그인",
+    "sampleCount" : 1000,
+    "errorCount" : 0,
+    "errorPct" : 0.0,
+    "meanResTime" : 0.7610000000000011,
+    "medianResTime" : 1.0,
+    "minResTime" : 0.0,
+    "maxResTime" : 23.0,
+    "pct1ResTime" : 1.0,
+    "pct2ResTime" : 2.0,
+    "pct3ResTime" : 3.0,
+    "throughput" : 203.29335230737954,
+    "receivedKBytesPerSec" : 160.01410347631634,
+    "sentKBytesPerSec" : 47.84540811140476
+  },
+  "극한 동시성 주문 생성" : {
+    "transaction" : "극한 동시성 주문 생성",
+    "sampleCount" : 1000,
+    "errorCount" : 0,
+    "errorPct" : 0.0,
+    "meanResTime" : 0.6789999999999998,
+    "medianResTime" : 1.0,
+    "minResTime" : 0.0,
+    "maxResTime" : 21.0,
+    "pct1ResTime" : 1.0,
+    "pct2ResTime" : 1.0,
+    "pct3ResTime" : 3.0,
+    "throughput" : 204.3318348998774,
+    "receivedKBytesPerSec" : 160.83150286064568,
+    "sentKBytesPerSec" : 53.6770152227217
+  },
+  "Total" : {
+    "transaction" : "Total",
+    "sampleCount" : 2000,
+    "errorCount" : 0,
+    "errorPct" : 0.0,
+    "meanResTime" : 0.7199999999999989,
+    "medianResTime" : 1.0,
+    "minResTime" : 0.0,
+    "maxResTime" : 23.0,
+    "pct1ResTime" : 1.0,
+    "pct2ResTime" : 2.0,
+    "pct3ResTime" : 3.0,
+    "throughput" : 406.58670461475907,
+    "receivedKBytesPerSec" : 320.0282069526327,
+    "sentKBytesPerSec" : 101.24961882496443
+  }
+}

@@ -1,0 +1,54 @@
+# 🚫 Docker 빌드에서 제외할 파일들
+
+# Git 관련
+.git
+.gitignore
+
+# IDE 관련
+.idea
+*.iml
+.vscode
+*.swp
+*.swo
+
+# 빌드 관련
+build/
+target/
+!gradle/wrapper/gradle-wrapper.jar
+
+# 로그 파일
+*.log
+logs/
+
+# 환경 설정 (보안)
+.env
+.env.local
+.env.production
+
+# 성능 테스트 결과
+performance-test/results/
+performance-test/*.jtl
+performance-test/*.log
+
+# 문서
+README.md
+docs/
+*.md
+
+# OS 관련
+.DS_Store
+Thumbs.db
+
+# 테스트 관련
+coverage/
+.coverage
+
+# Node.js (Frontend)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# 기타
+*.tmp
+*.temp
+*.pid

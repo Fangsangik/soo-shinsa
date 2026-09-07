@@ -1,0 +1,86 @@
+# 🏭 프로덕션 환경용 Docker Compose 오버라이드
+version: '3.8'
+
+services:
+  mysql:
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: soo_shinsa
+    volumes:
+      - mysql_prod_data:/var/lib/mysql
+    command: >
+      --character-set-server=utf8mb4 
+      --collation-server=utf8mb4_unicode_ci
+      --max-connections=200
+      --innodb-buffer-pool-size=1G
+      --innodb-log-file-size=256M
+
+  redis:
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    command: >
+      redis-server 
+      --appendonly yes 
+      --maxmemory 400mb 
+      --maxmemory-policy allkeys-lru
+
+  app:
+    deploy:
+      replicas: 2  # 고가용성을 위한 복제본
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,prod
+      JAVA_OPTS: >
+        -Xms1g -Xmx1g 
+        -XX:+UseG1GC 
+        -XX:MaxGCPauseMillis=200 
+        -XX:+UseContainerSupport
+        -XX:+HeapDumpOnOutOfMemoryError
+        -XX:HeapDumpPath=/app/logs/
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+  nginx:
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    ports:
+      - "80:80"
+      - "443:443"
+
+volumes:
+  mysql_prod_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data/mysql

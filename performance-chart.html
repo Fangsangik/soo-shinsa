@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 SooShinsa 성능 테스트 결과 그래프</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .chart-container {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .chart-title {
+            text-align: center;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+        .metrics-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .metric-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .metric-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        .success { color: #4ade80; }
+        .warning { color: #fbbf24; }
+        .danger { color: #f87171; }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1>🚀 SooShinsa 성능 테스트 결과</h1>
+            <p>단일 서버 극한 성능 분석 대시보드</p>
+        </div>
+
+        <!-- 핵심 지표 요약 -->
+        <div class="metrics-summary">
+            <div class="metric-card">
+                <div class="metric-label">최고 TPS</div>
+                <div class="metric-value success">88.8</div>
+                <div class="metric-label">300명 동시 사용자</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">안정 처리 한계</div>
+                <div class="metric-value warning">500명</div>
+                <div class="metric-label">100% 성공률</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">평균 응답시간</div>
+                <div class="metric-value success">0ms</div>
+                <div class="metric-label">매우 빠름</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">시스템 한계</div>
+                <div class="metric-value danger">750명+</div>
+                <div class="metric-label">과부하 발생</div>
+            </div>
+        </div>
+
+        <!-- TPS vs 동시 사용자 그래프 -->
+        <div class="chart-container">
+            <div class="chart-title">📊 TPS vs 동시 사용자 수</div>
+            <canvas id="tpsChart" width="400" height="200"></canvas>
+        </div>
+
+        <!-- 성공률 그래프 -->
+        <div class="chart-container">
+            <div class="chart-title">✅ 성공률 vs 동시 사용자 수</div>
+            <canvas id="successChart" width="400" height="200"></canvas>
+        </div>
+
+        <!-- 응답시간 그래프 -->
+        <div class="chart-container">
+            <div class="chart-title">⚡ 응답시간 vs 동시 사용자 수</div>
+            <canvas id="responseChart" width="400" height="200"></canvas>
+        </div>
+
+        <!-- 개선 전후 비교 -->
+        <div class="chart-container">
+            <div class="chart-title">📈 성능 개선 전후 비교</div>
+            <canvas id="improvementChart" width="400" height="200"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // TPS vs 동시 사용자 차트
+        const tpsCtx = document.getElementById('tpsChart').getContext('2d');
+        new Chart(tpsCtx, {
+            type: 'bar',
+            data: {
+                labels: ['50명', '100명', '200명', '300명', '500명', '750명', '1000명'],
+                datasets: [{
+                    label: 'TPS (Transactions Per Second)',
+                    data: [85, 85, 88, 88.8, 26.7, 0, 0],
+                    backgroundColor: [
+                        'rgba(74, 222, 128, 0.8)',
+                        'rgba(74, 222, 128, 0.8)',
+                        'rgba(74, 222, 128, 0.8)',
+                        'rgba(34, 197, 94, 0.9)',
+                        'rgba(251, 191, 36, 0.8)',
+                        'rgba(248, 113, 113, 0.8)',
+                        'rgba(248, 113, 113, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(34, 197, 94, 1)',
+                        'rgba(34, 197, 94, 1)',
+                        'rgba(34, 197, 94, 1)',
+                        'rgba(22, 163, 74, 1)',
+                        'rgba(245, 158, 11, 1)',
+                        'rgba(239, 68, 68, 1)',
+                        'rgba(239, 68, 68, 1)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        labels: { color: 'white' }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { color: 'white' },
+                        grid: { color: 'rgba(255,255,255,0.1)' }
+                    },
+                    x: {
+                        ticks: { color: 'white' },
+                        grid: { color: 'rgba(255,255,255,0.1)' }
+                    }
+                }
+            }
+        });
+
+        // 성공률 차트
+        const successCtx = document.getElementById('successChart').getContext('2d');
+        new Chart(successCtx, {
+            type: 'line',
+            data: {
+                labels: ['50명', '100명', '200명', '300명', '500명', '750명', '1000명'],
+                datasets: [{
+                    label: '성공률 (%)',
+                    data: [100, 100, 100, 100, 100, 0, 0],
+                    borderColor: 'rgba(74, 222, 128, 1)',
+                    backgroundColor: 'rgba(74, 222, 128, 0.2)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        labels: { color: 'white' }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { color: 'white' },
+                        grid: { color: 'rgba(255,255,255,0.1)' }
+                    },
+                    x: {
+                        ticks: { color: 'white' },
+                        grid: { color: 'rgba(255,255,255,0.1)' }
+                    }
+                }
+            }
+        });
+
+        // 응답시간 차트
+        const responseCtx = document.getElementById('responseChart').getContext('2d');
+        new Chart(responseCtx, {
+            type: 'line',
+            data: {
+                labels: ['50명', '100명', '200명', '300명', '500명'],
+                datasets: [
+                    {
+                        label: '평균 응답시간 (ms)',
+                        data: [0, 0, 0, 0, 0],
+                        borderColor: 'rgba(34, 197, 94, 1)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                        borderWidth: 2,
+                        fill: false
+                    },
+                    {
+                        label: '최대 응답시간 (ms)',
+                        data: [24, 39, 19, 19, 30],
+                        borderColor: 'rgba(251, 191, 36, 1)',
+                        backgroundColor: 'rgba(251, 191, 36, 0.2)',
+                        borderWidth: 2,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        labels: { color: 'white' }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: 'white' },
+                        grid: { color: 'rgba(255,255,255,0.1)' }
+                    },
+                    x: {
+                        ticks: { color: 'white' },
+                        grid: { color: 'rgba(255,255,255,0.1)' }
+                    }
+                }
+            }
+        });
+
+        // 개선 전후 비교 차트
+        const improvementCtx = document.getElementById('improvementChart').getContext('2d');
+        new Chart(improvementCtx, {
+            type: 'bar',
+            data: {
+                labels: ['TPS', '안전 처리 한계', '평균 응답시간'],
+                datasets: [
+                    {
+                        label: '개선 전',
+                        data: [33.3, 200, 50],
+                        backgroundColor: 'rgba(248, 113, 113, 0.8)',
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        borderWidth: 2
+                    },
+                    {
+                        label: '개선 후',
+                        data: [88.8, 500, 0],
+                        backgroundColor: 'rgba(74, 222, 128, 0.8)',
+                        borderColor: 'rgba(34, 197, 94, 1)',
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        labels: { color: 'white' }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: 'white' },
+                        grid: { color: 'rgba(255,255,255,0.1)' }
+                    },
+                    x: {
+                        ticks: { color: 'white' },
+                        grid: { color: 'rgba(255,255,255,0.1)' }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
