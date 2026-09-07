@@ -21,7 +21,6 @@ import com.Soo_Shinsa.order.model.Orders;
 import com.Soo_Shinsa.order.model.Payment;
 import com.Soo_Shinsa.order.repository.OrdersRepository;
 import com.Soo_Shinsa.order.repository.PaymentRepository;
-import com.Soo_Shinsa.product.aop.StockLock;
 import com.Soo_Shinsa.product.model.Product;
 import com.Soo_Shinsa.product.model.ProductOption;
 import com.Soo_Shinsa.product.repository.ProductOptionRepository;
@@ -39,6 +38,8 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -82,7 +83,7 @@ public class OrdersServiceImpl implements OrdersService {
 
     //    단일 상품 구매
     //    상품을 찾아와서 주문번호를 생성 후 주문을 만들고 거기에 주문아이템에 물건을 담음
-    @StockLock(key = "'lock:productOption:' + #productOptionId")
+    // 재고는 decreaseStock 의 조건부 원자 UPDATE 가 DB 행 락으로 직렬화한다. 분산락 불필요.
     @Transactional(isolation = Isolation.READ_COMMITTED)
     @Override
     public OrdersResponseDto createSingleProductOrder(User user, Long productOptionId, Integer quantity) {
@@ -105,11 +106,11 @@ public class OrdersServiceImpl implements OrdersService {
             throw new InvalidInputException(ErrorCode.CAN_NOT_USE_PRODUCT);
         }
         
-        // 재고 감소 후 판매 수량 증가
-        productOption.increaseSaleCount(quantity);
-        productOptionRepository.save(productOption);
+        // decreaseStock 이 판매수량까지 함께 올린다.
+        // 여기서 예전 엔티티를 다시 save 하면 방금 차감한 재고가 stale 값으로 덮어써진다.
         log.info("📉 재고 감소 완료 - 상품 옵션 ID: {}", productOptionId);
 
+        productOption = productOptionRepository.findByIdOrElseThrow(productOptionId);
         BigDecimal totalPrice = productOption.getProduct().getPrice().multiply(BigDecimal.valueOf(quantity));
 
 
@@ -135,14 +136,15 @@ public class OrdersServiceImpl implements OrdersService {
         return OrdersResponseDto.toDto(order);
     }
 
-    @StockLock(key = "'lock:cartItem:' + #requestDto.cartId")
     @Transactional(isolation = Isolation.READ_COMMITTED)
     @Override
     public OrdersResponseDto createSingleOrderCartItem(User user, OrderCreateRequestDto requestDto) {
         CartItem cartItem = cartItemRepository.findByIdOrElseThrow(requestDto.getCartId());
 
+        // 여러 행을 차감하므로 항상 같은 순서로 잠가야 동시 주문끼리 데드락이 나지 않는다
         List<ProductOption> productOptions = cartItem.getProductOptions().stream()
                 .map(cartItemProductOption -> productOptionRepository.findByIdOrElseThrow(cartItemProductOption.getProductOption().getId()))
+                .sorted(Comparator.comparing(ProductOption::getId))
                 .toList();
 
         Product product = cartItem.getProduct();
@@ -151,13 +153,14 @@ public class OrdersServiceImpl implements OrdersService {
             throw new InternalServerException(ErrorCode.CAN_NOT_USE_PRODUCT);
         }
 
+        // 읽고-검사하고-쓰는 방식은 동시에 들어오면 서로의 차감을 덮어쓴다(lost update).
+        // 다른 주문 경로와 동일하게 조건부 원자 UPDATE 로 차감한다.
         for (ProductOption option : productOptions) {
-            if (option.getQuantity() < cartItem.getQuantity()) {
-                throw new InternalServerException(ErrorCode.CAN_NOT_USE_PRODUCT);
+            int updatedRows = productOptionRepository.decreaseStock(option.getId(), cartItem.getQuantity());
+            if (updatedRows == 0) {
+                log.error("🚨 재고 부족으로 주문 실패 - 상품 옵션 ID: {}, 요청 수량: {}", option.getId(), cartItem.getQuantity());
+                throw new InvalidInputException(ErrorCode.CAN_NOT_USE_PRODUCT);
             }
-            option.increaseSaleCount(cartItem.getQuantity());
-            option.decreaseQuantity(cartItem.getQuantity());
-            productOptionRepository.saveAndFlush(option);
         }
 
         try {
@@ -210,7 +213,6 @@ public class OrdersServiceImpl implements OrdersService {
     }
 
 
-    @StockLock(key = "'lock:user:' + #user.userId")
     @Transactional(isolation = Isolation.READ_COMMITTED)
     @Override
     public OrdersResponseDto createAllOrderFromCart(User user) {
@@ -233,6 +235,7 @@ public class OrdersServiceImpl implements OrdersService {
 
             List<ProductOption> productOptions = cartItem.getProductOptions().stream()
                     .map(cartItemProductOption -> productOptionRepository.findByIdOrElseThrow(cartItemProductOption.getProductOption().getId()))
+                    .sorted(Comparator.comparing(ProductOption::getId))
                     .toList();
 
             Integer quantity = cartItem.getQuantity();
@@ -245,8 +248,7 @@ public class OrdersServiceImpl implements OrdersService {
                     log.error("🚨 재고 부족으로 주문 실패 - 상품 옵션 ID: {}, 요청 수량: {}", option.getId(), quantity);
                     throw new InvalidInputException(ErrorCode.CAN_NOT_USE_PRODUCT);
                 }
-                option.increaseSaleCount(quantity);
-                productOptionRepository.save(option);
+                // decreaseStock 이 salesCount 까지 처리한다 (stale 엔티티 재저장 금지)
             }
 
             try {
@@ -309,29 +311,26 @@ public class OrdersServiceImpl implements OrdersService {
 
         log.info("🎟 쿠폰 사용 검증 시작 - 쿠폰 ID: {}, 현재 재고: {}", coupon.getId(), coupon.getMaxCount());
 
-        if (coupon.getMaxCount() <= 0) {
-            log.error("🚨 쿠폰 사용 불가 - 쿠폰 ID: {}, 재고 부족", coupon.getId());
-            throw new InvalidInputException(ErrorCode.COUPON_OUT_OF_STOCK);
-        }
-
         CouponUser couponUser = couponUserRepository.findByCouponIdAndUserUserId(coupon.getId(), user.getUserId())
                 .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_COUPON));
 
-        if (couponUser.isUsed()) {
+        // 읽고-검사하고-쓰는 대신 조건부 UPDATE 로 처리한다.
+        // 0행이면 다른 요청이 먼저 썼다는 뜻이므로 그대로 실패시킨다.
+        if (couponUserRepository.markAsUsed(couponUser.getId(), LocalDate.now()) == 0) {
             log.error("🚨 이미 사용된 쿠폰 - 쿠폰 ID: {}", coupon.getId());
             throw new InvalidInputException(ErrorCode.ALREADY_USED_COUPON);
         }
 
-        // ✅ 즉시 반영하도록 트랜잭션 분리
-        coupon.decreaseMaxCount(1);
-        couponUser.markAsUsed();
-        couponRepository.saveAndFlush(coupon);
-        couponUserRepository.saveAndFlush(couponUser);
-        log.info("✅ 쿠폰 사용 완료 - 쿠폰 ID: {}, 남은 재고: {}", coupon.getId(), coupon.getMaxCount());
+        if (couponRepository.decreaseMaxCount(coupon.getId(), 1) == 0) {
+            log.error("🚨 쿠폰 사용 불가 - 쿠폰 ID: {}, 재고 부족", coupon.getId());
+            throw new InvalidInputException(ErrorCode.COUPON_OUT_OF_STOCK);
+        }
+        log.info("✅ 쿠폰 사용 완료 - 쿠폰 ID: {}", coupon.getId());
 
-        // 쿠폰 적용 후 카트 아이템 업데이트
-        cartItem.applyCoupon(coupon);
-        cartItemRepository.saveAndFlush(cartItem);
+        // 쿠폰 적용 후 카트 아이템 업데이트 (위 UPDATE 들이 컨텍스트를 비우므로 다시 읽는다)
+        CartItem managedCartItem = cartItemRepository.findByIdOrElseThrow(cartItem.getId());
+        managedCartItem.applyCoupon(couponRepository.findByIdOrElseThrow(coupon.getId()));
+        cartItemRepository.saveAndFlush(managedCartItem);
         log.info("✅ 카트 아이템 업데이트 완료 - 카트 아이템 ID: {}", cartItem.getId());
     }
 
