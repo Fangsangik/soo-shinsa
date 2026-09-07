@@ -11,6 +11,7 @@ import com.Soo_Shinsa.coupon.model.CouponUser;
 import com.Soo_Shinsa.coupon.repository.CouponBrandRelationRepository;
 import com.Soo_Shinsa.coupon.repository.CouponRepository;
 import com.Soo_Shinsa.coupon.repository.CouponUserRepository;
+import com.Soo_Shinsa.global.config.BusinessMetrics;
 import com.Soo_Shinsa.global.exception.ErrorCode;
 import com.Soo_Shinsa.global.exception.InvalidInputException;
 import com.Soo_Shinsa.global.utils.EntityValidator;
@@ -34,6 +35,7 @@ public class CouponServiceImpl implements CouponService {
     private final CouponUserRepository couponUserRepository;
     private final CouponBrandRelationRepository couponBrandRelationRepository;
     private final CouponStockGuard couponStockGuard;
+    private final BusinessMetrics metrics;
 
     /**
      * 쿠폰 정의 생성.
@@ -90,6 +92,7 @@ public class CouponServiceImpl implements CouponService {
         // 1️⃣ Redis 선차단. 정원이 이미 찼으면 DB 를 건드리지 않고 여기서 끝낸다.
         if (!couponStockGuard.tryAcquire(couponId, coupon.getMaxCount() - coupon.getIssuedCount())) {
             log.info("🚫 선착순 마감 - ID: {}", couponId);
+            metrics.couponPrefilterRejected();
             throw new InvalidInputException(ErrorCode.COUPON_OUT_OF_STOCK);
         }
 
@@ -101,6 +104,7 @@ public class CouponServiceImpl implements CouponService {
             //    영속성 컨텍스트를 비우므로 이후 엔티티는 다시 읽어서 쓴다.
             if (couponRepository.increaseIssuedCount(couponId) == 0) {
                 log.error("❌ 쿠폰 수량 초과 - ID: {}", couponId);
+                metrics.couponSoldOut();
                 throw new InvalidInputException(ErrorCode.COUPON_OUT_OF_STOCK);
             }
 
@@ -118,6 +122,7 @@ public class CouponServiceImpl implements CouponService {
             Coupon issued = couponRepository.findByIdOrElseThrow(couponId);
             issueCouponToUser(issued, user);
 
+            metrics.couponIssued();
             return CouponResponseDto.from(issued);
         } catch (RuntimeException e) {
             couponStockGuard.release(couponId);

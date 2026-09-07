@@ -10,6 +10,7 @@ import com.Soo_Shinsa.coupon.repository.CouponUserRepository;
 import com.Soo_Shinsa.global.constant.OrdersStatus;
 import com.Soo_Shinsa.global.constant.ProductStatus;
 import com.Soo_Shinsa.global.constant.TossPayStatus;
+import com.Soo_Shinsa.global.config.BusinessMetrics;
 import com.Soo_Shinsa.global.exception.ErrorCode;
 import com.Soo_Shinsa.global.exception.InternalServerException;
 import com.Soo_Shinsa.global.exception.InvalidInputException;
@@ -56,6 +57,8 @@ import java.util.stream.Collectors;
 public class OrdersServiceImpl implements OrdersService {
 
     /** 이 시간이 지나도 결제되지 않은 주문은 되돌린다 */
+    private final BusinessMetrics metrics;
+
     @Value("${app.order.pending-timeout:PT30M}")
     private Duration pendingTimeout = Duration.ofMinutes(30);
 
@@ -112,6 +115,7 @@ public class OrdersServiceImpl implements OrdersService {
         int updatedRows = productOptionRepository.decreaseStock(productOptionId, quantity);
         if (updatedRows == 0) {
             log.error("🚨 재고 부족으로 주문 실패 - 상품 옵션 ID: {}, 요청 수량: {}", productOptionId, quantity);
+            metrics.orderStockShortage();
             throw new InvalidInputException(ErrorCode.CAN_NOT_USE_PRODUCT);
         }
         
@@ -532,6 +536,7 @@ public class OrdersServiceImpl implements OrdersService {
         }
 
         if (reverted > 0) {
+            metrics.orderExpired(reverted);
             log.info("미결제 주문 {}건 취소, 재고 반환 완료", reverted);
         }
         return reverted;
