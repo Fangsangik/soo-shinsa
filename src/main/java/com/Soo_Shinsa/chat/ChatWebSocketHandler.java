@@ -28,6 +28,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) {
         String sessionId = session.getId();
         sessions.put(sessionId, session);
+        ChatMessageListener.register(sessionId, session); // 브로드캐스트 수신 대상 등록
         log.info("✅ WebSocket 연결됨: 세션 ID: {}", sessionId);
     }
 
@@ -59,6 +60,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         sessions.remove(session.getId());
+        ChatMessageListener.unregister(session.getId());
         log.info("🚪 WebSocket 연결 종료됨: 세션 ID: {}", session.getId());
     }
 

@@ -17,7 +17,17 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class ChatMessageListener implements MessageListener {
 
+    // 핸들러가 연결/종료 때 여기 등록한다. 예전에는 핸들러가 자기 맵에만 넣어서
+    // 이 맵이 항상 비어 있었고, Redis 로 발행된 메시지가 아무에게도 전달되지 않았다.
     private static final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
+
+    public static void register(String sessionId, WebSocketSession session) {
+        sessions.put(sessionId, session);
+    }
+
+    public static void unregister(String sessionId) {
+        sessions.remove(sessionId);
+    }
 
     /**
      * MessageListener 인터페이스를 통해 Redis PUB/SUB 메시지 수신

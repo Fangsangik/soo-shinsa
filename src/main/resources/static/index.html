@@ -442,6 +442,24 @@
         }
         .pending-row .grow { flex:1; }
         .nav-link.active { font-weight:700; text-decoration:underline; }
+
+        /* 상담 채팅 위젯 */
+        .chat-fab {
+            position:fixed; bottom:20px; right:20px; width:52px; height:52px; border-radius:50%;
+            border:none; background:#111; color:#fff; font-size:22px; cursor:pointer; z-index:60;
+            box-shadow:0 4px 12px rgba(0,0,0,.25);
+        }
+        .chat-panel {
+            display:none; position:fixed; bottom:84px; right:20px; width:300px; height:380px;
+            background:#fff; border:1px solid #ddd; border-radius:12px; z-index:60;
+            flex-direction:column; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,.18);
+        }
+        .chat-head { padding:10px 14px; font-weight:700; border-bottom:1px solid #eee; }
+        .chat-messages { flex:1; overflow-y:auto; padding:10px 12px; font-size:13px; }
+        .chat-line { margin:4px 0; word-break:break-all; }
+        .chat-line.sys { color:#999; font-size:12px; }
+        .chat-input-row { display:flex; gap:6px; padding:8px; border-top:1px solid #eee; }
+        .chat-input-row input { flex:1; padding:8px 10px; border:1px solid #ddd; border-radius:8px; }
     </style>
 </head>
 <body>
@@ -518,6 +536,18 @@
     </section>
 
     <div id="modal-root"></div>
+
+    <!-- 상담 채팅 (Redis pub/sub 브로드캐스트) -->
+    <button class="chat-fab" onclick="toggleChat()" aria-label="상담 채팅">💬</button>
+    <div id="chat-panel" class="chat-panel">
+        <div class="chat-head">고객 상담</div>
+        <div id="chat-messages" class="chat-messages"></div>
+        <div class="chat-input-row">
+            <input id="chat-input" type="text" placeholder="메시지 입력"
+                   onkeydown="if(event.key==='Enter')sendChat()">
+            <button class="auth-btn primary" onclick="sendChat()">전송</button>
+        </div>
+    </div>
 
     <script>
         // API 설정
@@ -908,10 +938,16 @@
             const roleLabel = { ADMIN: '관리자', VENDOR: '업주', CUSTOMER: '고객' }[me.role] || me.role;
             // 역할에 맞는 메뉴만 붙인다
             const roleMenu =
-                me.role === 'ADMIN'  ? `<button class="auth-btn" onclick="showAdminPanel()">승인 대기</button>` :
-                me.role === 'VENDOR' ? `<button class="auth-btn" onclick="showVendorPanel()">내 브랜드</button>` : '';
+                me.role === 'ADMIN'  ? `<button class="auth-btn" onclick="showAdminPanel()">승인 대기</button>
+                                        <button class="auth-btn" onclick="showStats()">통계</button>` :
+                me.role === 'VENDOR' ? `<button class="auth-btn" onclick="showVendorPanel()">내 브랜드</button>` :
+                `<button class="auth-btn" onclick="showWishes()">찜</button>
+                 <button class="auth-btn" onclick="showCart()">장바구니</button>
+                 <button class="auth-btn" onclick="showOrders()">주문내역</button>`;
+            const pointBadge = (me.role === 'CUSTOMER' && me.point != null)
+                ? `<span class="role-tag">${Number(me.point).toLocaleString('ko-KR')}P</span>` : '';
             el.innerHTML = `
-                <span class="auth-user">${me.name}<span class="role-tag">${roleLabel}</span></span>
+                <span class="auth-user">${me.name}<span class="role-tag">${roleLabel}</span>${pointBadge}</span>
                 ${roleMenu}
                 <button class="auth-btn" onclick="logout()">로그아웃</button>`;
         }
@@ -1103,15 +1139,24 @@
                 const body = await api(`/products/${productId}`);
                 const p = body.data || {};
                 const price = Number(p.price || 0).toLocaleString('ko-KR');
+                const optionRows = (p.options || []).length
+                    ? p.options.map(o => `
+                        <div class="pending-row">
+                            <span class="grow">${o.size ?? '-'} / ${o.color ?? '-'} · 재고 ${o.quantity ?? '-'}</span>
+                            <input id="qty-${o.id}" type="number" min="1" value="1" style="width:64px;">
+                            <button class="auth-btn primary"
+                                onclick="addToCart(${p.id}, ${o.id}, Number(document.getElementById('qty-${o.id}').value)||1)">담기</button>
+                        </div>`).join('')
+                    : `<p class="hint">등록된 옵션이 없어 구매할 수 없습니다.</p>`;
                 openModal(`
                     <h3>${p.name || '상품'}</h3>
                     <p class="hint">${price}원</p>
-                    ${(p.options || []).length
-                        ? `<label>옵션</label><ul style="margin:0;padding-left:18px;font-size:14px;">` +
-                          p.options.map(o => `<li>${o.size ?? o.name ?? '-'} · 재고 ${o.quantity ?? '-'}</li>`).join('') +
-                          `</ul>`
-                        : `<p class="hint">등록된 옵션이 없습니다.</p>`}
-                    <div class="modal-actions"><button class="auth-btn" onclick="closeModal()">닫기</button></div>`);
+                    ${optionRows}
+                    <div id="modal-msg" class="modal-msg"></div>
+                    <div class="modal-actions">
+                        <button class="auth-btn" onclick="toggleWish(${p.id})">♡ 찜</button>
+                        <button class="auth-btn" onclick="closeModal()">닫기</button>
+                    </div>`);
             } catch (e) {
                 openModal(`<h3>상품을 불러오지 못했습니다</h3><p class="hint">${e.message}</p>
                     <div class="modal-actions"><button class="auth-btn" onclick="closeModal()">닫기</button></div>`);
@@ -1257,6 +1302,272 @@
             } catch (e) {
                 modalMsg(e.message, false);
             }
+        }
+
+
+        // ===================================================================
+        // 구매 플로우: 장바구니 → 주문(포인트 사용) → 결제 / 주문 내역 / 찜 / 채팅
+        // ===================================================================
+
+        const STATUS_KO = {
+            PENDING: '결제 대기', ORDERCOMPLETED: '주문 완료', SHIPPING: '배송 중',
+            DELIVERED: '배송 완료', ORDERCANCEL: '주문 취소',
+            ORDERED: '주문됨', CANCELLED: '취소됨', REFUNDED: '환불됨'
+        };
+        const ko = (s) => STATUS_KO[s] || s || '';
+        const won = (n) => Number(n || 0).toLocaleString('ko-KR') + '원';
+
+        function requireLogin() {
+            if (me) return true;
+            showLogin();
+            return false;
+        }
+
+        // ---------- 장바구니 ----------
+        async function showCart() {
+            if (!requireLogin()) return;
+            openModal(`<h3>장바구니</h3><p class="hint">불러오는 중...</p>`);
+            let items = [];
+            try {
+                const body = await api('/carts/users?page=0&size=50');
+                items = body.data?.content || [];
+            } catch (e) {
+                openModal(`<h3>장바구니</h3><p class="hint">${e.message}</p>
+                    <div class="modal-actions"><button class="auth-btn" onclick="closeModal()">닫기</button></div>`);
+                return;
+            }
+            // 상품 이름은 목록 응답에 없어서 따로 채운다 (데모 규모라 병렬 조회로 충분)
+            const names = {};
+            await Promise.all([...new Set(items.map(i => i.productId))].map(async id => {
+                try { names[id] = (await api(`/products/${id}`)).data?.name; } catch (e) { names[id] = `상품 ${id}`; }
+            }));
+
+            const myPoint = me?.point ?? 0;
+            const rows = items.length ? items.map(i => `
+                <div class="pending-row">
+                    <span class="grow">${names[i.productId] || ''}<br>
+                        <span style="color:#888;font-size:12px;">${(i.productOptions || []).map(o => `${o.size}/${o.color}`).join(', ')} · 개당 ${won(i.productPrice)}</span>
+                    </span>
+                    <button class="auth-btn" onclick="changeCartQty(${i.cartItemId}, ${i.productId}, ${i.quantity - 1}, [${(i.productOptions || []).map(o => o.id)}])">−</button>
+                    <span>${i.quantity}</span>
+                    <button class="auth-btn" onclick="changeCartQty(${i.cartItemId}, ${i.productId}, ${i.quantity + 1}, [${(i.productOptions || []).map(o => o.id)}])">＋</button>
+                    <button class="auth-btn primary" onclick="orderCartItem(${i.cartItemId})">주문</button>
+                    <button class="auth-btn" onclick="removeCartItem(${i.cartItemId})">삭제</button>
+                </div>`).join('')
+                : `<p class="hint">장바구니가 비었습니다. 상품의 "보러가기"에서 담아보세요.</p>`;
+
+            openModal(`
+                <h3>장바구니</h3>
+                ${rows}
+                ${items.length ? `
+                <label>포인트 사용 (보유 ${Number(myPoint).toLocaleString('ko-KR')}P · 개별 주문에만 적용)</label>
+                <input id="cart-use-point" type="number" min="0" value="0">
+                <div class="modal-actions">
+                    <button class="auth-btn" onclick="closeModal()">닫기</button>
+                    <button class="auth-btn primary" onclick="orderAllCart()">전체 주문</button>
+                </div>` : `
+                <div class="modal-actions"><button class="auth-btn" onclick="closeModal()">닫기</button></div>`}
+                <div id="modal-msg" class="modal-msg"></div>`);
+        }
+
+        async function changeCartQty(cartItemId, productId, quantity, optionIds) {
+            if (quantity < 1) { return removeCartItem(cartItemId); }
+            try {
+                await api('/carts', { method: 'PATCH', body: JSON.stringify({ cartItemId, productId, quantity, productOptionIds: optionIds }) });
+                showCart();
+            } catch (e) { modalMsg(e.message, false); }
+        }
+
+        async function removeCartItem(cartItemId) {
+            try { await api(`/carts/${cartItemId}`, { method: 'DELETE' }); showCart(); }
+            catch (e) { modalMsg(e.message, false); }
+        }
+
+        async function orderCartItem(cartId) {
+            const usePoint = Number(document.getElementById('cart-use-point')?.value || 0);
+            try {
+                const body = await api('/orders/carts', { method: 'POST', body: JSON.stringify({ cartId, usePoint: usePoint > 0 ? usePoint : null }) });
+                await refreshAuth();          // 포인트 잔액 갱신
+                showPayment(body.data.id);
+            } catch (e) { modalMsg(e.message, false); }
+        }
+
+        async function orderAllCart() {
+            try {
+                const body = await api('/orders/carts/all', { method: 'POST' });
+                showPayment(body.data.id);
+            } catch (e) { modalMsg(e.message, false); }
+        }
+
+        async function addToCart(productId, optionId, qty) {
+            if (!requireLogin()) return;
+            try {
+                await api('/carts', { method: 'POST', body: JSON.stringify({ productId, quantity: qty, productOptionIds: [optionId] }) });
+                modalMsg('장바구니에 담았습니다.', true);
+            } catch (e) { modalMsg(e.message, false); }
+        }
+
+        // ---------- 결제 ----------
+        async function showPayment(orderPk) {
+            openModal(`<h3>결제</h3><p class="hint">결제 정보를 불러오는 중...</p>`);
+            try {
+                const info = (await api(`/payments/checkout/${orderPk}`));
+                const c = info.data ?? info; // CommonResponse 가 아닐 수 있어 방어
+                await api('/payments', { method: 'POST', body: JSON.stringify({ orderId: c.orderId, method: 'CARD' }) });
+                openModal(`
+                    <h3>결제</h3>
+                    <p class="hint">주문번호 ${c.orderId}</p>
+                    <label>결제 금액</label>
+                    <div style="font-size:22px;font-weight:700;margin:4px 0 12px;">${won(c.amount)}</div>
+                    <div id="modal-msg" class="modal-msg"></div>
+                    <div class="modal-actions">
+                        <button class="auth-btn" onclick="closeModal()">나중에</button>
+                        <button class="auth-btn primary" onclick='openToss(${JSON.stringify(JSON.stringify(c))})'>토스로 결제하기</button>
+                    </div>`);
+            } catch (e) {
+                openModal(`<h3>결제</h3><p class="hint">${e.message}</p>
+                    <div class="modal-actions"><button class="auth-btn" onclick="closeModal()">닫기</button></div>`);
+            }
+        }
+
+        function openToss(json) {
+            const c = JSON.parse(json);
+            const run = () => {
+                try {
+                    TossPayments(c.clientKey).requestPayment('카드', {
+                        amount: Number(c.amount),
+                        orderId: c.orderId,
+                        orderName: c.orderName || '수신사 주문',
+                        customerName: c.customerName || '',
+                        successUrl: location.origin + '/api/success',
+                        failUrl: location.origin + '/api/fail'
+                    }).catch(e => modalMsg(e.message || '결제창이 닫혔습니다.', false));
+                } catch (e) {
+                    modalMsg('결제창을 열 수 없습니다: ' + e.message, false);
+                }
+            };
+            if (window.TossPayments) return run();
+            const script = document.createElement('script');
+            script.src = 'https://js.tosspayments.com/v1/payment';
+            script.onload = run;
+            script.onerror = () => modalMsg('토스 SDK 를 불러오지 못했습니다.', false);
+            document.head.appendChild(script);
+        }
+
+        // ---------- 주문 내역 ----------
+        async function showOrders() {
+            if (!requireLogin()) return;
+            openModal(`<h3>주문 내역</h3><p class="hint">불러오는 중...</p>`);
+            try {
+                const body = await api('/orders/users?page=0&size=20');
+                const orders = body.data?.content || [];
+                const rows = orders.length ? orders.map(o => `
+                    <div class="pending-row">
+                        <span class="grow">${won(o.totalPrice)} · <b>${ko(o.status)}</b><br>
+                            <span style="color:#888;font-size:12px;">${(o.orderItems || []).map(i => `${i.productName}×${i.quantity}`).join(', ')}</span>
+                        </span>
+                        ${o.status === 'PENDING' ? `<button class="auth-btn primary" onclick="showPayment(${o.id})">결제</button>` : ''}
+                        ${(o.status === 'PENDING' || o.status === 'ORDERCOMPLETED')
+                            ? `<button class="auth-btn" onclick="cancelOrder(${o.id})">취소</button>` : ''}
+                    </div>`).join('')
+                    : `<p class="hint">주문이 없습니다.</p>`;
+                openModal(`<h3>주문 내역</h3>${rows}
+                    <div id="modal-msg" class="modal-msg"></div>
+                    <div class="modal-actions"><button class="auth-btn" onclick="closeModal()">닫기</button></div>`);
+            } catch (e) {
+                openModal(`<h3>주문 내역</h3><p class="hint">${e.message}</p>
+                    <div class="modal-actions"><button class="auth-btn" onclick="closeModal()">닫기</button></div>`);
+            }
+        }
+
+        async function cancelOrder(orderPk) {
+            try {
+                await api(`/orders/${orderPk}/cancel`, { method: 'POST' });
+                await refreshAuth(); // 포인트 반환 반영
+                showOrders();
+            } catch (e) { modalMsg(e.message, false); }
+        }
+
+        // ---------- 찜 ----------
+        async function toggleWish(productId) {
+            if (!requireLogin()) return;
+            try {
+                await api(`/wishes/${productId}`, { method: 'POST' });
+                modalMsg('찜에 추가했습니다.', true);
+            } catch (e) {
+                if (String(e.message).includes('이미')) {
+                    try { await api(`/wishes/${productId}`, { method: 'DELETE' }); modalMsg('찜을 해제했습니다.', true); }
+                    catch (e2) { modalMsg(e2.message, false); }
+                } else { modalMsg(e.message, false); }
+            }
+        }
+
+        async function showWishes() {
+            if (!requireLogin()) return;
+            openModal(`<h3>찜 목록</h3><p class="hint">불러오는 중...</p>`);
+            try {
+                const body = await api('/wishes');
+                const rows = (body.data || []).length ? body.data.map(w => `
+                    <div class="pending-row">
+                        <span class="grow">${w.productName}<br><span style="color:#888;font-size:12px;">${w.brandName || ''} · ${won(w.price)}</span></span>
+                        <button class="auth-btn primary" onclick="closeModal();showProductDetail(${w.productId})">보러가기</button>
+                        <button class="auth-btn" onclick="api('/wishes/${w.productId}',{method:'DELETE'}).then(showWishes)">해제</button>
+                    </div>`).join('')
+                    : `<p class="hint">찜한 상품이 없습니다.</p>`;
+                openModal(`<h3>찜 목록</h3>${rows}
+                    <div class="modal-actions"><button class="auth-btn" onclick="closeModal()">닫기</button></div>`);
+            } catch (e) {
+                openModal(`<h3>찜 목록</h3><p class="hint">${e.message}</p>
+                    <div class="modal-actions"><button class="auth-btn" onclick="closeModal()">닫기</button></div>`);
+            }
+        }
+
+        // ---------- 관리자 통계 ----------
+        async function showStats() {
+            openModal(`<h3>매출 통계</h3><p class="hint">불러오는 중...</p>`);
+            try {
+                const res = await api('/admin/statistics/sales?periodType=DAY');
+                openModal(`<h3>매출 통계 (일간)</h3>
+                    <pre style="max-height:50vh;overflow:auto;background:#f7f7f7;padding:12px;border-radius:8px;font-size:12px;">${
+                        escapeHtmlText(JSON.stringify(res, null, 2))}</pre>
+                    <div class="modal-actions"><button class="auth-btn" onclick="closeModal()">닫기</button></div>`);
+            } catch (e) {
+                openModal(`<h3>매출 통계</h3><p class="hint">${e.message}</p>
+                    <div class="modal-actions"><button class="auth-btn" onclick="closeModal()">닫기</button></div>`);
+            }
+        }
+        const escapeHtmlText = (t) => t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+        // ---------- 채팅 ----------
+        let chatWs = null;
+        function toggleChat() {
+            const panel = document.getElementById('chat-panel');
+            const hidden = panel.style.display === 'none' || !panel.style.display;
+            panel.style.display = hidden ? 'flex' : 'none';
+            if (hidden && !chatWs) { connectChat(); }
+        }
+        function connectChat() {
+            const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+            chatWs = new WebSocket(`${proto}://${location.host}/ws/chat-plain`);
+            const box = document.getElementById('chat-messages');
+            const line = (text, cls) => {
+                const div = document.createElement('div');
+                div.className = 'chat-line ' + (cls || '');
+                div.textContent = text;
+                box.appendChild(div);
+                box.scrollTop = box.scrollHeight;
+            };
+            chatWs.onopen = () => line('상담을 시작합니다. 메시지를 입력하세요.', 'sys');
+            chatWs.onmessage = (e) => { if (e.data !== 'pong') line(e.data, 'in'); };
+            chatWs.onclose = () => { line('연결이 끊어졌습니다.', 'sys'); chatWs = null; };
+            chatWs.onerror = () => { line('채팅 서버에 연결할 수 없습니다.', 'sys'); };
+        }
+        function sendChat() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text || !chatWs || chatWs.readyState !== 1) return;
+            chatWs.send(`${me ? me.name : '손님'}: ${text}`);
+            input.value = '';
         }
 
     </script>
