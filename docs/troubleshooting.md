@@ -17,7 +17,7 @@
 ✅ **환경변수 분리**: 모든 민감정보를 환경변수로 이동
 ```properties
 # Before
-jwt.secret=d4e8002d9a40324a4bc163505c22a1a8e0e77eb53d59efbd4f6e5a91ceb17736
+jwt.secret=****REDACTED****
 
 # After  
 jwt.secret=${JWT_SECRET:please_change_this_secret_key}
