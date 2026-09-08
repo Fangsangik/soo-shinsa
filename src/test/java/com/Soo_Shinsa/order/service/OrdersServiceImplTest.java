@@ -231,7 +231,7 @@ class OrdersServiceImplTest extends IntegrationTestSupport {
         for (int i = 0; i < threadCount; i++) {
             executorService.submit(() -> {
                 try {
-                    ordersService.createSingleProductOrder(user, productOption.getId(), 1);
+                    ordersService.createSingleProductOrder(user, productOption.getId(), 1, null);
                     ProductOption updateOption = productOptionRepository.findByIdOrElseThrow(productOption.getId());
 
                     log.info("주문 성공 : 남은 재고 {}", updateOption.getQuantity());

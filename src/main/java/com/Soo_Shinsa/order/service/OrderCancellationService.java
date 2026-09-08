@@ -26,6 +26,7 @@ public class OrderCancellationService {
     private final OrdersRepository ordersRepository;
     private final ProductOptionRepository productOptionRepository;
     private final OrderCacheService orderCacheService;
+    private final com.Soo_Shinsa.user.service.PointService pointService;
 
     /**
      * 아직 취소되지 않은 주문 아이템을 취소하고 재고를 되돌린다.
@@ -50,6 +51,8 @@ public class OrderCancellationService {
                 .toList();
         toCancel.forEach(orderItem -> orderItem.cancelOrderItem(reason));
         order.updateStatus(OrdersStatus.ORDERCANCEL);
+        // 사용 포인트 반환, 적립 포인트 회수
+        pointService.rollbackForCancel(order);
         ordersRepository.save(order);
         toCancel.forEach(this::restoreStock);
         orderCacheService.evictOrderCaches(order.getId(), order.getUser().getUserId());

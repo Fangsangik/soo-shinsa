@@ -45,6 +45,13 @@ public class Orders extends BaseTimeEntity {
 
     private BigDecimal discountPrice;
 
+    /** 이 주문에 사용/적립된 포인트. 취소 때 그대로 되돌리기 위해 기록한다. */
+    @Column(nullable = false)
+    private BigDecimal usedPoint = BigDecimal.ZERO;
+
+    @Column(nullable = false)
+    private BigDecimal earnedPoint = BigDecimal.ZERO;
+
     @Builder
     public Orders(BigDecimal totalPrice, OrdersStatus status, User user, List<OrderItem> orderItems, BigDecimal discountPrice) {
         this.orderId = createOrderNumber();
@@ -102,6 +109,14 @@ public class Orders extends BaseTimeEntity {
 
     private String createOrderNumber() {
         return orderId = "ORD-" + UUID.randomUUID();
+    }
+
+    public void recordUsedPoint(BigDecimal usedPoint) {
+        this.usedPoint = usedPoint;
+    }
+
+    public void recordEarnedPoint(BigDecimal earnedPoint) {
+        this.earnedPoint = earnedPoint;
     }
 
     public void updateStatus(OrdersStatus status) {

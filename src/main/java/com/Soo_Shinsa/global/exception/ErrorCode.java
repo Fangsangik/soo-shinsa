@@ -9,6 +9,12 @@ public enum ErrorCode {
     //InvalidInputException
     //비밀번호가 틀렸을 때 출력하는 오류 메시지
     WRONG_PASSWORD("비밀 번호가 틀렸습니다.", HttpStatus.BAD_REQUEST),
+    NOT_ENOUGH_POINT("포인트 잔액이 부족합니다.", HttpStatus.BAD_REQUEST),
+    POINT_OVER_ORDER_TOTAL("주문 금액보다 많은 포인트를 쓸 수 없습니다.", HttpStatus.BAD_REQUEST),
+    TOO_MANY_LOGIN_ATTEMPTS("로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.", HttpStatus.TOO_MANY_REQUESTS),
+    INVALID_ORDER_STATUS_CHANGE("취소는 주문 취소 API 로만 할 수 있습니다.", HttpStatus.BAD_REQUEST),
+    ALREADY_WISHED("이미 찜한 상품입니다.", HttpStatus.CONFLICT),
+    NOT_FOUND_WISH("찜을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     //아이디 비밀번호가 잘못됨
     DIFFERENT_EMAIL_PASSWORD("이메일 혹은 비밀번호가 잘못되었습니다.", HttpStatus.BAD_REQUEST),
     //탈퇴한 이메일로 가입을 시도할 때 출력하는 오류 메시지

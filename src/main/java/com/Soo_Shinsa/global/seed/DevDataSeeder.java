@@ -11,6 +11,7 @@ import com.Soo_Shinsa.global.constant.ProductStatus;
 import com.Soo_Shinsa.global.constant.Role;
 import com.Soo_Shinsa.global.constant.UserStatus;
 import com.Soo_Shinsa.product.model.Product;
+import com.Soo_Shinsa.product.model.ProductOption;
 import com.Soo_Shinsa.product.repository.ProductRepository;
 import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.user.repository.UserRepository;
@@ -44,6 +45,7 @@ public class DevDataSeeder implements ApplicationRunner {
     private final SubCategoryRepository subCategoryRepository;
     private final BrandRepository brandRepository;
     private final ProductRepository productRepository;
+    private final com.Soo_Shinsa.product.repository.ProductOptionRepository productOptionRepository;
     private final PasswordEncoder passwordEncoder;
 
     private static final String SEED_VENDOR_EMAIL = "vendor@sooshinsa.dev";
@@ -77,6 +79,7 @@ public class DevDataSeeder implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         // 시드 업주가 있으면 이미 심어진 것으로 본다 (기존 데이터는 그대로 둔다)
         if (userRepository.findByEmail(SEED_VENDOR_EMAIL).isPresent()) {
+            backfillOptions(); // 옵션 없이 심어진 예전 시드 보정
             log.info("시드 데이터 생략 - 이미 생성됨");
             return;
         }
@@ -122,7 +125,34 @@ public class DevDataSeeder implements ApplicationRunner {
             }
         }
         productRepository.saveAll(products);
+        backfillOptions();
 
         log.info("시드 데이터 생성 완료 - 브랜드 {}건, 상품 {}건", BRANDS.size(), products.size());
+    }
+
+    /**
+     * 옵션이 없는 상품에 기본 옵션(M/L)을 만들어 준다.
+     * 옵션이 없으면 장바구니에도 못 담고 주문도 못 한다 - 시드 상품이 전부 그 상태였다.
+     */
+    private void backfillOptions() {
+        List<ProductOption> created = new ArrayList<>();
+        for (Product product : productRepository.findAll()) {
+            if (!productOptionRepository.findAllByProductId(product.getId()).isEmpty()) {
+                continue;
+            }
+            for (String size : List.of("M", "L")) {
+                created.add(ProductOption.builder()
+                        .size(size)
+                        .color("BASIC")
+                        .quantity(50)
+                        .productStatus(product.getProductStatus())
+                        .product(product)
+                        .build());
+            }
+        }
+        if (!created.isEmpty()) {
+            productOptionRepository.saveAll(created);
+            log.info("상품 옵션 백필 - {}건", created.size());
+        }
     }
 }

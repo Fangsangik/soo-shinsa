@@ -30,6 +30,7 @@ public class PaymentStateWriter {
 
     private final PaymentRepository paymentRepository;
     private final OrdersRepository ordersRepository;
+    private final com.Soo_Shinsa.user.service.PointService pointService;
     private final OrderCancellationService orderCancellationService;
 
     /**
@@ -102,6 +103,9 @@ public class PaymentStateWriter {
         Orders order = ordersRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_ORDER));
         order.updateStatus(OrdersStatus.ORDERCOMPLETED);
+
+        // 포인트 적립 + 누적 구매액 반영 + 등급 승급
+        pointService.settlePurchase(order);
         ordersRepository.save(order);
     }
 }

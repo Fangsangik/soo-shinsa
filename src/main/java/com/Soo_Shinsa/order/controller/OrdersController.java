@@ -59,7 +59,7 @@ public class OrdersController {
     public ResponseEntity<CommonResponse<OrdersResponseDto>> createSingleProductOrder(@AuthenticationPrincipal UserDetails userDetails,
                                                                       @Valid @RequestBody SingleProductOrderRequestDto requestDto) {
         User user = UserUtils.getUser(userDetails);
-        OrdersResponseDto response = ordersService.createSingleProductOrder(user, requestDto.getProductOptionId(), requestDto.getQuantity());
+        OrdersResponseDto response = ordersService.createSingleProductOrder(user, requestDto.getProductOptionId(), requestDto.getQuantity(), requestDto.getUsePoint());
         CommonResponse<OrdersResponseDto> commonResponse = new CommonResponse<>(ResponseMessage.ORDER_CREATE_SUCCESS, response);
         return ResponseEntity.status(HttpStatus.CREATED).body(commonResponse);
     }

@@ -11,4 +11,7 @@ public class SingleProductOrderRequestDto {
     private Long productOptionId;
     @NotNull(message = "수량은 필수값 입니다.")
     private Integer quantity;
+
+    /** 사용할 포인트(선택). 결제 금액에서 차감된다. */
+    private java.math.BigDecimal usePoint;
 }

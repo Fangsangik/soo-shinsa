@@ -1,11 +1,9 @@
 package com.Soo_Shinsa.product.dto;
 
 import lombok.Getter;
-import lombok.Setter;
 import lombok.NoArgsConstructor;
 
 @Getter
-@Setter // @ModelAttribute 쿼리파라미터 바인딩용
 @NoArgsConstructor
 public class FindProductOptionRequestDto {
 
@@ -13,12 +11,17 @@ public class FindProductOptionRequestDto {
     private String color;
 
     /**
-     * 조회 파라미터 이름은 optionSize 를 쓴다.
-     * size 는 페이징 크기(@RequestParam int size)와 이름이 겹쳐서
-     * ?size=M 으로 부르면 int 변환에 실패해 400 이 났다.
+     * 조회 파라미터는 optionSize/color 만 받는다.
+     *
+     * 클래스에 @Setter 를 붙였더니 페이징 파라미터 ?size=10 이 setSize("10") 으로
+     * 바인딩되어 size='10' 인 옵션을 찾았다(항상 0건). 그래서 setSize 는 만들지 않는다.
      */
     public void setOptionSize(String optionSize) {
         this.size = optionSize;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
     }
 
 

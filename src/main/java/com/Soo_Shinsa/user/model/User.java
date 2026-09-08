@@ -1,5 +1,6 @@
 package com.Soo_Shinsa.user.model;
 
+import java.math.BigDecimal;
 import com.Soo_Shinsa.global.constant.Role;
 import com.Soo_Shinsa.global.constant.UserStatus;
 import com.Soo_Shinsa.user.dto.KakaoUserInfoResponseDto;
@@ -45,6 +46,14 @@ public class User {
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private KakaoUser kakaoUser;
 
+    /** 포인트 잔액. 결제 승인 때 적립되고 주문 때 사용한다. */
+    @Column(nullable = false)
+    private BigDecimal point = BigDecimal.ZERO;
+
+    /** 누적 구매액. 등급 승급 판정에 쓴다. */
+    @Column(nullable = false)
+    private BigDecimal totalPurchase = BigDecimal.ZERO;
+
     @Builder
     public User(String email, String password, String name, String phoneNum, UserStatus status, Role role, UserGrade userGrade, KakaoUser kakaoUser) {
         this.email = email;
@@ -59,6 +68,23 @@ public class User {
 
     public void updateUserGrade(UserGrade userGrade) {
         this.userGrade = userGrade;
+    }
+
+    public void addPoint(BigDecimal amount) {
+        this.point = this.point.add(amount);
+    }
+
+    /** 잔액을 넘는 차감은 호출부에서 막는다. 방어적으로 0 밑으로는 내려가지 않게 한다. */
+    public void subtractPoint(BigDecimal amount) {
+        this.point = this.point.subtract(amount).max(BigDecimal.ZERO);
+    }
+
+    public void addPurchase(BigDecimal amount) {
+        this.totalPurchase = this.totalPurchase.add(amount);
+    }
+
+    public void subtractPurchase(BigDecimal amount) {
+        this.totalPurchase = this.totalPurchase.subtract(amount).max(BigDecimal.ZERO);
     }
 
     public void delete() {

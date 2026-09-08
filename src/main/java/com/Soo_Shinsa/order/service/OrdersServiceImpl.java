@@ -74,6 +74,7 @@ public class OrdersServiceImpl implements OrdersService {
     private final TossPaymentsService tossPaymentsService;
     private final CartItemProductOptionRepository cartItemProductOptionRepository;
     private final OrderCacheService orderCacheService;
+    private final com.Soo_Shinsa.user.service.PointService pointService;
 
 
     @Override
@@ -100,7 +101,7 @@ public class OrdersServiceImpl implements OrdersService {
     // 재고는 decreaseStock 의 조건부 원자 UPDATE 가 DB 행 락으로 직렬화한다. 분산락 불필요.
     @Transactional(isolation = Isolation.READ_COMMITTED)
     @Override
-    public OrdersResponseDto createSingleProductOrder(User user, Long productOptionId, Integer quantity) {
+    public OrdersResponseDto createSingleProductOrder(User user, Long productOptionId, Integer quantity, BigDecimal usePoint) {
 
         log.info("🔒 StockLock 적용 확인 - productOptionId: {}", productOptionId);
 
@@ -128,9 +129,10 @@ public class OrdersServiceImpl implements OrdersService {
         productOption = productOptionRepository.findByIdOrElseThrow(productOptionId);
         BigDecimal totalPrice = productOption.getProduct().getPrice().multiply(BigDecimal.valueOf(quantity));
 
+        User managedUser = userRepository.findByIdOrElseThrow(user.getUserId());
 
         Orders order = Orders.builder()
-                .user(user)
+                .user(managedUser)
                 .totalPrice(totalPrice)
                 .status(OrdersStatus.PENDING)
                 .build();
@@ -145,6 +147,14 @@ public class OrdersServiceImpl implements OrdersService {
                 .build();
 
         order.addOrderItem(orderItem);
+
+        // 포인트 사용은 addOrderItem 뒤에 한다. addOrderItem 이 총액을 상품가 기준으로
+        // 다시 계산하므로(calculateTotalPrice) 먼저 빼면 덮어써진다.
+        if (usePoint != null && usePoint.signum() > 0) {
+            pointService.use(managedUser, usePoint, order.getTotalPrice());
+            order.updateTotalPrice(order.getTotalPrice().subtract(usePoint));
+            order.recordUsedPoint(usePoint);
+        }
 
         ordersRepository.save(order);
 
@@ -210,6 +220,14 @@ public class OrdersServiceImpl implements OrdersService {
                     .build();
 
             order.addOrderItem(orderItem);
+        }
+
+        // 포인트 사용: 결제 금액에서 차감하고 취소 대비로 주문에 기록
+        if (requestDto.getUsePoint() != null && requestDto.getUsePoint().signum() > 0) {
+            User managedUser = userRepository.findByIdOrElseThrow(user.getUserId());
+            pointService.use(managedUser, requestDto.getUsePoint(), totalPrice);
+            totalPrice = totalPrice.subtract(requestDto.getUsePoint());
+            order.recordUsedPoint(requestDto.getUsePoint());
         }
 
         // ✅ 주문 객체에 최종 가격 업데이트 (JPA `save()` 전에 반영)
@@ -370,6 +388,10 @@ public class OrdersServiceImpl implements OrdersService {
     public OrdersResponseDto updateOrder(User user, Long orderId, OrdersStatus status) {
 
         // 컨트롤러에서 관리자만 들어온다. 관리자는 남의 주문을 다루므로 소유권 검증을 하지 않는다.
+        // 취소는 재고 복원과 포인트 롤백이 딸려 있으므로 반드시 cancel 엔드포인트로만 한다.
+        if (status == OrdersStatus.ORDERCANCEL) {
+            throw new InvalidInputException(ErrorCode.INVALID_ORDER_STATUS_CHANGE);
+        }
         Orders findOrder = ordersRepository.findByIdOrElseThrow(orderId);
         findOrder.updateStatus(status);
         Orders savedOrder = ordersRepository.save(findOrder);

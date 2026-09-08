@@ -26,5 +26,9 @@ public class WebSocketConfig implements WebSocketConfigurer {
         registry.addHandler(chatWebSocketHandler, "/ws/chat")
                 .setAllowedOrigins(origins)  // 특정 출처만 허용
                 .withSockJS();  // SockJS fallback 지원
+
+        // 프런트가 라이브러리 없이 표준 WebSocket 으로 붙는 경로 (SockJS 클라이언트 불필요)
+        registry.addHandler(chatWebSocketHandler, "/ws/chat-plain")
+                .setAllowedOrigins(origins);
     }
 }

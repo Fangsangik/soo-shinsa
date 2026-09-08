@@ -9,7 +9,7 @@ import org.springframework.data.domain.Page;
 public interface OrdersService {
     OrdersResponseDto getOrderById(Long orderId, User user);
     Page<OrdersResponseDto> getAllByUserId(User user, OrderDateRequestDto dateRequestDto, int page, int size);
-    OrdersResponseDto createSingleProductOrder(User user, Long productId, Integer quantity);
+    OrdersResponseDto createSingleProductOrder(User user, Long productOptionId, Integer quantity, java.math.BigDecimal usePoint);
     OrdersResponseDto createAllOrderFromCart(User user);
     OrdersResponseDto createSingleOrderCartItem(User user, OrderCreateRequestDto requestDto);
     void cancelOrder(User user, Long orderId) throws JsonProcessingException;

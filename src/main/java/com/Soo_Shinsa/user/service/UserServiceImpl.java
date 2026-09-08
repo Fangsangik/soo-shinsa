@@ -45,6 +45,7 @@ public class UserServiceImpl implements UserService {
     private final JwtProvider jwtProvider;
     private final JwtAccessTokenService jwtAccessTokenService;
     private final JwtRefreshTokenService jwtRefreshTokenService;
+    private final com.Soo_Shinsa.global.auth.LoginAttemptService loginAttemptService;
     private final UserDetailsServiceImp userDetailsService;
     private final JwtBlackListService jwtBlackListService;
     private final KakaoUserRepository kakaoUserRepository;
@@ -149,6 +150,11 @@ public class UserServiceImpl implements UserService {
     public JwtAuthResponseDto login(LoginRequestDto dto) {
         log.info("🟢 login 메서드 실행됨: {}", dto.getEmail());
 
+        // 브루트포스 제한: 이메일당 5회 실패 시 5분간 차단
+        if (loginAttemptService.isBlocked(dto.getEmail())) {
+            throw new InvalidInputException(ErrorCode.TOO_MANY_LOGIN_ATTEMPTS);
+        }
+
         //사용자 확인
         User user = userRepository.findByEmailOrElseThrow(dto.getEmail());
 
@@ -158,8 +164,10 @@ public class UserServiceImpl implements UserService {
 
         //비밀번호 확인
         if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
+            loginAttemptService.recordFailure(dto.getEmail());
             throw new NoAuthorizedException(WRONG_PASSWORD);
         }
+        loginAttemptService.clear(dto.getEmail());
 
         //인증 객체를 저장
         UserDetails userDetails = new UserDetailsImp(user);

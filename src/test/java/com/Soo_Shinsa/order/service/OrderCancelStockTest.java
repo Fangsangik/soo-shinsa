@@ -87,7 +87,7 @@ class OrderCancelStockTest extends IntegrationTestSupport {
 
     @Test
     void 전체_취소하면_재고가_돌아온다() throws Exception {
-        OrdersResponseDto order = ordersService.createSingleProductOrder(user, option.getId(), 2);
+        OrdersResponseDto order = ordersService.createSingleProductOrder(user, option.getId(), 2, null);
         assertEquals(STOCK - 2, stock(), "주문 시 재고가 차감된다");
 
         ordersService.cancelOrder(user, order.getId());
@@ -99,7 +99,7 @@ class OrderCancelStockTest extends IntegrationTestSupport {
 
     @Test
     void 이미_취소된_주문은_다시_취소되지_않는다() throws Exception {
-        OrdersResponseDto order = ordersService.createSingleProductOrder(user, option.getId(), 2);
+        OrdersResponseDto order = ordersService.createSingleProductOrder(user, option.getId(), 2, null);
         ordersService.cancelOrder(user, order.getId());
 
         // 두 번 취소되면 재고가 두 번 복원돼 원래보다 늘어난다
@@ -109,7 +109,7 @@ class OrderCancelStockTest extends IntegrationTestSupport {
 
     @Test
     void 결제되지_않고_방치된_주문은_재고가_반환된다() throws Exception {
-        ordersService.createSingleProductOrder(user, option.getId(), 3);
+        ordersService.createSingleProductOrder(user, option.getId(), 3, null);
         assertEquals(STOCK - 3, stock());
 
         // pending-timeout 을 0으로 두었으므로 방금 만든 주문도 만료 대상이다
@@ -121,7 +121,7 @@ class OrderCancelStockTest extends IntegrationTestSupport {
 
     @Test
     void 이미_취소된_주문은_만료_처리로_재고가_또_늘지_않는다() throws Exception {
-        OrdersResponseDto order = ordersService.createSingleProductOrder(user, option.getId(), 3);
+        OrdersResponseDto order = ordersService.createSingleProductOrder(user, option.getId(), 3, null);
         ordersService.cancelOrder(user, order.getId());
         assertEquals(STOCK, stock());
 
@@ -132,7 +132,7 @@ class OrderCancelStockTest extends IntegrationTestSupport {
     @Test
     void 결제_취소_경로도_재고를_되돌린다() throws Exception {
         // 주문 취소는 복원하는데 결제 취소만 복원하지 않아 재고가 사라졌다
-        OrdersResponseDto order = ordersService.createSingleProductOrder(user, option.getId(), 2);
+        OrdersResponseDto order = ordersService.createSingleProductOrder(user, option.getId(), 2, null);
         assertEquals(STOCK - 2, stock());
 
         orderCancellationService.cancel(order.getId(), "결제 취소");
@@ -144,7 +144,7 @@ class OrderCancelStockTest extends IntegrationTestSupport {
 
     @Test
     void 두_번_취소해도_재고가_두_배로_늘지_않는다() throws Exception {
-        OrdersResponseDto order = ordersService.createSingleProductOrder(user, option.getId(), 2);
+        OrdersResponseDto order = ordersService.createSingleProductOrder(user, option.getId(), 2, null);
 
         assertTrue(orderCancellationService.cancel(order.getId(), "1회"));
         assertFalse(orderCancellationService.cancel(order.getId(), "2회"), "이미 취소된 주문");
