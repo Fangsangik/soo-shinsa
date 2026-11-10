@@ -36,7 +36,7 @@ public class OrderItemResponseDto {
                 .productName(orderItem.getProduct().getName())
                 .quantity(orderItem.getQuantity())
                 .price(orderItem.getProduct().getPrice())
-                .discountPrice(orderItem.getPrice())
+                .discountPrice(orderItem.getDiscountPrice() != null ? orderItem.getDiscountPrice() : orderItem.getPrice())
                 .build();
     }
 }

@@ -119,4 +119,8 @@ public class ProductServiceImpl implements ProductService {
     }
 
 
+    @Override
+    public Page<ProductResponseDto> searchProducts(FindProductRequestDto requestDto, int page, int size) {
+        return productRepository.findAllProduct(null, requestDto, PageRequest.of(page, size));
+    }
 }

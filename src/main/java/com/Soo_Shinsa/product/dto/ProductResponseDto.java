@@ -41,6 +41,7 @@ public class ProductResponseDto {
                 .name(product.getName())
                 .price(product.getPrice())
                 .status(product.getProductStatus())
+                .imageUrl(product.getImageUrl())
                 .brandId(product.getBrand().getId())
                 .subCategoryId(product.getBrand().getSubCategory().getId())
                 .build();

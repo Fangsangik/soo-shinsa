@@ -53,13 +53,17 @@ public class CartItemServiceImpl implements CartItemService {
             throw new InternalServerException(ErrorCode.CAN_NOT_USE_PRODUCT);
         }
 
-        List<ProductOption> productOptions = productOptionRepository.findProductOptionByProductId(product.getId());
+        ProductOption selected = productOptionRepository.findByIdOrElseThrow(requestDto.getProductOptionId());
+        if (!selected.getProduct().getId().equals(product.getId())) {
+            throw new InternalServerException(ErrorCode.NOT_FOUND_PRODUCT_OPTION);
+        }
+        List<ProductOption> productOptions = List.of(selected);
 
         CartItem cartItem = CartItem.builder()
                 .quantity(requestDto.getQuantity())
                 .user(user)
                 .product(product)
-                .productOption(productOptions.get(0))
+                .productOption(selected)
                 .build();
 
         cartItemRepository.save(cartItem);
@@ -77,7 +81,7 @@ public class CartItemServiceImpl implements CartItemService {
         //사용자의 카트인지 확인
         EntityValidator.validateUserOwnership(userId.getUserId(), cartItem.getUser().getUserId());
 
-        List<ProductOption> productOptions = productOptionRepository.findProductOptionByProductId(cartItem.getProduct().getId());
+        List<ProductOption> productOptions = List.of(cartItem.getProductOption());
 
         return CartItemResponseDto.toDto(cartItem, productOptions);
     }
@@ -101,7 +105,7 @@ public class CartItemServiceImpl implements CartItemService {
 
 
         // 상품 옵션 조회
-        List<ProductOption> productOptions = productOptionRepository.findProductOptionByProductId(cartItem.getProduct().getId());
+        List<ProductOption> productOptions = List.of(cartItem.getProductOption());
 
         return CartItemResponseDto.toDto(cartItem, productOptions);
     }
@@ -166,7 +170,7 @@ public class CartItemServiceImpl implements CartItemService {
         couponUserRepository.save(couponUser);
 
         // 응답 DTO 반환
-        List<ProductOption> productOptions = productOptionRepository.findProductOptionByProductId(cartItem.getProduct().getId());
+        List<ProductOption> productOptions = List.of(cartItem.getProductOption());
         return ApplyCouponCartResponseDto.toDto(cartItem, productOptions);
     }
 

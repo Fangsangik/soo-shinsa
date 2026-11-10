@@ -12,6 +12,22 @@
 김민경 : User, 통계
  
 황상익 : Image, Report, Product, ProductOptions, CartItem, Coupon, Review, Cateogry Refactoring, Brand Refactoring, AWS, Order 일부 Refactoring, 각 기능 동적 쿼리 작성 
+## 🚀 Run (Front + Back)
+프론트는 `src/main/resources/static/`(index.html, app.js, app.css)의 정적 SPA로, Spring Boot가 같은 포트(8080)에서 서빙합니다 (CORS 불필요).
+
+```bash
+brew services start redis            # Redis 필수
+# src/main/resources/application-local.properties 에 MySQL 비밀번호 입력 (DB soo_shinsa 자동 생성)
+./gradlew bootRun
+python3 scripts/seed-local.py            # 테스트 계정 + 카테고리/브랜드/상품 시드
+```
+
+- http://localhost:8080/ → 브랜드 둘러보기 / 회원가입 / 로그인 / 장바구니 / 주문 / 결제(Toss 테스트) / 리뷰 / 신고
+- 관리자(ADMIN)·입점사(VENDOR) 계정은 상단 `관리` 메뉴에서 카테고리 → 서브카테고리 → 브랜드(서브카테고리 드롭다운) → 상품 → 옵션 순으로 등록
+- 결제는 SPA `#/pay/{orderId}`에서 인증된 주문 조회 + `GET /api/client-key`(공개) 로 Toss 결제창을 띄웁니다. 주문 상태는 고객이 취소/반품/교환 신청만 가능하고 결제·배송 상태는 ADMIN/VENDOR만 변경합니다.
+- 테스트: `python3 scripts/contract-test.py` (프론트가 읽는 필드/PK ↔ 백엔드 응답 계약 175개 체크)
+- 이미지 업로드는 로컬 프로필(local)에서 S3 대신 mock URL(picsum)로 저장됩니다 (`app.image.mock=true`). 이미지 없는 상품도 프론트에서 mock 이미지로 표시됩니다.
+
 ## 👨‍💻 About Project 
 - 쿠팡, 무신사 이커머스를 모티브로 無신사라는 쇼핑몰 이커머스 입니다. 회원가입과 백 오피스 기능이 갖춰져 있고, 회원별 등급에 따라 상품 적립 포인트가 적립이 되어 그에 맞는 할인 및 포인트 사용이 가능하게 할 수 있으며, 관리자와 점주는 판매 현황 및 자신의 매장의 매출 현황을 분석해, 보다 영업을 효율적으로 할 수 있는 기능이 구성되어 있으며, 소비자는 브랜드별 카테고리에 상품들이 구성되어 구매가 가능합니다. 또한 쿠폰 지급을 통해 소비자는 상품을 구매할 때 보다 할인되어 있는 상품을 통해 구매가 가능합니다. 상품 구매 후 후기 작성이 가능 하며, 상품 구매 직전 다른 사람의 후기가 궁금할 경우, 별점에 따라 조회가 가능합니다.
 악성 리뷰나, 잘못된 상품이 있을 경우에는 신고기능을 통해, 해당 개시물 혹은 상품을 신고 할 수 있으며, 신고가 접수되면, Admin 측에서 적절한 조치가 이뤄질 수 있도록 했습니다. 

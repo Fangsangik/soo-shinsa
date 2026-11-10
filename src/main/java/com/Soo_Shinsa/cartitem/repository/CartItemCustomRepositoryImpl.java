@@ -61,7 +61,7 @@ public class CartItemCustomRepositoryImpl implements CartItemCustomRepository {
                                     productOption.product.id
                             ))
                             .from(productOption)
-                            .where(productOption.product.id.eq(cart.getProduct().getId()))
+                            .where(productOption.id.eq(cart.getProductOption().getId()))
                             .fetch();
 
                     return new CartItemResponseDto(

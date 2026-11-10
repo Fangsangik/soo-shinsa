@@ -191,10 +191,25 @@ public class OrdersServiceImpl implements OrdersService {
         User findUser = userRepository.findByIdOrElseThrow(user.getUserId());
         Orders findOrder = ordersRepository.findByIdOrElseThrow(orderId);
 
-        EntityValidator.validateAndOrders(findOrder, findUser.getUserId());
+        if (!findUser.isAdminOrVendor()) {
+            EntityValidator.validateAndOrders(findOrder, findUser.getUserId());
+            if (!isCustomerTransitionAllowed(findOrder.getStatus(), status)) {
+                throw new com.Soo_Shinsa.exception.InvalidInputException(ErrorCode.INVALID_ORDER_STATUS);
+            }
+        }
         findOrder.updateStatus(status);
         Orders savedOrder = ordersRepository.save(findOrder);
         return OrdersResponseDto.toDto(savedOrder);
     }
 
+    /** 고객이 직접 바꿀 수 있는 상태 전이. 결제/배송 상태는 ADMIN/VENDOR만 변경 가능. */
+    static boolean isCustomerTransitionAllowed(OrdersStatus from, OrdersStatus to) {
+        return switch (to) {
+            case CANCEL -> from == OrdersStatus.BEFOREPAYMENT || from == OrdersStatus.PAYMENTCOMPLETED;
+            case REQUESTFORRETURN, APPLYFOREXCHANGE -> from == OrdersStatus.DELIVERYCOMPLETED || from == OrdersStatus.ORDERCOMPLETED;
+            case CANCELRETURN -> from == OrdersStatus.REQUESTFORRETURN;
+            case EXCHANGECANCELLATION -> from == OrdersStatus.APPLYFOREXCHANGE;
+            default -> false;
+        };
+    }
 }

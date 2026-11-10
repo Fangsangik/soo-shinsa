@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SubCategoryRepository extends JpaRepository<SubCategory, Long> {
 
+    java.util.List<SubCategory> findAllByCategoryId(Long categoryId);
+
     default SubCategory findByIdOrElseThrow(Long subCategoryId) {
         return findById(subCategoryId).orElseThrow(
                 () -> new NotFoundException(ErrorCode.NOT_FOUND_SUB_CATEGORY));

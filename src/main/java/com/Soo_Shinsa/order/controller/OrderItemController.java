@@ -46,7 +46,7 @@ public class OrderItemController {
     //특정 유저의 모든 오더아이템들을 읽기
     @GetMapping
     public ResponseEntity<CommonResponse<Page<OrderItemResponseDto>>> readOrderItem(@AuthenticationPrincipal UserDetails userDetails,
-                                                                    @RequestBody OrderDateRequestDto dateRequestDto,
+                                                                    @ModelAttribute OrderDateRequestDto dateRequestDto,
                                                                     @RequestParam(defaultValue = "0") int page,
                                                                     @RequestParam(defaultValue = "10") int size) {
         User user = UserUtils.getUser(userDetails);

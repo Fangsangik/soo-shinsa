@@ -15,6 +15,7 @@ public interface ProductService {
     FindProductResponseDto findProduct(Long productId);
 
     Page<ProductResponseDto> findAllProduct(Long brandId, FindProductRequestDto requestDto, int page, int size);
+    Page<ProductResponseDto> searchProducts(FindProductRequestDto requestDto, int page, int size);
 
     void deleteProduct(Long productId, User user);
 }

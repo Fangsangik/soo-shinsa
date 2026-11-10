@@ -59,6 +59,7 @@ public class JwtProvider {
 
         return Jwts.builder()
                 .subject(user.getEmail())
+                .id(java.util.UUID.randomUUID().toString()) // 같은 초에 재로그인해도 토큰이 달라지도록
                 .issuedAt(currentDate)
                 .expiration(expireDate)
                 .claim("role", user.getRole())

@@ -53,10 +53,19 @@ public class ProductController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    /** 전체 상품 검색 (브랜드 무관) */
+    @GetMapping
+    public ResponseEntity<CommonResponse<Page<ProductResponseDto>>> searchProducts(@RequestParam(defaultValue = "0") int page,
+                                                                              @RequestParam(defaultValue = "12") int size,
+                                                                              @ModelAttribute FindProductRequestDto requestDto) {
+        Page<ProductResponseDto> result = productService.searchProducts(requestDto, page, size);
+        return ResponseEntity.ok(new CommonResponse<>(ResponseMessage.PRODUCT_SELECT_SUCCESS, result));
+    }
+
     @GetMapping("/brands/{brandId}")
     public ResponseEntity<CommonResponse<Page<ProductResponseDto>>> findAllProductList(@RequestParam(defaultValue = "0") int page,
                                                                        @RequestParam(defaultValue = "10") int size,
-                                                                       @RequestBody FindProductRequestDto requestDto,
+                                                                       @ModelAttribute FindProductRequestDto requestDto,
                                                                        @PathVariable Long brandId) {
         Page<ProductResponseDto> productResponseDto = productService.findAllProduct(brandId, requestDto, page, size);
         CommonResponse<Page<ProductResponseDto>> response = new CommonResponse<>(ResponseMessage.PRODUCT_SELECT_SUCCESS, productResponseDto);

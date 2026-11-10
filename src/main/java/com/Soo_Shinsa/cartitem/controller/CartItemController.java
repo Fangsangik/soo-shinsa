@@ -46,7 +46,7 @@ public class CartItemController {
     //유저의 카트들을 모두 검색
     @GetMapping("/users")
     public ResponseEntity<CommonResponse<Page<CartItemResponseDto>>> findByIdAll(@AuthenticationPrincipal UserDetails userDetails,
-                                                                                 @RequestBody CartItemDateRequestDto requestDto,
+                                                                                 @ModelAttribute CartItemDateRequestDto requestDto,
                                                                                  @RequestParam(defaultValue = "0") int page,
                                                                                  @RequestParam(defaultValue = "10") int size) {
 

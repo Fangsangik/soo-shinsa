@@ -57,4 +57,11 @@ public class SubCategoryServiceImpl implements SubCategoryService {
 
         return SubCategoryUpdateResponseDto.toDto(findSubCategory);
     }
+    @Override
+    public java.util.List<SubCategoryResponseDto> findAll(Long categoryId) {
+        java.util.List<com.Soo_Shinsa.category.model.SubCategory> list = categoryId == null
+                ? subCategoryRepository.findAll()
+                : subCategoryRepository.findAllByCategoryId(categoryId);
+        return list.stream().map(SubCategoryResponseDto::toDto).toList();
+    }
 }

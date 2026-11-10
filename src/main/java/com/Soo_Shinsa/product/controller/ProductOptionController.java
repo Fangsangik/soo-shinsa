@@ -53,9 +53,9 @@ public class ProductOptionController {
     }
 
     @GetMapping
-    public ResponseEntity<CommonResponse<Page<ProductOptionResponseDto>>> findOptionListByProductId(@RequestBody FindProductOptionRequestDto requestDto,
+    public ResponseEntity<CommonResponse<Page<ProductOptionResponseDto>>> findOptionListByProductId(@ModelAttribute FindProductOptionRequestDto requestDto,
                                                                                     @RequestParam(defaultValue = "0") int page,
-                                                                                    @RequestParam(defaultValue = "10") int size) {
+                                                                                    @RequestParam(name = "pageSize", defaultValue = "10") int size) {
         Page<ProductOptionResponseDto> productOptionResponseDto = productOptionService.findProductsByOptionalSizeAndColor(requestDto, page, size);
         CommonResponse<Page<ProductOptionResponseDto>> response = new CommonResponse<>(ResponseMessage.OPTION_SELECT_SUCCESS, productOptionResponseDto);
         return ResponseEntity.status(HttpStatus.OK).body(response);

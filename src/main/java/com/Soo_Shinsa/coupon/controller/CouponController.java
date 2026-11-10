@@ -32,4 +32,9 @@ public class CouponController {
         CommonResponse<CouponResponseDto> response = new CommonResponse<>(ResponseMessage.COUPON_CREATE_SUCCESS, coupon);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
+    /** 사용 가능한(미만료, 수량 남은) 쿠폰 목록 — 장바구니에서 선택용 */
+    @org.springframework.web.bind.annotation.GetMapping
+    public ResponseEntity<CommonResponse<java.util.List<CouponResponseDto>>> findAvailable() {
+        return ResponseEntity.ok(new CommonResponse<>(ResponseMessage.COUPON_SELECT_SUCCESS, couponService.findAvailable()));
+    }
 }

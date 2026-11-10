@@ -52,6 +52,12 @@ public class TossPaymentsServiceImpl implements TossPaymentsService {
         Orders order = ordersRepository.findById(requestDto.getOrder())
                 .orElseThrow(() -> new IllegalArgumentException("오더가 없습니다"));
 
+        com.Soo_Shinsa.utils.EntityValidator.validateAndOrders(order, user.getUserId());
+        Payment existing = paymentRepository.findByOrderId(order.getOrderId());
+        if (existing != null) {
+            return PaymentResponseDto.toDto(existing); // 결제 페이지 재진입 시 중복 생성 방지
+        }
+
         Payment payment = new Payment(
                 order.getOrderId(),
                 order.getTotalPrice(),
@@ -74,6 +80,9 @@ public class TossPaymentsServiceImpl implements TossPaymentsService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         Payment findPayment = paymentRepository.findByOrderId(orderId);
+        if (findPayment == null) {
+            throw new com.Soo_Shinsa.exception.NotFoundException(com.Soo_Shinsa.exception.ErrorCode.NOT_FOUND_ORDER);
+        }
         findPayment.update(TossPayStatus.DONE, paymentKey);
         paymentRepository.save(findPayment);
 

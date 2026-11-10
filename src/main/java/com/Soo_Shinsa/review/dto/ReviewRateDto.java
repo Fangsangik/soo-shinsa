@@ -3,9 +3,11 @@ package com.Soo_Shinsa.review.dto;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 
 @Getter
+@Setter
 @NoArgsConstructor
 public class ReviewRateDto {
     @Max(value = 5, message = "5점 이하여야 합니다")

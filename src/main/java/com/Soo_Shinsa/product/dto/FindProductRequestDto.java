@@ -2,11 +2,13 @@ package com.Soo_Shinsa.product.dto;
 
 import com.Soo_Shinsa.constant.ProductStatus;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
 @Getter
+@Setter
 @NoArgsConstructor
 public class FindProductRequestDto {
     private String nameKeyword;

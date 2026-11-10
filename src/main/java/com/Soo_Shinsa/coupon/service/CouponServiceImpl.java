@@ -99,4 +99,16 @@ public class CouponServiceImpl implements CouponService {
 
         couponUserRepository.save(couponUser);
     }
+    @Transactional(readOnly = true)
+    @Override
+    public java.util.List<CouponResponseDto> findAvailable() {
+        return couponRepository.findAllByExpirationDateGreaterThanEqualAndMaxCountGreaterThan(java.time.LocalDate.now(), 0).stream()
+                .map(c -> CouponResponseDto.builder()
+                        .id(c.getId()).couponName(c.getCouponName()).couponCode(c.getCouponCode())
+                        .discountRate(c.getDiscountRate()).couponType(c.getCouponType())
+                        .issueDate(c.getIssueDate()).expirationDate(c.getExpirationDate()).maxCount(c.getMaxCount())
+                        .brandRelations(CouponBrandRelationDto.toDtos(c.getCouponBrandRelations()))
+                        .build())
+                .toList();
+    }
 }

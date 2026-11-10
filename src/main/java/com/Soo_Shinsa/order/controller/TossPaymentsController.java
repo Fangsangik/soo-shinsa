@@ -53,23 +53,19 @@ public class TossPaymentsController {
         return "success";
     }
 
-    @RequestMapping("/home/users/{userId}/orders/{orderId}")
-    public String home(
-            @PathVariable Long userId,
-            @PathVariable Long orderId,
-            Model model){
-        UserOrderDTO item = tossPaymentsService.findItem(userId, orderId);
-        BigDecimal totalPrice = item.getOrder().getTotalPrice();
+    /** 프론트(SPA #/pay/:id) 결제 페이지용 공개 클라이언트 키. 주문 정보는 인증된 /orders/{id}로 조회한다. */
+    @GetMapping("/client-key")
+    @ResponseBody
+    public java.util.Map<String, String> clientKey() {
+        return java.util.Map.of("clientKey", clientKey);
+    }
 
-        String orderName = item.getOrder().getOrderId();
-        String name = item.getUser().getName();
-
-        model.addAttribute("tosspayments_key", clientKey);
-        model.addAttribute("totalPrice", totalPrice);
-        model.addAttribute("orderName", orderName);
-        model.addAttribute("name", name);
-        return "home";
-
+    @GetMapping("/fail")
+    public String failPayment(@RequestParam(required = false) String code,
+                              @RequestParam(required = false) String message, Model model) {
+        model.addAttribute("code", code);
+        model.addAttribute("message", message);
+        return "fail";
     }
 
     @PostMapping("/cancel")

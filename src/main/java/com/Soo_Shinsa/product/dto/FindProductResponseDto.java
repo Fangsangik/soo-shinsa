@@ -14,12 +14,14 @@ public class FindProductResponseDto {
     private Long id;
     private String name;
     private BigDecimal price;
+    private String imageUrl;
     private List<ProductOptionResponseDto> options;
 
-    public FindProductResponseDto(Long id, String name, BigDecimal price, List<ProductOptionResponseDto> options) {
+    public FindProductResponseDto(Long id, String name, BigDecimal price, String imageUrl, List<ProductOptionResponseDto> options) {
         this.id = id;
         this.name = name;
         this.price = price;
+        this.imageUrl = imageUrl;
         this.options = options;
     }
 
@@ -32,6 +34,7 @@ public class FindProductResponseDto {
                 product.getId(),
                 product.getName(),
                 product.getPrice(),
+                product.getImageUrl(),
                 optionDtos
         );
     }

@@ -39,7 +39,7 @@ public class OrdersController {
     //특정유저의 모든 오더 읽기
     @GetMapping("/users")
     public ResponseEntity<CommonResponse<Page<OrdersResponseDto>>> getOrderByAll(@AuthenticationPrincipal UserDetails userDetails,
-                                                                 @RequestBody OrderDateRequestDto dateRequestDto,
+                                                                 @ModelAttribute OrderDateRequestDto dateRequestDto,
                                                                  @RequestParam (defaultValue = "0") int page,
                                                                  @RequestParam (defaultValue = "10") int size) {
         User user = UserUtils.getUser(userDetails);

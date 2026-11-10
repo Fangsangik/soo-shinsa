@@ -6,4 +6,5 @@ import com.Soo_Shinsa.user.model.User;
 
 public interface CouponService {
     CouponResponseDto createCoupon(CouponRequestDto couponRequestDto, User user);
+    java.util.List<CouponResponseDto> findAvailable();
 }

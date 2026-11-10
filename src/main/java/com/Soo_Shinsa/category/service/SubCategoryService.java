@@ -10,5 +10,6 @@ public interface SubCategoryService {
 
     SubCategoryResponseDto createSubCategory(User user, SubCategoryRequestDto dto);
     SubCategoryResponseDto findSubCategoryById(Long categoryId);
+    java.util.List<SubCategoryResponseDto> findAll(Long categoryId);
     SubCategoryUpdateResponseDto updateSubCategory(User user, SubCategoryUpdateRequestDto dto, Long subCategoryId);
 }

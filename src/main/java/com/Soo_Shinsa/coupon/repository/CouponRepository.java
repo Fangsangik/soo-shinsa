@@ -13,6 +13,8 @@ import java.util.Optional;
 
 public interface CouponRepository extends JpaRepository<Coupon, Long> {
 
+    java.util.List<Coupon> findAllByExpirationDateGreaterThanEqualAndMaxCountGreaterThan(java.time.LocalDate today, int minCount);
+
     default Coupon findByIdOrElseThrow(Long couponId) {
         return findById(couponId).orElseThrow(
                 () -> new NotFoundException(ErrorCode.NOT_FOUND_COUPON_COUNT)

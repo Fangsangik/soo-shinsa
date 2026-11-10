@@ -58,7 +58,7 @@ public class ReviewController {
 
     @GetMapping("/products/{productId}")
     public ResponseEntity<CommonResponse<Page<ReviewResponseDto>>> getAllReviewByProductId(@PathVariable Long productId,
-                                                                                           @Valid @RequestBody(required = false) ReviewRateDto reviewRateDto,
+                                                                                           @Valid @ModelAttribute ReviewRateDto reviewRateDto,
                                                                                            @RequestParam(defaultValue = "0") int page,
                                                                                            @RequestParam(defaultValue = "10") int size) {
         Page<ReviewResponseDto> reviews = reviewService.getReviewsByProductId(productId, reviewRateDto, page, size);

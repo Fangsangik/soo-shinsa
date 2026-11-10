@@ -16,6 +16,12 @@ public class FindCategoryResponseDto {
 
     private Long totalCount;
 
+    public FindCategoryResponseDto(Long id, String name, Long totalCount) {
+        this.id = id;
+        this.name = name;
+        this.totalCount = totalCount;
+    }
+
     @Builder
     public FindCategoryResponseDto(Long id, Long subCategoryId, Long parentId, String name, Long totalCount) {
         this.id = id;

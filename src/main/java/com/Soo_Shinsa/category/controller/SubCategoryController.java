@@ -29,6 +29,11 @@ public class SubCategoryController {
         return ResponseEntity.ok(new CommonResponse<>("서브 카테고리가 성공적으로 생성되었습니다.", responseDto));
     }
 
+    @GetMapping
+    public ResponseEntity<CommonResponse<java.util.List<SubCategoryResponseDto>>> findAll(@RequestParam(required = false) Long categoryId) {
+        return ResponseEntity.ok(new CommonResponse<>("서브 카테고리가 조회 되었습니다.", subCategoryService.findAll(categoryId)));
+    }
+
     @GetMapping("/{subCategoryId}")
     public ResponseEntity<CommonResponse<SubCategoryResponseDto>> findSubCategoryById(@PathVariable Long subCategoryId) {
         SubCategoryResponseDto responseDto = subCategoryService.findSubCategoryById(subCategoryId);

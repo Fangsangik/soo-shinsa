@@ -24,7 +24,9 @@ public class ProductCustomRepositoryImpl implements ProductCustomRepository {
         QSubCategory subCategory = QSubCategory.subCategory;
 
         BooleanBuilder builder = new BooleanBuilder();
-        builder.and(product.brand.id.eq(brandId));
+        if (brandId != null) {
+            builder.and(product.brand.id.eq(brandId));
+        }
 
         if (requestDto.getNameKeyword() != null && !requestDto.getNameKeyword().isEmpty()) {
             builder.and(product.name.containsIgnoreCase(requestDto.getNameKeyword()));
