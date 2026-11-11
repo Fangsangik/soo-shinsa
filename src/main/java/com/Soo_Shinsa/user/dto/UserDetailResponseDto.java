@@ -6,6 +6,7 @@ import lombok.Getter;
 
 @Getter
 public class UserDetailResponseDto {
+    private final Long userId;
     private final String name;
     private final String phoneNum;
     private final String role;
@@ -14,6 +15,7 @@ public class UserDetailResponseDto {
     private String requirement;
 
     public UserDetailResponseDto(User user) {
+        this.userId = user.getUserId();
         this.name = user.getName();
         this.phoneNum = user.getPhoneNum();
         this.role = user.getRole().name();

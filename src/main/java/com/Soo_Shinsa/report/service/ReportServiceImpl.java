@@ -124,6 +124,11 @@ public class ReportServiceImpl implements ReportService {
      *
      * @param reportId
      */
+    @Override
+    public Page<ReportResponseDto> getMyReports(User user, int page, int size) {
+        return reportRepository.findAllByUserUserIdOrderByCreatedAtDesc(user.getUserId(), PageRequest.of(page, size)).map(ReportResponseDto::toDto);
+    }
+
     @Transactional
     @Override
     public void deleteReport(Long reportId, User user) {

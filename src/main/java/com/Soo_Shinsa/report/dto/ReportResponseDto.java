@@ -15,14 +15,16 @@ public class ReportResponseDto {
     private TargetType targetType;
     private ReportStatus status;
     private String content;
+    private String rejectReason; // 반려 시 신고자에게 보여줄 사유
 
     @Builder
-    public ReportResponseDto(Long id, Long targetId, TargetType targetType, ReportStatus status, String content) {
+    public ReportResponseDto(Long id, Long targetId, TargetType targetType, ReportStatus status, String content, String rejectReason) {
         this.id = id;
         this.targetId = targetId;
         this.targetType = targetType;
         this.status = status;
         this.content = content;
+        this.rejectReason = rejectReason;
     }
 
     public static ReportResponseDto toDto(Report report) {
@@ -32,6 +34,7 @@ public class ReportResponseDto {
                 .targetType(report.getTargetType())
                 .status(report.getStatus())
                 .content(report.getContent())
+                .rejectReason(report.getRejectReason())
                 .build();
     }
 }

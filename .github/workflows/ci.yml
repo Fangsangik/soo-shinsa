@@ -1,0 +1,19 @@
+name: CI
+on:
+  push:
+    branches: [ feature, main, master ]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17', cache: gradle }
+      - name: Frontend syntax
+        run: node --check src/main/resources/static/app.js
+      - name: Unit tests (DB/Redis 불필요)
+        run: ./gradlew test --no-daemon
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: test-report, path: build/reports/tests/test }

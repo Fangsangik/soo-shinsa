@@ -54,9 +54,9 @@ public class UserServiceImpl implements UserService {
     public UserResponseDto create(SignInRequestDto dto) {
         //검증
         //중복체크
-        if (userRepository.existsByEmail(dto.getEmail())) {
-            throw new NoAuthorizedException(EMAIL_EXIST);
-        }
+        userRepository.findByEmail(dto.getEmail()).ifPresent(existing -> {
+            throw new DuplicatedException(existing.getStatus() == UserStatus.DELETED ? EMAIL_DELETED : EMAIL_EXIST);
+        });
 
         //user 생성
         User user = dto.toEntity(passwordEncoder.encode(dto.getPassword()));

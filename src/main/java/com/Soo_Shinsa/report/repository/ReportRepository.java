@@ -15,4 +15,6 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     }
     @Query("SELECT r FROM Report r ORDER BY r.createdAt DESC")
     Page<Report> findAllReports(Pageable pageable);
+
+    Page<Report> findAllByUserUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 }

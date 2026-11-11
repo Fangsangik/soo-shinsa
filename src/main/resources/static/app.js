@@ -56,7 +56,14 @@
             <div class="row" style="justify-content:center"><a class="btn primary" href="#/">홈으로</a></div></div>`;
     };
     class ApiError extends Error { constructor(status, code, message) { super(message); this.status = status; this.code = code; } }
+    /* 진행 중인 요청 수에 따라 상단 로딩 바 표시 */
+    let inflight = 0;
+    const busy = d => { inflight = Math.max(0, inflight + d); $('#loading').hidden = inflight === 0; };
     const api = async (method, path, body, retry = true) => {
+        busy(1);
+        try { return await request(method, path, body, retry); } finally { busy(-1); }
+    };
+    const request = async (method, path, body, retry = true) => {
         const headers = {};
         if (tokens.access) headers.Authorization = 'Bearer ' + tokens.access;
         if (body && !(body instanceof FormData)) { headers['Content-Type'] = 'application/json'; body = JSON.stringify(body); }
@@ -69,7 +76,7 @@
         if (res.status === 401) {
             // 액세스 토큰만 만료된 경우: refresh 로 조용히 이어간다
             if (code === 'TOKEN_EXPIRED' && retry && tokens.refresh && await refreshToken()) {
-                return api(method, path, body instanceof FormData ? body : (body && JSON.parse(body)), false);
+                return request(method, path, body instanceof FormData ? body : (body && JSON.parse(body)), false);
             }
             if (tokens.access || code === 'NO_TOKEN') authGate(code, message);
             throw new ApiError(401, code, message);
@@ -77,7 +84,10 @@
         if (res.status === 403) { forbidden(message); throw new ApiError(403, code, message); }
         throw new ApiError(res.status, code, message);
     };
-    const refreshToken = async () => {
+    /* 동시에 여러 요청이 401 을 받아도 refresh 는 한 번만 (single-flight) */
+    let refreshing = null;
+    const refreshToken = () => refreshing || (refreshing = doRefresh().finally(() => { refreshing = null; }));
+    const doRefresh = async () => {
         try {
             const res = await fetch('/users/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken: tokens.refresh, accessToken: tokens.access }) });
             if (!res.ok) throw 0;
@@ -237,12 +247,26 @@
             const f = Object.fromEntries(new FormData($('#rf')));
             const j = await api('GET', `/reviews/products/${id}${qs({ ...f, page, size: 10 })}`);
             const list = j.data.content;
-            $('#reviews').innerHTML = list.length ? list.map(r => `<div class="card">
-                <div class="row between"><span class="stars">${'★'.repeat(r.rate)}${'☆'.repeat(5 - r.rate)}</span>
-                <button class="btn ghost sm" data-report="${r.id}">신고</button></div>
+            const mine = r => state.user && r.userId === state.user.userId;
+            $('#reviews').innerHTML = list.length ? list.map(r => `<div class="card" data-rid="${r.id}">
+                <div class="row between"><span class="stars">${'★'.repeat(r.rate)}${'☆'.repeat(5 - r.rate)}${mine(r) ? ' <span class="badge">내 리뷰</span>' : ''}</span>
+                <span>${mine(r) ? `<button class="btn ghost sm redit">수정</button><button class="btn danger sm rdel">삭제</button>` : `<button class="btn ghost sm" data-report="${r.id}">신고</button>`}</span></div>
                 <p style="margin:8px 0 0">${esc(r.content)}</p>${r.imageUrl ? `<img src="${esc(r.imageUrl)}" style="max-width:240px;border-radius:8px;margin-top:8px">` : ''}
             </div>`).join('') : '<div class="empty">아직 리뷰가 없습니다. 구매 후 주문 페이지에서 리뷰를 남길 수 있어요.</div>';
             $('#reviews').querySelectorAll('[data-report]').forEach(b => b.onclick = () => reportDialog('REVIEW', +b.dataset.report));
+            $('#reviews').querySelectorAll('[data-rid]').forEach(card => {
+                const r = list.find(x => x.id === +card.dataset.rid);
+                const edit = $('.redit', card); if (edit) edit.onclick = () => openModal(`<h2 style="margin-top:0">리뷰 수정</h2>
+                    <label>별점<select name="rate">${[5,4,3,2,1].map(n=>`<option value="${n}" ${n === r.rate ? 'selected' : ''}>${'★'.repeat(n)}</option>`).join('')}</select></label>
+                    <label>내용<textarea name="content" required>${esc(r.content)}</textarea></label><label>사진 교체 (선택)<input type="file" name="imageFile" accept="image/*"></label>`, async (d, form) => {
+                    const fd = new FormData(); fd.append('updateDto', new Blob([JSON.stringify({ rate: +d.rate, content: d.content })], { type: 'application/json' }));
+                    if (form.imageFile.files[0]) fd.append('imageFile', form.imageFile.files[0]);
+                    const res = await api('PATCH', `/reviews/${r.id}`, fd); toast(res.message); loadReviews(page);
+                });
+                const del = $('.rdel', card); if (del) del.onclick = () => openModal(`<h2 style="margin-top:0">리뷰를 삭제할까요?</h2><p class="muted">삭제 후 되돌릴 수 없습니다.</p>`, async () => {
+                    await api('DELETE', `/reviews/${r.id}`); toast('리뷰를 삭제했습니다.'); loadReviews(page);
+                });
+            });
             $('#rpg').innerHTML = ''; mount($('#rpg'), j.data, loadReviews);
         };
         $('#rf').onsubmit = e => { e.preventDefault(); loadReviews(0).catch(err => toast(err.message, true)); };
@@ -380,7 +404,16 @@
             <label>기존 비밀번호<input name="oldPassword" type="password" required></label><label>새 비밀번호<input name="newPassword" type="password" required></label>
             <button class="btn primary">저장</button></form>
             <h2>내 쿠폰</h2><div id="coupons" class="muted">불러오는 중…</div>
+            <h2>내 신고</h2><div id="reports" class="muted">불러오는 중…</div>
             <h2>계정</h2><div class="row"><button class="btn" id="logout">로그아웃</button><button class="btn danger" id="leave">회원 탈퇴</button></div>`;
+        const REPORT_KO = { OPEN: '접수됨', IN_PROGRESS: '처리 중', APPROVED: '승인됨', REJECTED: '반려됨', RESOLVED: '처리 완료' };
+        const loadReports = (page = 0) => api('GET', `/reports/me?page=${page}&size=5`).then(j => {
+            const list = j.data.content;
+            $('#reports').innerHTML = list.length ? `<table><thead><tr><th>대상</th><th>내용</th><th>상태</th></tr></thead><tbody>${list.map(r => `<tr><td>${esc({ BRAND: '브랜드', PRODUCT: '상품', REVIEW: '리뷰' }[r.targetType] || r.targetType)} #${r.targetId}</td><td>${esc(r.content)}</td>
+                <td><span class="badge ${r.status === 'RESOLVED' || r.status === 'APPROVED' ? 'ok' : r.status === 'REJECTED' ? 'warn' : ''}">${esc(REPORT_KO[r.status] || r.status)}</span>${r.rejectReason ? `<div class="muted">사유: ${esc(r.rejectReason)}</div>` : ''}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">신고한 내역이 없습니다.</div>';
+            mount($('#reports'), j.data, loadReports);
+        }).catch(err => { $('#reports').textContent = err.message; });
+        loadReports();
         api('GET', '/coupons/me').then(j => {
             const list = j.data;
             $('#coupons').innerHTML = list.length ? `<table><thead><tr><th>쿠폰</th><th>할인</th><th>만료일</th><th>상태</th></tr></thead><tbody>${list.map(c => `<tr><td>${esc(c.couponName)} <span class="muted">${esc(c.couponCode)}</span></td><td>${Number(c.discountRate)}%</td><td>${esc(c.expirationDate)}</td><td><span class="badge ${c.used ? '' : 'ok'}">${c.used ? `사용함 (${esc(c.usedAt)})` : '사용 가능'}</span></td></tr>`).join('')}</tbody></table>`
@@ -576,13 +609,18 @@
     };
 
     /* ---------- router ---------- */
+    const TITLES = { home: '홈', login: '로그인', signup: '회원가입', brand: '브랜드', product: '상품', cart: '장바구니', pay: '결제', orders: '주문 내역', me: '내 정보', admin: '관리' };
     const route = async () => {
         const [, page = '', arg] = location.hash.split('/');
+        document.title = `${TITLES[page || 'home'] || '無shinsa'} · 無shinsa`;
+        window.scrollTo(0, 0);
         renderNav();
         const fn = pages[page || 'home'];
         if (!fn) { app.innerHTML = '<div class="empty">페이지를 찾을 수 없습니다.</div>'; return; }
         try { await fn(arg); } catch (err) { app.innerHTML = `<div class="empty">${esc(err.message)}</div>`; }
     };
     window.addEventListener('hashchange', route);
+    // 다른 탭에서 로그인/로그아웃하면 이 탭도 따라간다
+    window.addEventListener('storage', e => { if (e.key === 'accessToken') loadMe().then(route); });
     loadMe().then(route);
 })();

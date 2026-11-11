@@ -13,4 +13,7 @@ public interface ReportService {
     ReportResponseDto getReport(Long reportId, User user);
     void deleteReport(Long reportId, User user);
     Page<ReportResponseDto> getAllReports(User user, int page, int size);
+
+    /** 신고자 본인의 신고 내역 (처리 상태·반려 사유 확인용) */
+    Page<ReportResponseDto> getMyReports(User user, int page, int size);
 }

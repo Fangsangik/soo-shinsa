@@ -96,3 +96,24 @@ select.sm { padding: 4px 8px; font-size: 13px; }
 .gate-icon { font-size: 40px; margin-bottom: 8px; }
 .gate h1 { margin-bottom: 8px; }
 .gate p { margin: 4px 0 20px; }
+
+/* 상단 로딩 바 */
+.loading { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 50; background: linear-gradient(90deg, transparent, var(--fg), transparent); background-size: 50% 100%; animation: slide 1s linear infinite; }
+@keyframes slide { from { background-position: -50% 0; } to { background-position: 150% 0; } }
+/* 모바일: 표는 가로 스크롤, 그리드는 2열, 메뉴는 촘촘하게 */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+@media (max-width: 640px) {
+    .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .brand-tile { height: 72px; font-size: 15px; }
+    .topbar { padding: 0 12px; height: 52px; }
+    .logo { font-size: 17px; }
+    nav { gap: 8px; font-size: 12px; white-space: nowrap; overflow-x: auto; }
+    h1 { font-size: 20px; }
+    .card { padding: 14px; border-radius: 10px; }
+    table { display: block; overflow-x: auto; white-space: nowrap; }
+    form.stack { max-width: none; }
+    .row > input, .row > select { min-width: 0; flex: 1 1 120px; }
+    .pay-page { margin: 16px auto; }
+    .gate { margin: 24px auto; padding: 24px 16px; }
+    dialog { padding: 16px; }
+}

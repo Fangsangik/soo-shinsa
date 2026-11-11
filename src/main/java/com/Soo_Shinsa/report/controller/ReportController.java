@@ -42,6 +42,15 @@ public class ReportController {
         return ResponseEntity.ok().build();
     }
 
+    /** 내 신고 내역 */
+    @GetMapping("/me")
+    public ResponseEntity<CommonResponse<Page<ReportResponseDto>>> getMyReports(@AuthenticationPrincipal UserDetailsImp userDetails,
+                                                                           @RequestParam(defaultValue = "0") int page,
+                                                                           @RequestParam(defaultValue = "10") int size) {
+        Page<ReportResponseDto> reports = reportService.getMyReports(UserUtils.getUser(userDetails), page, size);
+        return ResponseEntity.ok(new CommonResponse<>(ResponseMessage.REPORT_SELECT_SUCCESS, reports));
+    }
+
     @GetMapping("/{reportId}")
     public ResponseEntity<CommonResponse<ReportResponseDto>> getReport(@PathVariable Long reportId,
                                                        @AuthenticationPrincipal UserDetailsImp userDetails) {
