@@ -139,9 +139,9 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant C as 고객 Browser
-    participant A1 as App #1
+    participant A1 as App 1
     participant R as Redis
-    participant A2 as App #2
+    participant A2 as App 2
     participant V as 입점사 Browser
 
     C->>A1: WS /ws/chat?token=&room=brand-1
