@@ -365,6 +365,131 @@ s, j = call("GET", "/reports")
 expect(s == 403, "customer cannot read all reports (admin only)", s)
 login("ADMIN"); call("DELETE", f"/reports/{rep_me}")
 
+print("== 찜  (product page ♡, pages.wishes)  — POST/DELETE /wishes/{productId}, GET /wishes")
+login("CUSTOMER")
+s, j = call("GET", "/wishes")
+for w in j["data"]:
+    call("DELETE", f"/wishes/{w['productId']}")
+s, j = call("POST", f"/wishes/{prod['id']}")
+expect(s == 201, "POST /wishes/{productId} 201", j)
+fields(j["data"], {"id": int, "productId": int, "productName": str, "price": NUM, "status": str, "brandId": int, "brandName": str, "imageUrl": (str, type(None))}, "wish.data")
+s, j = call("POST", f"/wishes/{prod['id']}")
+expect(s == 400 and j.get("code") == "ALREADY_WISHED", "duplicate wish → ALREADY_WISHED", j)
+s, j = call("GET", "/wishes")
+expect(s == 200 and [w["productId"] for w in j["data"]] == [prod["id"]], "GET /wishes lists exactly my wish")
+s, j = call("DELETE", f"/wishes/{prod['id']}")
+expect(s == 204, "DELETE /wishes/{productId} 204", s)
+s, j = call("DELETE", f"/wishes/{prod['id']}")
+expect(s == 404 and j.get("code") == "NOT_FOUND_WISH", "unwish twice → NOT_FOUND_WISH", j)
+
+print("== 포인트  (cart usePoint → order.totalPrice; 결제 완료 적립 → /users.point; 취소 → 반환)")
+login("CUSTOMER")
+s, u0 = call("GET", "/users")
+fields(u0["data"], {"point": NUM, "totalPurchase": NUM}, "GET /users.data (point fields)")
+p0 = float(u0["data"]["point"])
+s, j = call("POST", "/carts", {"productId": prod["id"], "quantity": 1, "productOptionId": opt["id"]})
+s, j = call("POST", "/orders/carts")
+earn_order = j["data"]
+expect(s == 201 and float(earn_order["usedPoint"]) == 0, "order without points has usedPoint 0", j)
+login("ADMIN")
+s, j = call("PATCH", "/orders", {"orderId": earn_order["id"], "status": "PAYMENTCOMPLETED"})
+expect(s == 200 and float(j["data"]["earnedPoint"]) > 0, "PAYMENTCOMPLETED earns points (earnedPoint > 0)", j)
+earned = float(j["data"]["earnedPoint"])
+s, j = call("PATCH", "/orders", {"orderId": earn_order["id"], "status": "PAYMENTCOMPLETED"})
+expect(s == 200 and float(j["data"]["earnedPoint"]) == earned, "repeating PAYMENTCOMPLETED does not double-earn")
+login("CUSTOMER")
+s, u1 = call("GET", "/users")
+expect(abs(float(u1["data"]["point"]) - (p0 + earned)) < 0.01, f"/users.point increased by earnedPoint ({earned})", u1["data"]["point"])
+expect(float(u1["data"]["totalPurchase"]) >= float(earn_order["totalPrice"]), "totalPurchase accumulated")
+use = min(float(u1["data"]["point"]), float(prod["price"]))
+s, j = call("POST", "/carts", {"productId": prod["id"], "quantity": 1, "productOptionId": opt["id"]})
+s, j = call("POST", "/orders/carts", {"usePoint": use})
+expect(s == 201, "POST /orders/carts {usePoint}", j)
+use_order = j["data"]
+expect(float(use_order["usedPoint"]) == use and abs(float(use_order["totalPrice"]) - (float(prod["price"]) - use)) < 0.01, "usedPoint recorded and totalPrice reduced", use_order)
+s, u2 = call("GET", "/users")
+expect(abs(float(u2["data"]["point"]) - (float(u1["data"]["point"]) - use)) < 0.01, "balance decreased by usedPoint")
+s, j = call("POST", "/orders/carts", {"usePoint": 10 ** 9})
+expect(s == 404 or s == 400, "over-balance usePoint rejected (or empty cart 404)", j)
+s, j = call("PATCH", "/orders", {"orderId": use_order["id"], "status": "CANCEL"})
+expect(s == 200, "customer cancels the point order", j)
+s, u3 = call("GET", "/users")
+expect(abs(float(u3["data"]["point"]) - float(u1["data"]["point"])) < 0.01, "cancel refunds usedPoint")
+login("ADMIN")
+call("PATCH", "/orders", {"orderId": use_order["id"], "status": "RETURN"})
+login("CUSTOMER")
+s, u4 = call("GET", "/users")
+expect(abs(float(u4["data"]["point"]) - float(u3["data"]["point"])) < 0.01, "RETURN after CANCEL does not refund twice")
+s, j = call("POST", "/orders/single", {"productId": prod["id"], "quantity": 1, "usePoint": 1})
+expect(s == 201 and float(j["data"]["usedPoint"]) == 1, "POST /orders/single {usePoint}", j)
+call("PATCH", "/orders", {"orderId": j["data"]["id"], "status": "CANCEL"})
+
+print("== 상담 채팅  (GET /chat/rooms, WebSocket /ws/chat?token&room)")
+import socket, base64, struct
+def ws_connect(token, room):
+    sk = socket.create_connection(("localhost", 8080), timeout=5)
+    key = base64.b64encode(os.urandom(16)).decode()
+    sk.sendall((f"GET /ws/chat?token={token}&room={room} HTTP/1.1\r\nHost: localhost:8080\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n\r\n").encode())
+    head = b""
+    while b"\r\n\r\n" not in head:
+        chunk = sk.recv(4096)
+        if not chunk: break
+        head += chunk
+    status = int(head.split(b" ")[1]) if head.startswith(b"HTTP/") else 0
+    return sk, status, head.split(b"\r\n\r\n", 1)[1]
+def ws_send(sk, text):
+    data = text.encode(); mask = os.urandom(4)
+    hdr = bytes([0x81]) + (bytes([0x80 | len(data)]) if len(data) < 126 else bytes([0x80 | 126]) + struct.pack(">H", len(data)))
+    sk.sendall(hdr + mask + bytes(b ^ mask[i % 4] for i, b in enumerate(data)))
+def ws_recv_all(sk, buf, timeout=3):
+    sk.settimeout(timeout); msgs = []
+    try:
+        while True:
+            while len(buf) >= 2:
+                ln = buf[1] & 0x7F; off = 2
+                if ln == 126: ln = struct.unpack(">H", buf[2:4])[0]; off = 4
+                if len(buf) < off + ln: break
+                msgs.append(buf[off:off + ln].decode(errors="replace")); buf = buf[off + ln:]
+            buf += sk.recv(65536)
+    except Exception:
+        pass
+    return msgs, buf
+login("CUSTOMER"); cust_tok = TOK
+s, j = call("GET", "/chat/rooms")
+expect(s == 200 and isinstance(j["data"], list) and j["data"], "customer GET /chat/rooms lists brands", j)
+fields(j["data"][0], {"brandId": int, "brandName": str}, "chat/rooms[]")
+room = brand["id"]
+login("VENDOR"); vend_tok = TOK
+s, j = call("GET", "/chat/rooms")
+expect(s == 200 and all(r["brandId"] in [b["id"] for b in call("GET", "/brands/owners")[1]["data"]] for r in j["data"]), "vendor GET /chat/rooms = own brands only")
+sk_c, st_c, buf_c = ws_connect(cust_tok, room)
+expect(st_c == 101, "customer websocket handshake 101", st_c)
+sk_v, st_v, buf_v = ws_connect(vend_tok, room)
+expect(st_v == 101, "vendor websocket handshake (own brand) 101", st_v)
+_, st_bad, _ = ws_connect("bad.token.x", room)
+expect(st_bad in (401, 403), "bad token handshake rejected", st_bad)
+other_brand = next((b["id"] for b in bj["data"]["content"] if b["id"] not in [x["brandId"] for x in j["data"]]), None)
+if other_brand:
+    _, st_f, _ = ws_connect(vend_tok, other_brand)
+    expect(st_f in (401, 403), "vendor cannot enter another brand's room", st_f)
+msg = f"계약테스트 메시지 {int(time.time())}"
+ws_send(sk_c, msg)
+got_v, buf_v = ws_recv_all(sk_v, buf_v)
+got_c, buf_c = ws_recv_all(sk_c, buf_c)
+expect(any(msg in m for m in got_v), "vendor receives customer's message via Redis pub/sub", got_v[-1:] )
+expect(any(msg in m for m in got_c), "sender also receives the broadcast (echo)")
+if got_v:
+    m = json.loads([m for m in got_v if msg in m][0])
+    fields(m, {"room": str, "senderId": int, "sender": str, "role": str, "text": str, "at": int}, "chat message")
+    expect(m["role"] == "CUSTOMER" and m["room"] == str(room), "message carries sender role and room")
+sk_c.close(); sk_v.close()
+sk_c2, st2, buf2 = ws_connect(cust_tok, room)
+hist, _ = ws_recv_all(sk_c2, buf2, 2)
+expect(any(msg in m for m in hist), "rejoining the room replays recent history")
+sk_c2.close()
+s, j = call("GET", "/chat/rooms")
+expect(any(r["brandId"] == room and r.get("last") and msg in r["last"]["text"] for r in call("GET", "/chat/rooms")[1]["data"]), "rooms list shows last message")
+
 print("== 에러 응답 형태  (api(): json.message 를 토스트로 표시)")
 TOK = None
 s, j = call("GET", "/carts/users")

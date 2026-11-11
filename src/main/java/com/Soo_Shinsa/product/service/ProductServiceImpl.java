@@ -36,6 +36,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductOptionRepository productOptionRepository;
     private final ReviewRepository reviewRepository;
     private final OrderItemRepository orderItemRepository;
+    private final com.Soo_Shinsa.wish.repository.WishRepository wishRepository;
 
 
     @Transactional
@@ -114,6 +115,7 @@ public class ProductServiceImpl implements ProductService {
         reviewRepository.deleteAllByProductId(productId);
         orderItemRepository.deleteAllByProductId(productId);
         productOptionRepository.deleteAllByProductId(productId);
+        wishRepository.deleteAllByProductId(productId);
 
         productRepository.delete(product);
     }

@@ -12,6 +12,8 @@ public interface BrandRepository extends JpaRepository<Brand, Long>, BrandCustom
 
     List<Brand> findAllByUserUserId(Long userId);
 
+    boolean existsByIdAndUserUserId(Long brandId, Long userId);
+
     default Brand findByIdOrElseThrow(Long brandId) {
         return findById(brandId).orElseThrow(
                 () -> new NotFoundException(NOT_FOUND_BRAND));

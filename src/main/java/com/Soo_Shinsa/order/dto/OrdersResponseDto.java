@@ -22,12 +22,20 @@ public class OrdersResponseDto {
 
     private Long userId;
     private String userName;
+    private BigDecimal usedPoint;
+    private BigDecimal earnedPoint;
 
     private List<OrderItemResponseDto> orderItems;
 
 
+        public OrdersResponseDto(Long id, String orderId, BigDecimal totalPrice, OrdersStatus status, Long userId, String userName, List<OrderItemResponseDto> orderItems) {
+        this(id, orderId, totalPrice, status, userId, userName, orderItems, null, null);
+    }
+
     @Builder
-    public OrdersResponseDto(Long id, String orderId, BigDecimal totalPrice, OrdersStatus status, Long userId, String userName, List<OrderItemResponseDto> orderItems) {
+    public OrdersResponseDto(Long id, String orderId, BigDecimal totalPrice, OrdersStatus status, Long userId, String userName, List<OrderItemResponseDto> orderItems, BigDecimal usedPoint, BigDecimal earnedPoint) {
+        this.usedPoint = usedPoint;
+        this.earnedPoint = earnedPoint;
         this.id = id;
         this.orderId = orderId;
         this.totalPrice = totalPrice;
@@ -39,6 +47,8 @@ public class OrdersResponseDto {
 
     public static OrdersResponseDto toDto(Orders orders) {
         return OrdersResponseDto.builder()
+                .usedPoint(orders.getUsedPoint())
+                .earnedPoint(orders.getEarnedPoint())
                 .id(orders.getId())
                 .orderId(orders.getOrderId())
                 .totalPrice(orders.getTotalPrice())

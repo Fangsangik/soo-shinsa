@@ -65,16 +65,17 @@ public class OrdersController {
     public ResponseEntity<CommonResponse<OrdersResponseDto>> createSingleProductOrder(@AuthenticationPrincipal UserDetails userDetails,
                                                                       @Valid @RequestBody SingleProductOrderRequestDto requestDto) {
         User user = UserUtils.getUser(userDetails);
-        OrdersResponseDto response = ordersService.createSingleProductOrder(user, requestDto.getProductId(), requestDto.getQuantity());
+        OrdersResponseDto response = ordersService.createSingleProductOrder(user, requestDto.getProductId(), requestDto.getQuantity(), requestDto.getUsePoint());
         CommonResponse<OrdersResponseDto> commonResponse = new CommonResponse<>(ResponseMessage.ORDER_CREATE_SUCCESS, response);
         return ResponseEntity.status(HttpStatus.CREATED).body(commonResponse);
     }
 
     //카트에 담음 물건을 구매 생성
     @PostMapping("/carts")
-    public ResponseEntity<CommonResponse<OrdersResponseDto>> createAllOrderFromCart(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<CommonResponse<OrdersResponseDto>> createAllOrderFromCart(@AuthenticationPrincipal UserDetails userDetails,
+                                                                                   @RequestBody(required = false) java.util.Map<String, java.math.BigDecimal> body) {
         User user = UserUtils.getUser(userDetails);
-        OrdersResponseDto responseDto = ordersService.createAllOrderFromCart(user);
+        OrdersResponseDto responseDto = ordersService.createAllOrderFromCart(user, body == null ? null : body.get("usePoint"));
         CommonResponse<OrdersResponseDto> response = new CommonResponse<>(ResponseMessage.ORDER_CREATE_SUCCESS, responseDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

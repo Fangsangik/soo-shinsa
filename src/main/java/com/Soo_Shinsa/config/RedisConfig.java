@@ -28,6 +28,12 @@ public class RedisConfig {
         return new LettuceConnectionFactory("localhost", 6379);
     }
 
+    /** 채팅 히스토리/pub-sub 용 (ChatConfig 에 두면 핸들러와 순환 참조) */
+    @Bean
+    public org.springframework.data.redis.core.StringRedisTemplate stringRedisTemplate(RedisConnectionFactory f) {
+        return new org.springframework.data.redis.core.StringRedisTemplate(f);
+    }
+
     @Bean
     public RedisTemplate<String, String> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<String, String> template = new RedisTemplate<>();

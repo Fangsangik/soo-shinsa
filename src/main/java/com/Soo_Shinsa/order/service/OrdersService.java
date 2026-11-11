@@ -9,8 +9,10 @@ import org.springframework.data.domain.Page;
 public interface OrdersService {
     OrdersResponseDto getOrderById(Long orderId, User user);
     Page<OrdersResponseDto> getAllByUserId(User user, OrderDateRequestDto dateRequestDto, int page, int size);
-    OrdersResponseDto createSingleProductOrder(User user, Long productId, Integer quantity);
-    OrdersResponseDto createAllOrderFromCart(User user);
+    OrdersResponseDto createSingleProductOrder(User user, Long productId, Integer quantity, java.math.BigDecimal usePoint);
+    default OrdersResponseDto createSingleProductOrder(User user, Long productId, Integer quantity) { return createSingleProductOrder(user, productId, quantity, null); }
+    OrdersResponseDto createAllOrderFromCart(User user, java.math.BigDecimal usePoint);
+    default OrdersResponseDto createAllOrderFromCart(User user) { return createAllOrderFromCart(user, null); }
     OrdersResponseDto createSingleOrderCartItem (User user, Long cartItemId);
     OrdersResponseDto createOrder (User user);
 

@@ -58,6 +58,9 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.3'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
 
+    //websocket (고객 ↔ 입점사 상담 채팅)
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
     //validation
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 

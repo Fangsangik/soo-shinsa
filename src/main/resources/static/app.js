@@ -111,7 +111,7 @@
         const here = location.hash.split('/')[1] || '';
         const link = (h, t) => `<a href="#/${h}" class="${here === h ? 'active' : ''}">${t}</a>`;
         nav.innerHTML = tokens.access
-            ? link('', '브랜드') + link('cart', '장바구니') + link('orders', '주문') + (isStaff() ? link('admin', state.user?.role === 'ADMIN' ? '관리' : '입점사 관리') : '') + link('me', esc(state.user?.name || '내 정보'))
+            ? link('', '브랜드') + link('wishes', '찜') + link('cart', '장바구니') + link('orders', '주문') + (isStaff() ? link('admin', state.user?.role === 'ADMIN' ? '관리' : '입점사 관리') : '') + link('me', esc(state.user?.name || '내 정보') + (state.user?.role === 'CUSTOMER' && state.user.point != null ? ` <span class="badge ok">${Math.round(Number(state.user.point)).toLocaleString('ko-KR')}P</span>` : ''))
             : link('', '브랜드') + link('login', '로그인') + link('signup', '회원가입');
     };
 
@@ -189,6 +189,7 @@
                 <input name="maxPrice" type="number" min="0" placeholder="최대 가격" style="width:120px">
                 <button class="btn sm">검색</button>
                 <button class="btn sm ghost" type="button" id="report">브랜드 신고</button>
+                <button class="btn sm" type="button" id="chat">💬 브랜드 상담</button>
             </form>
             <div class="grid" id="g" style="margin-top:16px"></div><div id="pg"></div>`;
         const load = async (page = 0) => {
@@ -200,6 +201,7 @@
         };
         $('#filter').onsubmit = e => { e.preventDefault(); load(0).catch(err => toast(err.message, true)); };
         $('#report').onclick = () => reportDialog('BRAND', id);
+        $('#chat').onclick = () => { if (requireLogin()) openChat(+id, brand.name); };
         await load();
     };
 
@@ -222,6 +224,7 @@
                 <div class="row">
                     <button class="btn primary" name="act" value="cart" ${opts.length ? '' : 'disabled title="옵션이 없는 상품은 장바구니에 담을 수 없습니다"'}>장바구니</button>
                     <button class="btn" name="act" value="buy">바로 구매</button>
+                    <button class="btn ghost sm" type="button" id="wish">♡ 찜</button>
                     <button class="btn ghost sm" type="button" id="report">신고</button>
                 </div>
             </form></div></div></div>
@@ -243,6 +246,14 @@
             } catch (err) { toast(err.message, true); }
         };
         $('#report').onclick = () => reportDialog('PRODUCT', p.id);
+        let wished = false;
+        const paintWish = () => { $('#wish').textContent = wished ? '♥ 찜 해제' : '♡ 찜'; $('#wish').classList.toggle('primary', wished); };
+        if (tokens.access) api('GET', '/wishes').then(j => { wished = j.data.some(w => w.productId === p.id); paintWish(); }).catch(() => {});
+        $('#wish').onclick = async () => {
+            if (!requireLogin()) return;
+            try { if (wished) { await api('DELETE', `/wishes/${p.id}`); toast('찜을 해제했습니다.'); } else { const r = await api('POST', `/wishes/${p.id}`); toast(r.message); } wished = !wished; paintWish(); }
+            catch (err) { toast(err.message, true); }
+        };
         const loadReviews = async (page = 0) => {
             const f = Object.fromEntries(new FormData($('#rf')));
             const j = await api('GET', `/reviews/products/${id}${qs({ ...f, page, size: 10 })}`);
@@ -291,7 +302,8 @@
                 <td>${won(Number(i.productPrice) * i.quantity)}</td>
                 <td><button class="btn sm ghost coupon">쿠폰</button><button class="btn sm danger del">삭제</button></td></tr>`).join('')}
             </tbody></table>
-            <div class="row between" style="margin-top:16px"><strong>총 ${won(total)}</strong><button class="btn primary" id="order">전체 주문하기</button></div>`;
+            <div class="row between" style="margin-top:16px"><strong>총 ${won(total)}</strong>
+                <div class="row">${state.user?.role === 'CUSTOMER' ? `<label style="display:flex;align-items:center;gap:6px">포인트 사용 (보유 ${Math.round(Number(state.user.point || 0)).toLocaleString('ko-KR')}P)<input id="usePoint" type="number" min="0" max="${Math.min(Math.floor(Number(state.user.point || 0)), Math.floor(total))}" value="0" style="width:110px"></label>` : ''}<button class="btn primary" id="order">전체 주문하기</button></div></div>`;
         $('#c').querySelectorAll('tr[data-id]').forEach(tr => {
             const id = tr.dataset.id;
             $('.qty', tr).onchange = async e => {
@@ -311,7 +323,9 @@
         });
         $('#order').onclick = async () => {
             try {
-                const r = await api('POST', '/orders/carts'); toast(r.message);
+                const usePoint = Number($('#usePoint')?.value || 0);
+                const r = await api('POST', '/orders/carts', usePoint > 0 ? { usePoint } : null); toast(r.message);
+                await loadMe(); // 포인트 잔액 갱신
                 location.hash = `#/pay/${r.data.id}`;
             } catch (err) { toast(err.message, true); }
         };
@@ -369,7 +383,7 @@
                     <td>${won(it.discountPrice ?? it.price)}</td>
                     <td style="text-align:right">${o.status !== 'BEFOREPAYMENT' && o.status !== 'CANCEL' && o.status !== 'RETURN' ? `<button class="btn sm ghost review" data-item="${it.orderItemId}" data-pid="${it.productId}">리뷰 작성</button>` : ''}</td></tr>`).join('')}
                 </tbody></table>
-                <div class="row between" style="margin-top:8px"><span class="muted">총 결제금액</span><strong>${won(o.totalPrice)}</strong></div>
+                <div class="row between" style="margin-top:8px"><span class="muted">총 결제금액${Number(o.usedPoint) > 0 ? ` · 포인트 ${Math.round(Number(o.usedPoint)).toLocaleString('ko-KR')}P 사용` : ''}${Number(o.earnedPoint) > 0 ? ` · ${Math.round(Number(o.earnedPoint)).toLocaleString('ko-KR')}P 적립` : ''}</span><strong>${won(o.totalPrice)}</strong></div>
             </div>`).join('') : '<div class="empty">주문 내역이 없습니다.</div>';
             $('#pg').innerHTML = ''; mount($('#pg'), j.data, load);
             $('#list').querySelectorAll('.card').forEach(card => {
@@ -398,7 +412,8 @@
         app.innerHTML = `<h1>내 정보</h1><div class="card">
             <table><tbody><tr><th>이름</th><td>${esc(u.name)}</td></tr><tr><th>이메일</th><td>${esc(localStorage.getItem('email'))}</td></tr>
             <tr><th>전화번호</th><td>${esc(u.phoneNum)}</td></tr><tr><th>역할</th><td>${esc(u.role)}</td></tr>
-            ${u.userGrade ? `<tr><th>등급</th><td>${esc(u.userGrade)} (적립률 ${esc(u.pointRate)}, 승급 기준 ${esc(u.requirement)})</td></tr>` : ''}</tbody></table></div>
+            ${u.userGrade ? `<tr><th>등급</th><td>${esc(u.userGrade)} (적립률 ${Math.round(Number(u.pointRate) * 100)}%, 승급 기준 누적 ${won(u.requirement)})</td></tr>` : ''}
+            ${u.role === 'CUSTOMER' ? `<tr><th>포인트</th><td><strong>${Math.round(Number(u.point || 0)).toLocaleString('ko-KR')}P</strong> <span class="muted">· 누적 구매 ${won(u.totalPurchase)} · 결제 완료 시 적립, 장바구니에서 사용</span></td></tr>` : ''}</tbody></table></div>
             <h2>정보 수정</h2><form class="stack" id="f">
             <label>이름<input name="name" value="${esc(u.name)}"></label><label>전화번호<input name="phoneNum" value="${esc(u.phoneNum)}"></label>
             <label>기존 비밀번호<input name="oldPassword" type="password" required></label><label>새 비밀번호<input name="newPassword" type="password" required></label>
@@ -425,6 +440,51 @@
             await api('POST', '/users/leave', d); tokens.clear(); toast('탈퇴 처리되었습니다.'); location.hash = '#/';
         });
     };
+
+    pages.wishes = async () => {
+        if (!requireLogin()) return;
+        app.innerHTML = '<h1>찜한 상품</h1><div id="g" class="grid"><div class="muted">불러오는 중…</div></div>';
+        const load = async () => {
+            const list = (await api('GET', '/wishes')).data;
+            $('#g').innerHTML = list.length ? list.map(w => `<div class="tile"><a href="#/product/${w.productId}"><div class="thumb"><img src="${img(w.imageUrl, w.productId)}" alt="" loading="lazy"></div></a>
+                <div class="body"><div class="name">${esc(w.productName)}</div><div class="muted">${esc(w.brandName || '')}</div><div class="row between"><span class="price">${won(w.price)}</span><button class="btn sm ghost" data-un="${w.productId}">해제</button></div></div></div>`).join('')
+                : '<div class="empty">찜한 상품이 없습니다. 상품 페이지의 ♡ 버튼으로 담아 보세요.</div>';
+            $('#g').querySelectorAll('[data-un]').forEach(b => b.onclick = async () => { try { await api('DELETE', `/wishes/${b.dataset.un}`); toast('찜을 해제했습니다.'); load(); } catch (err) { toast(err.message, true); } });
+        };
+        await load();
+    };
+
+    /* ---------- 상담 채팅 (WebSocket /ws/chat?token&room=brandId, 서버가 Redis pub/sub 으로 전달) ---------- */
+    const chat = { ws: null, room: null, name: '' };
+    const chatUI = () => $('#chat-panel');
+    const openChat = async (brandId, brandName) => {
+        chatUI().hidden = false;
+        if (brandId) { chat.room = brandId; chat.name = brandName; }
+        const rooms = (await api('GET', '/chat/rooms')).data;
+        if (!chat.room && rooms.length) { chat.room = rooms[0].brandId; chat.name = rooms[0].brandName; }
+        $('#chat-room').innerHTML = rooms.map(r => `<option value="${r.brandId}" ${r.brandId === chat.room ? 'selected' : ''}>${esc(r.brandName)}${r.last ? ` · ${esc(r.last.text.slice(0, 14))}` : ''}</option>`).join('') || '<option value="">상담 가능한 브랜드가 없습니다</option>';
+        $('#chat-room').onchange = e => { const o = e.target.selectedOptions[0]; chat.room = +o.value; chat.name = o.textContent.split(' · ')[0]; connectChat(); };
+        if (chat.room) connectChat();
+    };
+    const chatLine = (m, sys) => {
+        const box = $('#chat-messages'); const mine = m.senderId === state.user?.userId;
+        box.insertAdjacentHTML('beforeend', sys ? `<div class="chat-line sys">${esc(m)}</div>` : `<div class="chat-line ${mine ? 'me' : ''}"><span class="who">${esc(m.sender)}<span class="badge">${{ CUSTOMER: '고객', VENDOR: '입점사', ADMIN: '관리자' }[m.role] || esc(m.role)}</span></span><span class="bubble">${esc(m.text)}</span><span class="muted">${new Date(m.at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span></div>`);
+        box.scrollTop = box.scrollHeight;
+    };
+    const connectChat = () => {
+        if (chat.ws) { chat.ws.onclose = null; chat.ws.close(); chat.ws = null; }
+        $('#chat-messages').innerHTML = ''; $('#chat-title').textContent = `${chat.name} 상담`;
+        const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/chat?token=${encodeURIComponent(tokens.access)}&room=${chat.room}`);
+        ws.onopen = () => chatLine('상담이 연결되었습니다. 입점사가 답하면 여기에 표시됩니다.', true);
+        ws.onmessage = e => { if (e.data === 'pong') return; try { chatLine(JSON.parse(e.data)); } catch { /* ignore */ } };
+        ws.onclose = () => { chatLine('연결이 끊어졌습니다. 방을 다시 선택하면 재연결됩니다.', true); chat.ws = null; };
+        ws.onerror = () => toast('상담 연결에 실패했습니다. 로그인 상태와 권한을 확인하세요.', true);
+        chat.ws = ws;
+    };
+    const sendChat = () => { const i = $('#chat-input'); const t = i.value.trim(); if (!t || !chat.ws || chat.ws.readyState !== 1) return; chat.ws.send(t); i.value = ''; };
+    $('#chat-fab').onclick = () => { if (!requireLogin()) return; if (chatUI().hidden) openChat().catch(err => toast(err.message, true)); else chatUI().hidden = true; };
+    $('#chat-close').onclick = () => { chatUI().hidden = true; };
+    $('#chat-send').onclick = sendChat; $('#chat-input').onkeydown = e => { if (e.key === 'Enter') sendChat(); };
 
     /* ---------- admin / vendor ---------- */
     pages.admin = async () => {
@@ -609,12 +669,13 @@
     };
 
     /* ---------- router ---------- */
-    const TITLES = { home: '홈', login: '로그인', signup: '회원가입', brand: '브랜드', product: '상품', cart: '장바구니', pay: '결제', orders: '주문 내역', me: '내 정보', admin: '관리' };
+    const TITLES = { wishes: '찜한 상품', home: '홈', login: '로그인', signup: '회원가입', brand: '브랜드', product: '상품', cart: '장바구니', pay: '결제', orders: '주문 내역', me: '내 정보', admin: '관리' };
     const route = async () => {
         const [, page = '', arg] = location.hash.split('/');
         document.title = `${TITLES[page || 'home'] || '無shinsa'} · 無shinsa`;
         window.scrollTo(0, 0);
         renderNav();
+        $('#chat-fab').hidden = !tokens.access;
         const fn = pages[page || 'home'];
         if (!fn) { app.innerHTML = '<div class="empty">페이지를 찾을 수 없습니다.</div>'; return; }
         try { await fn(arg); } catch (err) { app.innerHTML = `<div class="empty">${esc(err.message)}</div>`; }

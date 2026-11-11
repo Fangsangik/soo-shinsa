@@ -36,6 +36,7 @@ public class OrdersServiceImpl implements OrdersService {
     private final OrdersRepository ordersRepository;
     private final CartItemRepository cartItemRepository;
     private final UserRepository userRepository;
+    private final com.Soo_Shinsa.user.service.PointService pointService;
 
 
     @Transactional(readOnly = true) // 주문/장바구니 ↔ 상품 lazy 로딩을 서비스 안에서 끝내기 위한 최소 범위 (OSIV off)
@@ -63,7 +64,7 @@ public class OrdersServiceImpl implements OrdersService {
 //    상품을 찾아와서 주문번호를 생성 후 주문을 만들고 거기에 주문아이템에 물건을 담음
     @Transactional
     @Override
-    public OrdersResponseDto createSingleProductOrder(User user, Long productId, Integer quantity) {
+    public OrdersResponseDto createSingleProductOrder(User user, Long productId, Integer quantity, BigDecimal usePoint) {
 
         Product product = productRepository.findByIdOrElseThrow(productId);
         if (product.getProductStatus().equals(ProductStatus.SOLD_OUT) || product.getProductStatus().equals(ProductStatus.UNAVAILABLE)) {
@@ -84,10 +85,18 @@ public class OrdersServiceImpl implements OrdersService {
                 .build();
 
         order.addOrderItem(orderItem);
+        applyPoint(user, order, usePoint);
 
         ordersRepository.save(order);
 
         return OrdersResponseDto.toDto(order);
+    }
+
+    /** 포인트 사용: 영속 User 잔액 차감 + 주문 결제 금액에서 차감 */
+    private void applyPoint(User user, Orders order, BigDecimal usePoint) {
+        if (usePoint == null || usePoint.signum() <= 0) return;
+        User managed = userRepository.findByIdOrElseThrow(user.getUserId());
+        order.applyPoint(pointService.use(managed, usePoint, order.getTotalPrice()));
     }
 
     @Transactional
@@ -131,7 +140,7 @@ public class OrdersServiceImpl implements OrdersService {
 
     @Transactional
     @Override
-    public OrdersResponseDto createAllOrderFromCart(User user) {
+    public OrdersResponseDto createAllOrderFromCart(User user, BigDecimal usePoint) {
 
         List<CartItem> cartItems = cartItemRepository.findByUserUserId(user.getUserId());
         if (cartItems.isEmpty()) {
@@ -162,6 +171,7 @@ public class OrdersServiceImpl implements OrdersService {
 
             order.addOrderItem(orderItem);
         }
+        applyPoint(user, order, usePoint);
 
         ordersRepository.save(order);
 
@@ -207,6 +217,7 @@ public class OrdersServiceImpl implements OrdersService {
             }
         }
         findOrder.updateStatus(status);
+        pointService.onStatusChanged(findOrder, status); // 결제 완료 → 적립, 취소/반품 → 되돌리기
         Orders savedOrder = ordersRepository.save(findOrder);
         return OrdersResponseDto.toDto(savedOrder);
     }

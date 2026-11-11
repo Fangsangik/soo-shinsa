@@ -15,6 +15,12 @@
 </header>
 <main id="app" class="container"></main>
 <div id="toast" class="toast" hidden></div>
+<button id="chat-fab" class="chat-fab" aria-label="상담 채팅" hidden>💬</button>
+<section id="chat-panel" class="chat-panel" hidden>
+    <div class="chat-head"><strong id="chat-title">상담</strong><select id="chat-room" class="sm"></select><button id="chat-close" class="btn sm ghost">닫기</button></div>
+    <div id="chat-messages" class="chat-messages"></div>
+    <div class="chat-input-row"><input id="chat-input" placeholder="메시지 입력 후 Enter" maxlength="1000"><button id="chat-send" class="btn sm primary">전송</button></div>
+</section>
 <dialog id="modal"></dialog>
 <script src="/app.js"></script>
 </body>

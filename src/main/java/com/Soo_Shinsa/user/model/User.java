@@ -42,6 +42,14 @@ public class User {
     @JoinColumn(name = "user_grade_id")
     private UserGrade userGrade;
 
+    /** 포인트 잔액. 결제 승인 시 (결제액 × 등급 적립률) 적립, 주문 생성 시 사용 */
+    @Column(nullable = false, columnDefinition = "decimal(38,2) default 0")
+    private java.math.BigDecimal point = java.math.BigDecimal.ZERO;
+
+    /** 누적 구매액. 등급 승급 판정 기준 */
+    @Column(nullable = false, columnDefinition = "decimal(38,2) default 0")
+    private java.math.BigDecimal totalPurchase = java.math.BigDecimal.ZERO;
+
     @Builder
     public User(String email, String password, String name, String phoneNum, UserStatus status, Role role, UserGrade userGrade) {
         this.email = email;
@@ -60,6 +68,12 @@ public class User {
         u.userId = userId; u.email = email; u.name = name; u.role = role; u.status = UserStatus.ACTIVE;
         return u;
     }
+
+    public void addPoint(java.math.BigDecimal amount) { this.point = nz(this.point).add(amount); }
+    public void subtractPoint(java.math.BigDecimal amount) { this.point = nz(this.point).subtract(amount).max(java.math.BigDecimal.ZERO); }
+    public void addPurchase(java.math.BigDecimal amount) { this.totalPurchase = nz(this.totalPurchase).add(amount); }
+    public void subtractPurchase(java.math.BigDecimal amount) { this.totalPurchase = nz(this.totalPurchase).subtract(amount).max(java.math.BigDecimal.ZERO); }
+    private static java.math.BigDecimal nz(java.math.BigDecimal v) { return v == null ? java.math.BigDecimal.ZERO : v; }
 
     public void updateUserGrade(UserGrade userGrade) {
         this.userGrade = userGrade;

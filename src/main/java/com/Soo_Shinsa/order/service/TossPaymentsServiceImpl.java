@@ -38,6 +38,7 @@ public class TossPaymentsServiceImpl implements TossPaymentsService {
     private final PaymentRepository paymentRepository;
     private final OrdersRepository ordersRepository;
     private final UserRepository userRepository;
+    private final com.Soo_Shinsa.user.service.PointService pointService;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -92,6 +93,7 @@ public class TossPaymentsServiceImpl implements TossPaymentsService {
                 "https://api.tosspayments.com/v1/payments/" + paymentKey, request, JsonNode.class);
         Orders findOrder = ordersRepository.findByOrderId(orderId);
         findOrder.updateStatus(PAYMENTCOMPLETED);
+        pointService.onStatusChanged(findOrder, PAYMENTCOMPLETED);
         ordersRepository.save(findOrder);
 
     }
@@ -108,6 +110,7 @@ public class TossPaymentsServiceImpl implements TossPaymentsService {
         String orderId = findPayment.getOrderId();
         Orders findOrder = ordersRepository.findByOrderId(orderId);
         findOrder.updateStatus(OrdersStatus.RETURN);
+        pointService.onStatusChanged(findOrder, OrdersStatus.RETURN);
         ordersRepository.save(findOrder);
 
         findPayment.update(TossPayStatus.CANCELED, paymentKey);

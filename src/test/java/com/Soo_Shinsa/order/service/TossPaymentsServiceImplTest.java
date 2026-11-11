@@ -36,6 +36,7 @@ class TossPaymentsServiceImplTest {
     @Mock PaymentRepository paymentRepository;
     @Mock OrdersRepository ordersRepository;
     @Mock UserRepository userRepository;
+    @Mock com.Soo_Shinsa.user.service.PointService pointService;
     @InjectMocks TossPaymentsServiceImpl service;
 
     User me, other;

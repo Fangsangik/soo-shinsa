@@ -43,6 +43,7 @@ class ProductServiceImplTest {
     @Mock ProductOptionRepository productOptionRepository;
     @Mock ReviewRepository reviewRepository;
     @Mock OrderItemRepository orderItemRepository;
+    @Mock com.Soo_Shinsa.wish.repository.WishRepository wishRepository;
     @InjectMocks ProductServiceImpl productService;
     @InjectMocks ProductOptionServiceImpl optionService;
 
@@ -104,6 +105,7 @@ class ProductServiceImplTest {
         in.verify(orderItemRepository).deleteAllByProductId(10L);
         in.verify(productOptionRepository).deleteAllByProductId(10L);
         in.verify(productRepository).delete(product);
+        verify(wishRepository).deleteAllByProductId(10L);
     }
 
     @Test

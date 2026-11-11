@@ -46,6 +46,7 @@ class OrdersServiceImplTest {
     @Mock OrdersRepository ordersRepository;
     @Mock CartItemRepository cartItemRepository;
     @Mock UserRepository userRepository;
+    @Mock com.Soo_Shinsa.user.service.PointService pointService;
     @InjectMocks OrdersServiceImpl service;
 
     User customer, otherCustomer, vendor, admin;
@@ -164,6 +165,40 @@ class OrdersServiceImplTest {
             service.createSingleOrderCartItem(customer, 1L);
             verify(cartItemRepository).delete(mine);
             verify(cartItemRepository, never()).deleteAll();
+        }
+    }
+
+    @Nested
+    class 포인트 {
+        @Test
+        void 장바구니_주문에_포인트를_쓰면_영속_사용자_잔액을_차감하고_결제_금액에서_뺀다() {
+            CartItem c1 = cartItem(1L, customer, product, option(1L, product), 2); // 20,000
+            when(cartItemRepository.findByUserUserId(customer.getUserId())).thenReturn(List.of(c1));
+            when(pointService.use(eq(customer), eq(new BigDecimal("3000")), any())).thenReturn(new BigDecimal("3000"));
+
+            OrdersResponseDto dto = service.createAllOrderFromCart(customer, new BigDecimal("3000"));
+
+            assertThat(dto.getTotalPrice()).isEqualByComparingTo("17000");
+            assertThat(dto.getUsedPoint()).isEqualByComparingTo("3000");
+            verify(pointService).use(eq(customer), eq(new BigDecimal("3000")), eq(new BigDecimal("20000")));
+        }
+
+        @Test
+        void 포인트를_안_쓰면_PointService_를_부르지_않는다() {
+            when(cartItemRepository.findByUserUserId(customer.getUserId())).thenReturn(List.of(cartItem(1L, customer, product, option(1L, product), 1)));
+            service.createAllOrderFromCart(customer, null);
+            service.createAllOrderFromCart(customer, BigDecimal.ZERO);
+            verify(pointService, never()).use(any(), any(), any());
+        }
+
+        @Test
+        void 상태_변경마다_PointService_에_전이를_알린다() {
+            Orders order = order(1L, customer, BEFOREPAYMENT);
+            when(ordersRepository.findByIdOrElseThrow(1L)).thenReturn(order);
+            service.updateOrder(admin, 1L, PAYMENTCOMPLETED);
+            service.updateOrder(customer, 1L, CANCEL);
+            verify(pointService).onStatusChanged(order, PAYMENTCOMPLETED);
+            verify(pointService).onStatusChanged(order, CANCEL);
         }
     }
 

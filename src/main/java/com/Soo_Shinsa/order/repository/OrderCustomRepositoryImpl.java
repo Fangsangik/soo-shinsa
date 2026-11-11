@@ -63,6 +63,8 @@ public class OrderCustomRepositoryImpl implements OrderCustomRepository {
                 .fetch()
                 .stream()
                 .map(order -> OrdersResponseDto.builder()
+                        .usedPoint(order.getUsedPoint())
+                        .earnedPoint(order.getEarnedPoint())
                         .id(order.getId())
                         .orderId(order.getOrderId())
                         .totalPrice(order.getTotalPrice())

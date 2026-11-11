@@ -9,4 +9,7 @@ public class SingleProductOrderRequestDto {
     private Long productId;
     @NotNull(message = "수량은 필수값 입니다.")
     private Integer quantity;
+
+    /** 사용할 포인트 (선택) */
+    private java.math.BigDecimal usePoint;
 }

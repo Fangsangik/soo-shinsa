@@ -42,6 +42,16 @@ public class Orders extends BaseTimeEntity {
 
     private BigDecimal discountPrice;
 
+    /** 이 주문에 쓴/적립한 포인트. 취소 때 그대로 되돌리기 위해 기록 (적립률이 승급으로 바뀌어도 금액이 안 어긋나게) */
+    @Column(nullable = false, columnDefinition = "decimal(38,2) default 0")
+    private BigDecimal usedPoint = BigDecimal.ZERO;
+    @Column(nullable = false, columnDefinition = "decimal(38,2) default 0")
+    private BigDecimal earnedPoint = BigDecimal.ZERO;
+    @Column(nullable = false, columnDefinition = "bit default 0")
+    private boolean pointSettled = false;   // 적립/누적구매 반영 완료 (중복 정산 방지)
+    @Column(nullable = false, columnDefinition = "bit default 0")
+    private boolean pointRefunded = false;  // 취소로 되돌림 완료 (중복 반환 방지)
+
     @Builder
     public Orders(String orderId, BigDecimal totalPrice, OrdersStatus status, User user, List<OrderItem> orderItems, BigDecimal discountPrice) {
         this.orderId = createOrderNumber();
@@ -85,7 +95,15 @@ public class Orders extends BaseTimeEntity {
 
     }
 
-    // 총 결제 금액 계산
+    /** 주문 생성 시 포인트 사용: 결제 금액에서 차감 */
+    public void applyPoint(BigDecimal amount) {
+        this.usedPoint = amount == null ? BigDecimal.ZERO : amount;
+        calculateTotalPrice();
+    }
+    public void recordEarnedPoint(BigDecimal earned) { this.earnedPoint = earned; this.pointSettled = true; }
+    public void markPointRefunded() { this.pointRefunded = true; }
+
+    // 총 결제 금액 계산 = 항목 합계 − 사용 포인트
     public void calculateTotalPrice() {
         this.totalPrice = orderItems.stream()
                 .map(item -> {
@@ -94,7 +112,9 @@ public class Orders extends BaseTimeEntity {
                             : item.getProduct().getPrice();
                     return effectivePrice.multiply(BigDecimal.valueOf(item.getQuantity()));
                 })
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .subtract(usedPoint == null ? BigDecimal.ZERO : usedPoint)
+                .max(BigDecimal.ZERO);
     }
 
     private String createOrderNumber() {

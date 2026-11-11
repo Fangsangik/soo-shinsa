@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class UrlConst {
     //로그인 필터 화이트 리스트
-    public static final String[] WHITE_LIST = {"/", "/users/signin", "/users/refresh", "/users/logout", "/users/login", "/api/success", "/api/fail", "/api/client-key", "/index.html", "/app.js", "/app.css", "/style.css", "/favicon.ico"};
+    public static final String[] WHITE_LIST = {"/", "/users/signin", "/users/refresh", "/users/logout", "/users/login", "/api/success", "/api/fail", "/api/client-key", "/index.html", "/app.js", "/app.css", "/style.css", "/favicon.ico", "/ws/**"};
 
     //비로그인 조회 허용 (GET 전용)
     public static final String[] PUBLIC_GET_LIST = {"/brands", "/brands/{id:\\d+}", "/products", "/products/{id:\\d+}", "/products/brands/*",

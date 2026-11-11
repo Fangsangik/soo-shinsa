@@ -69,6 +69,11 @@ public enum ErrorCode {
     INVALID_ORDER_STATUS("현재 주문 상태에서는 변경할 수 없는 상태입니다.", HttpStatus.BAD_REQUEST),
     ONLY_BEFORE_PAYMENT("결제 전 상태만 이용할 수 있습니다.", HttpStatus.BAD_REQUEST),
     NOT_FOUND_SUB_CATEGORY("해당 카테고리를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    NOT_ENOUGH_POINT("보유 포인트가 부족합니다.", HttpStatus.BAD_REQUEST),
+    POINT_OVER_ORDER_TOTAL("포인트는 주문 금액까지만 사용할 수 있습니다.", HttpStatus.BAD_REQUEST),
+    ALREADY_WISHED("이미 찜한 상품입니다.", HttpStatus.BAD_REQUEST),
+    NOT_FOUND_WISH("찜한 상품이 아닙니다.", HttpStatus.NOT_FOUND),
+    CHAT_ROOM_FORBIDDEN("이 상담방에 들어갈 권한이 없습니다.", HttpStatus.FORBIDDEN),
     INVALID_REFRESH_TOKEN("유효하지 않은 토큰 입니다.", HttpStatus.BAD_REQUEST),
     ACCESS_TOKEN_VALID("아직 AccessToken이 유효 합니다.", HttpStatus.MULTI_STATUS);
 
