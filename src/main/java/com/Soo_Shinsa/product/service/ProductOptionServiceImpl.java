@@ -29,9 +29,9 @@ public class ProductOptionServiceImpl implements ProductOptionService {
     @Transactional
     @Override
     public ProductOptionResponseDto createOption(User user, ProductOptionRequestDto dto, Long productId) {
-        EntityValidator.validateAdminOrVendorAccess(user);
 
         Product findProduct = productRepository.findByIdOrElseThrow(productId);
+        EntityValidator.validateBrandOwner(user, findProduct.getBrand());
 
 
         ProductOption option = ProductOption.builder()
@@ -51,7 +51,6 @@ public class ProductOptionServiceImpl implements ProductOptionService {
     @Override
     public ProductOptionResponseDto updateOption(User user, ProductOptionUpdateDto dto, Long productOptionId) {
 
-        EntityValidator.validateAdminOrVendorAccess(user);
 
         ProductOption findOption = productOptionRepository.findByIdOrElseThrow(productOptionId);
 
@@ -60,6 +59,7 @@ public class ProductOptionServiceImpl implements ProductOptionService {
         if (associatedProduct == null) {
             throw new NotFoundException(ErrorCode.NOT_FOUND_PRODUCT);
         }
+        EntityValidator.validateBrandOwner(user, associatedProduct.getBrand());
 
         findOption.update(dto.getSize(), dto.getColor(), dto.getStatus());
 

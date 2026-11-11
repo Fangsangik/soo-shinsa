@@ -40,6 +40,8 @@ public class ProductCustomRepositoryImpl implements ProductCustomRepository {
             builder.and(product.price.loe(requestDto.getMaxPrice()));
         }
 
+        // count 쿼리는 행이 1개뿐이라 .fetch().size() 는 항상 1 → 페이지가 넘어가면 totalElements 가 틀렸다. fetchOne 으로 수정.
+        Long total = queryFactory.select(product.count()).from(product).where(builder).fetchOne();
         return new PageImpl<>(
                 queryFactory
                         .select(Projections.constructor(ProductResponseDto.class,
@@ -60,12 +62,7 @@ public class ProductCustomRepositoryImpl implements ProductCustomRepository {
                         .limit(pageable.getPageSize())
                         .fetch(),
                 pageable,
-                queryFactory
-                        .select(product.count())
-                        .from(product)
-                        .where(builder)
-                        .fetch()
-                        .size()
+                total != null ? total : 0
         );
     }
 }

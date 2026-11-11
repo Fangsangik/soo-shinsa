@@ -30,7 +30,7 @@ public class ProductOptionResponseDto {
                 .id(savedOption.getId())
                 .color(savedOption.getColor())
                 .product(savedOption.getProduct().getId())
-                .status(ProductStatus.AVAILABLE)
+                .status(savedOption.getProductStatus())
                 .size(savedOption.getSize())
                 .build();
     }

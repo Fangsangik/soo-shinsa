@@ -2,7 +2,7 @@
 """프론트(app.js) ↔ 백엔드 응답 계약 검증.
 app.js 가 읽는 필드/ID 가 실제 응답에 존재하고 타입이 맞는지, 그리고 한 응답의 ID 가 다음 요청의 PK 로 그대로 쓰이는지 확인한다.
 사용: 서버 기동 + python3 scripts/seed-local.py 후  python3 scripts/contract-test.py"""
-import json, os, re, sys, urllib.request, urllib.error, uuid
+import json, os, re, sys, time, urllib.parse, urllib.request, urllib.error, uuid
 
 BASE = os.environ.get("BASE_URL", "http://localhost:8080")
 PW = "Passw0rd!"
@@ -76,7 +76,7 @@ print("== 홈: 브랜드 + 전체 상품 검색  (pages.home)")
 s, bj = call("GET", "/brands?page=0&size=100")
 fields(bj["data"], PAGE, "GET /brands.data")
 expect(len(bj["data"]["content"]) > 0, "at least one brand (seed)")
-brand = bj["data"]["content"][0]
+brand = next(b for b in bj["data"]["content"] if call("GET", f"/products/brands/{b['id']}?page=0&size=1")[1]["data"]["totalElements"] > 0)  # 상품이 있는 브랜드
 fields(brand, {"id": int, "name": str}, "brands.content[]")
 s, pj = call("GET", "/products?page=0&size=12")
 fields(pj["data"], PAGE, "GET /products.data")
@@ -216,6 +216,107 @@ login("VENDOR")
 s, j = call("GET", "/brands/owners")
 expect(s == 200 and isinstance(j["data"], list) and len(j["data"]) > 0, "GET /brands/owners list for vendor")
 fields(j["data"][0], {"id": int, "name": str, "registrationNum": str}, "brands/owners[]")
+
+print("== 쿠폰 UX  (cart dropdown excludes used; pages.me 내 쿠폰 = GET /coupons/me)")
+login("CUSTOMER")
+s, j = call("GET", "/coupons")
+expect(s == 200 and all(c["id"] != new_cp for c in j["data"]), "coupon just applied is no longer in GET /coupons for this user")
+s, j = call("GET", "/coupons/me")
+expect(s == 200 and isinstance(j["data"], list) and len(j["data"]) > 0, "GET /coupons/me list")
+mine = next((c for c in j["data"] if c["couponId"] == new_cp), None)
+expect(mine is not None, "applied coupon appears in /coupons/me by couponId")
+if mine:
+    fields(mine, {"couponUserId": int, "couponId": int, "couponName": str, "couponCode": str, "discountRate": NUM, "expirationDate": str, "used": bool}, "coupons/me[]")
+    expect(mine["used"] is True and isinstance(mine["usedAt"], str), "applied coupon is used=true with usedAt")
+
+print("== 페이지네이션  (pager(): totalPages, number, first, last 를 읽는다)")
+PAGER = {"totalPages": int, "number": int, "first": bool, "last": bool, "totalElements": int}
+for path in [f"/orders/users?page=0&size=1", f"/reviews/products/{prod['id']}?page=0&size=1", f"/products/brands/{brand['id']}?page=0&size=1", "/products?page=0&size=1"]:
+    s, j = call("GET", path)
+    expect(s == 200, f"GET {path} 200", j)
+    fields(j["data"], PAGER, path.split('?')[0])
+    if j["data"]["totalElements"] > 1:
+        expect(j["data"]["totalPages"] == j["data"]["totalElements"], f"{path.split('?')[0]} size=1 → totalPages == totalElements")
+        s2, j2 = call("GET", path.replace("page=0", "page=1"))
+        expect(s2 == 200 and j2["data"]["number"] == 1 and j2["data"]["first"] is False, f"{path.split('?')[0]} page=1 is navigable")
+
+print("== 주문 관리  (adminTabs.orders: GET /orders/manage, STAFF_ACTIONS → PATCH /orders)")
+login("ADMIN")
+s, j = call("GET", "/orders/manage?page=0&size=5")
+expect(s == 200, "ADMIN GET /orders/manage 200", j)
+fields(j["data"], PAGER, "orders/manage.data")
+if j["data"]["content"]:
+    fields(j["data"]["content"][0], {"id": int, "orderId": str, "userName": str, "status": str, "totalPrice": NUM, "orderItems": list}, "orders/manage[]")
+s, j = call("GET", "/orders/manage?status=CANCEL&size=50")
+expect(s == 200 and all(x["status"] == "CANCEL" for x in j["data"]["content"]), "status filter returns only that status")
+s, j = call("GET", "/orders/manage?startDate=2000-01-01&endDate=2000-01-02")
+expect(s == 200 and j["data"]["totalElements"] == 0, "date range filter (iso) binds and filters")
+s, j = call("GET", "/reports?page=0&size=1")
+fields(j["data"], PAGER, "reports.data (admin pager)")
+login("VENDOR")
+s, j = call("GET", "/orders/manage?size=50")
+expect(s == 200, "VENDOR GET /orders/manage 200", j)
+ids = [x["id"] for x in j["data"]["content"]]
+expect(o["id"] in ids, "vendor sees the order containing its own brand's product")
+s, j = call("GET", f"/orders/{o['id']}")  # 현재 상태 확인 후 입점사 전이 1회
+cur = j["data"]["status"] if s == 200 else None
+nxt = {"BEFOREPAYMENT": "PAYMENTCOMPLETED", "PAYMENTCOMPLETED": "ONDELIVERY", "ONDELIVERY": "DELIVERYCOMPLETED", "CANCEL": "RETURN", "DELIVERYCOMPLETED": "ORDERCOMPLETED"}.get(cur)
+if nxt:
+    s, j = call("PATCH", "/orders", {"orderId": o["id"], "status": nxt})
+    expect(s == 200 and j["data"]["status"] == nxt, f"vendor staff transition {cur} → {nxt}", j)
+login("CUSTOMER")
+s, j = call("GET", "/orders/manage")
+expect(s in (401, 403), "CUSTOMER cannot read /orders/manage", s)
+
+print("== 입점사 상품 관리  (adminTabs.brand: PATCH /products/{id}, POST/PATCH options, DELETE /products/{id})")
+login("VENDOR")
+s, j = call("GET", "/brands/owners"); bid = j["data"][0]["id"]
+s, j = call("POST", f"/products/brands/{bid}", multipart={"productRequestDto": {"name": "계약테스트 상품", "price": 10000, "brandId": bid, "status": "AVAILABLE"}})
+expect(s == 201, "vendor creates product (no image → imageUrl null is fine)", j); pid = j["data"]["id"]
+s, j = call("PATCH", f"/products/{pid}", multipart={"productUpdateDto": {"name": "계약테스트 상품(수정)", "price": 12000, "status": "SOLD_OUT"}})
+expect(s == 200, "PATCH /products/{id} multipart productUpdateDto", j)
+if s == 200:
+    fields(j["data"], {"id": int, "name": str, "price": NUM, "status": str}, "product update.data")
+    expect(float(j["data"]["price"]) == 12000 and j["data"]["status"] == "SOLD_OUT", "update applied (price/status)")
+s, j = call("POST", f"/options/products/{pid}", {"size": "XL", "color": "Navy", "status": "SOLD_OUT"})
+expect(s == 201 and j["data"]["status"] == "SOLD_OUT", "option create echoes requested status (not hardcoded AVAILABLE)", j); oid = j["data"]["id"]
+s, j = call("PATCH", f"/options/{oid}", {"size": "XL", "color": "Navy", "status": "AVAILABLE"})
+expect(s == 200 and j["data"]["status"] == "AVAILABLE", "option status update", j)
+s, j = call("GET", f"/products/{pid}")
+expect(any(x["id"] == oid and x["status"] == "AVAILABLE" for x in j["data"]["options"]), "product detail options reflect option update")
+ts = str(int(time.time()))
+call("POST", "/users/signin", {"email": f"v2{ts}@r.test", "phoneNum": "010-2222-3333", "password": PW, "name": "다른입점사", "role": "VENDOR"})
+s, j = call("POST", "/users/login", {"email": f"v2{ts}@r.test", "password": PW}); TOK = j["data"]["accessToken"]
+s, j = call("PATCH", f"/products/{pid}", multipart={"productUpdateDto": {"price": 1}})
+expect(s in (401, 403), "another vendor cannot edit this vendor's product", s)
+s, j = call("POST", f"/options/products/{pid}", {"size": "S", "color": "Red", "status": "AVAILABLE"})
+expect(s in (401, 403), "another vendor cannot add options to this vendor's product", s)
+s, j = call("DELETE", f"/products/{pid}")
+expect(s in (401, 403), "another vendor cannot delete this vendor's product", s)
+login("VENDOR")
+s, j = call("DELETE", f"/products/{pid}")
+expect(s == 204, "owner deletes product (cascade options)", s)
+
+print("== 통계  (adminTabs.stats: POST /admin/statistics/aggregate → GET sales/count; rowList=날짜, columnList=브랜드+총합)")
+login("ADMIN")
+today = time.strftime("%Y-%m-%d")
+s, j = call("POST", f"/admin/statistics/aggregate?date={today}")
+expect(s == 200 and j.get("date") == today and isinstance(j.get("rows"), int), "aggregate returns {date, rows}", j)
+rows_first = j.get("rows")
+s, j2 = call("POST", f"/admin/statistics/aggregate?date={today}")
+expect(s == 200 and j2.get("rows") == rows_first, "re-running the same date is idempotent (same row count)", j2)
+expect(rows_first > 0, "today's orders produced statistics rows (orders were created by this test)")
+s, j = call("GET", f"/admin/statistics/sales?periodType=DAY&startDate={today}&endDate={today}")
+expect(s == 200 and today in j["headerData"]["rowList"], "sales DAY includes today's row", j)
+expect(j["headerData"]["columnList"][-1] == "총합" and len(j["bodyDataList"]) == len(j["headerData"]["columnList"]), "bodyDataList aligns with columnList (brands + 총합)")
+expect(all(len(b["dataList"]) == len(j["headerData"]["rowList"]) for b in j["bodyDataList"]), "each brand row has one value per date")
+s, j = call("GET", f"/admin/statistics/count?periodType=DAY&startDate={today}&endDate={today}&orderStatus=BEFOREPAYMENT")
+expect(s == 200 and "headerData" in j, "count with orderStatus filter", j)
+s, j = call("GET", f"/admin/statistics/sales?periodType=DAY&startDate={today}&endDate={today}&brandList={urllib.parse.quote(j['headerData']['columnList'][0]) if j['headerData']['columnList'] and j['headerData']['columnList'][0] != '총합' else ''}")
+expect(s == 200, "sales with (url-encoded) brandList filter", j)
+login("VENDOR")
+s, j = call("POST", f"/admin/statistics/aggregate?date={today}")
+expect(s == 403, "VENDOR cannot trigger aggregation", s)
 
 print("== 에러 응답 형태  (api(): json.message 를 토스트로 표시)")
 TOK = None

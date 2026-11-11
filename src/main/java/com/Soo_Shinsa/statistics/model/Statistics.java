@@ -35,7 +35,7 @@ public class Statistics {
     public Statistics(OrderHistoryForStatistic orderHistory) {
         this.productName = orderHistory.getProductName();
         this.totalPrice = orderHistory.getPrice();
-        this.categoryName = null;
+        this.categoryName = orderHistory.getCategoryName();
         this.brandName = orderHistory.getBrandName();
 
         this.quantity = orderHistory.getQuantity();

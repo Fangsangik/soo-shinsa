@@ -17,23 +17,14 @@ import java.util.Date;
 @Slf4j
 @Configuration
 public class ScheduleConfig {
-    private final JobLauncher jobLauncher;
-    private final JobRegistry jobRegistry;
+    private final com.Soo_Shinsa.statistics.service.StatisticsAggregateService aggregateService;
 
     //매 00:00 주기로 동작
     @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
 //    @Scheduled(cron = "1/5 * * * * *", zone = "Asia/Seoul")
     public void runFirstJob() throws Exception {
 
-        log.info("first schedule start");
-
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        String date = dateFormat.format(new Date());
-
-        JobParameters jobParameters = new JobParametersBuilder()
-                .addString("date", date)
-                .toJobParameters();
-
-        jobLauncher.run(jobRegistry.getJob("stackOrderHistoryJob"), jobParameters);
+        log.info("nightly statistics aggregation start");
+        aggregateService.aggregate(java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")).minusDays(1));
     }
 }

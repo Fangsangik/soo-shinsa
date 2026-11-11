@@ -8,6 +8,15 @@
     const won = n => Math.round(Number(n || 0)).toLocaleString('ko-KR') + '원';
     const qs = o => { const p = new URLSearchParams(); Object.entries(o).forEach(([k, v]) => (v !== '' && v != null) && p.set(k, v)); const s = p.toString(); return s ? '?' + s : ''; };
     const state = { user: null };
+    /* Spring Page → « 이전 / n / 다음 » 컨트롤. go(page) 로 다시 로드. */
+    const pager = (pg, go) => {
+        if (!pg || pg.totalPages <= 1) return '';
+        const el = document.createElement('div'); el.className = 'pager';
+        el.innerHTML = `<button class="btn sm ghost" ${pg.first ? 'disabled' : ''} data-go="${pg.number - 1}">이전</button><span class="muted">${pg.number + 1} / ${pg.totalPages} 페이지 · 총 ${pg.totalElements}개</span><button class="btn sm ghost" ${pg.last ? 'disabled' : ''} data-go="${pg.number + 1}">다음</button>`;
+        el.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(+b.dataset.go));
+        return el;
+    };
+    const mount = (host, pg, go) => { const p = pager(pg, go); if (p) host.append(p); };
 
     /* ---------- toast / modal ---------- */
     let toastTimer;
@@ -71,7 +80,7 @@
         const here = location.hash.split('/')[1] || '';
         const link = (h, t) => `<a href="#/${h}" class="${here === h ? 'active' : ''}">${t}</a>`;
         nav.innerHTML = tokens.access
-            ? link('', '브랜드') + link('cart', '장바구니') + link('orders', '주문') + (isStaff() ? link('admin', '관리') : '') + link('me', esc(state.user?.name || '내 정보'))
+            ? link('', '브랜드') + link('cart', '장바구니') + link('orders', '주문') + (isStaff() ? link('admin', state.user?.role === 'ADMIN' ? '관리' : '입점사 관리') : '') + link('me', esc(state.user?.name || '내 정보'))
             : link('', '브랜드') + link('login', '로그인') + link('signup', '회원가입');
     };
 
@@ -150,19 +159,15 @@
                 <button class="btn sm">검색</button>
                 <button class="btn sm ghost" type="button" id="report">브랜드 신고</button>
             </form>
-            <div class="grid" id="g" style="margin-top:16px"></div>`;
-        const load = async () => {
+            <div class="grid" id="g" style="margin-top:16px"></div><div id="pg"></div>`;
+        const load = async (page = 0) => {
             const f = Object.fromEntries(new FormData($('#filter')));
-            const j = await api('GET', `/products/brands/${id}${qs({ ...f, page: 0, size: 60 })}`);
+            const j = await api('GET', `/products/brands/${id}${qs({ ...f, page, size: 12 })}`);
             const list = j.data.content;
-            $('#g').innerHTML = list.length ? list.map(p => `
-                <a class="tile" href="#/product/${p.id}">
-                    <div class="thumb"><img src="${img(p.imageUrl, p.id)}" alt="" loading="lazy"></div>
-                    <div class="body"><div class="name">${esc(p.name)}</div><div class="price">${won(p.price)}</div>
-                    <span class="badge ${p.status === 'AVAILABLE' ? 'ok' : 'warn'}">${esc(p.status)}</span></div>
-                </a>`).join('') : '<div class="empty">상품이 없습니다.</div>';
+            $('#g').innerHTML = list.length ? list.map(productTile).join('') : '<div class="empty">상품이 없습니다.</div>';
+            $('#pg').innerHTML = ''; mount($('#pg'), j.data, load);
         };
-        $('#filter').onsubmit = e => { e.preventDefault(); load().catch(err => toast(err.message, true)); };
+        $('#filter').onsubmit = e => { e.preventDefault(); load(0).catch(err => toast(err.message, true)); };
         $('#report').onclick = () => reportDialog('BRAND', id);
         await load();
     };
@@ -192,7 +197,7 @@
             <h2>리뷰</h2>
             <form class="row" id="rf"><select name="minRate"><option value="">최소 별점</option>${[1,2,3,4,5].map(n=>`<option>${n}</option>`).join('')}</select>
                 <select name="maxRate"><option value="">최대 별점</option>${[1,2,3,4,5].map(n=>`<option>${n}</option>`).join('')}</select><button class="btn sm">필터</button></form>
-            <div id="reviews" style="margin-top:12px"></div>`;
+            <div id="reviews" style="margin-top:12px"></div><div id="rpg"></div>`;
         $('#buy').onsubmit = async e => {
             e.preventDefault(); if (!requireLogin()) return;
             const d = Object.fromEntries(new FormData(e.target)); const act = e.submitter.value;
@@ -207,9 +212,9 @@
             } catch (err) { toast(err.message, true); }
         };
         $('#report').onclick = () => reportDialog('PRODUCT', p.id);
-        const loadReviews = async () => {
+        const loadReviews = async (page = 0) => {
             const f = Object.fromEntries(new FormData($('#rf')));
-            const j = await api('GET', `/reviews/products/${id}${qs({ ...f, page: 0, size: 50 })}`);
+            const j = await api('GET', `/reviews/products/${id}${qs({ ...f, page, size: 10 })}`);
             const list = j.data.content;
             $('#reviews').innerHTML = list.length ? list.map(r => `<div class="card">
                 <div class="row between"><span class="stars">${'★'.repeat(r.rate)}${'☆'.repeat(5 - r.rate)}</span>
@@ -217,8 +222,9 @@
                 <p style="margin:8px 0 0">${esc(r.content)}</p>${r.imageUrl ? `<img src="${esc(r.imageUrl)}" style="max-width:240px;border-radius:8px;margin-top:8px">` : ''}
             </div>`).join('') : '<div class="empty">아직 리뷰가 없습니다. 구매 후 주문 페이지에서 리뷰를 남길 수 있어요.</div>';
             $('#reviews').querySelectorAll('[data-report]').forEach(b => b.onclick = () => reportDialog('REVIEW', +b.dataset.report));
+            $('#rpg').innerHTML = ''; mount($('#rpg'), j.data, loadReviews);
         };
-        $('#rf').onsubmit = e => { e.preventDefault(); loadReviews().catch(err => toast(err.message, true)); };
+        $('#rf').onsubmit = e => { e.preventDefault(); loadReviews(0).catch(err => toast(err.message, true)); };
         await loadReviews();
     };
 
@@ -251,7 +257,7 @@
             $('.coupon', tr).onclick = async () => {
                 let coupons = [];
                 try { coupons = (await api('GET', '/coupons')).data; } catch (err) { toast(err.message, true); return; }
-                if (!coupons.length) { toast('사용 가능한 쿠폰이 없습니다.'); return; }
+                if (!coupons.length) { toast('사용 가능한 쿠폰이 없습니다. (이미 사용한 쿠폰은 제외됩니다)'); return; }
                 openModal(`<h2 style="margin-top:0">쿠폰 적용</h2><label>쿠폰<select name="couponId">${coupons.map(c => `<option value="${c.id}">${esc(c.couponName)} · ${Number(c.discountRate)}% (~${esc(c.expirationDate)})</option>`).join('')}</select></label>`, async d => {
                     const r = await api('POST', `/carts/${id}/apply-coupon`, { couponId: +d.couponId });
                     toast(`${r.message} 할인가 ${won(r.data.discountedPrice)}`); pages.cart();
@@ -295,17 +301,22 @@
         DELIVERYCOMPLETED: [['REQUESTFORRETURN', '반품 신청'], ['APPLYFOREXCHANGE', '교환 신청']], ORDERCOMPLETED: [['REQUESTFORRETURN', '반품 신청'], ['APPLYFOREXCHANGE', '교환 신청']],
         REQUESTFORRETURN: [['CANCELRETURN', '반품 취소']], APPLYFOREXCHANGE: [['EXCHANGECANCELLATION', '교환 취소']] };
 
+    // 관리자/입점사가 누를 수 있는 전이 (결제 확인은 Toss 테스트키 없이 데모할 때 사용)
+    const STAFF_ACTIONS = { BEFOREPAYMENT: [['PAYMENTCOMPLETED', '결제 확인']], PAYMENTCOMPLETED: [['ONDELIVERY', '배송 시작']], ONDELIVERY: [['DELIVERYCOMPLETED', '배송 완료']],
+        DELIVERYCOMPLETED: [['ORDERCOMPLETED', '구매 확정']], CANCEL: [['RETURN', '취소 완료']], REQUESTFORRETURN: [['RETURNCOMPLETED', '반품 완료']], APPLYFOREXCHANGE: [['COMPLETEDEXCHANGE', '교환 완료']] };
+    const BADGE = s => s === 'PAYMENTCOMPLETED' || s === 'ORDERCOMPLETED' ? 'ok' : s === 'BEFOREPAYMENT' || s.includes('REQUEST') || s === 'APPLYFOREXCHANGE' || s === 'CANCEL' ? 'warn' : '';
+
     pages.orders = async () => {
         if (!requireLogin()) return;
         app.innerHTML = `<h1>주문 내역</h1>
             <form class="row" id="f"><label>시작일<input type="date" name="startDate"></label><label>종료일<input type="date" name="endDate"></label><button class="btn sm" style="align-self:end">조회</button></form>
-            <div id="list" style="margin-top:16px"></div>`;
-        const load = async () => {
+            <div id="list" style="margin-top:16px"></div><div id="pg"></div>`;
+        const load = async (page = 0) => {
             const f = Object.fromEntries(new FormData($('#f')));
-            const j = await api('GET', `/orders/users${qs({ ...f, page: 0, size: 50 })}`);
+            const j = await api('GET', `/orders/users${qs({ ...f, page, size: 10 })}`);
             const orders = j.data.content;
             $('#list').innerHTML = orders.length ? orders.map(o => `<div class="card" data-id="${o.id}">
-                <div class="row between"><div><strong>${esc(o.orderId)}</strong> <span class="badge ${o.status === 'PAYMENTCOMPLETED' ? 'ok' : o.status === 'BEFOREPAYMENT' ? 'warn' : ''}">${STATUS_KO[o.status] || esc(o.status)}</span></div>
+                <div class="row between"><div><strong>${esc(o.orderId)}</strong> <span class="badge ${BADGE(o.status)}">${STATUS_KO[o.status] || esc(o.status)}</span></div>
                     <div>${o.status === 'BEFOREPAYMENT' ? `<a class="btn primary sm" href="#/pay/${o.id}">결제하기</a>` : ''}
                     ${(ORDER_ACTIONS[o.status] || []).map(([to, label]) => `<button class="btn sm ${to === 'CANCEL' ? 'danger' : 'ghost'} act" data-to="${to}">${label}</button>`).join('')}</div></div>
                 <table style="margin-top:12px"><tbody>${(o.orderItems || []).map(it => `<tr>
@@ -315,10 +326,11 @@
                 </tbody></table>
                 <div class="row between" style="margin-top:8px"><span class="muted">총 결제금액</span><strong>${won(o.totalPrice)}</strong></div>
             </div>`).join('') : '<div class="empty">주문 내역이 없습니다.</div>';
+            $('#pg').innerHTML = ''; mount($('#pg'), j.data, load);
             $('#list').querySelectorAll('.card').forEach(card => {
                 const id = +card.dataset.id;
                 card.querySelectorAll('.act').forEach(b => b.onclick = async () => {
-                    try { const r = await api('PATCH', '/orders', { orderId: id, status: b.dataset.to }); toast(r.message); load(); } catch (err) { toast(err.message, true); }
+                    try { const r = await api('PATCH', '/orders', { orderId: id, status: b.dataset.to }); toast(r.message); load(page); } catch (err) { toast(err.message, true); }
                 });
                 card.querySelectorAll('.review').forEach(b => b.onclick = () => openModal(`<h2 style="margin-top:0">리뷰 작성</h2>
                     <label>별점<select name="rate">${[5,4,3,2,1].map(n=>`<option value="${n}">${'★'.repeat(n)}</option>`).join('')}</select></label>
@@ -331,7 +343,7 @@
                 }));
             });
         };
-        $('#f').onsubmit = e => { e.preventDefault(); load().catch(err => toast(err.message, true)); };
+        $('#f').onsubmit = e => { e.preventDefault(); load(0).catch(err => toast(err.message, true)); };
         await load();
     };
 
@@ -346,7 +358,13 @@
             <label>이름<input name="name" value="${esc(u.name)}"></label><label>전화번호<input name="phoneNum" value="${esc(u.phoneNum)}"></label>
             <label>기존 비밀번호<input name="oldPassword" type="password" required></label><label>새 비밀번호<input name="newPassword" type="password" required></label>
             <button class="btn primary">저장</button></form>
+            <h2>내 쿠폰</h2><div id="coupons" class="muted">불러오는 중…</div>
             <h2>계정</h2><div class="row"><button class="btn" id="logout">로그아웃</button><button class="btn danger" id="leave">회원 탈퇴</button></div>`;
+        api('GET', '/coupons/me').then(j => {
+            const list = j.data;
+            $('#coupons').innerHTML = list.length ? `<table><thead><tr><th>쿠폰</th><th>할인</th><th>만료일</th><th>상태</th></tr></thead><tbody>${list.map(c => `<tr><td>${esc(c.couponName)} <span class="muted">${esc(c.couponCode)}</span></td><td>${Number(c.discountRate)}%</td><td>${esc(c.expirationDate)}</td><td><span class="badge ${c.used ? '' : 'ok'}">${c.used ? `사용함 (${esc(c.usedAt)})` : '사용 가능'}</span></td></tr>`).join('')}</tbody></table>`
+                : '<div class="empty">발급받은 쿠폰이 없습니다. 장바구니에서 쿠폰을 적용하면 여기에 기록됩니다.</div>';
+        }).catch(err => { $('#coupons').textContent = err.message; });
         $('#f').onsubmit = async e => { e.preventDefault(); try { const r = await api('PATCH', '/users', Object.fromEntries(new FormData(e.target))); toast('저장되었습니다.'); pages.me(); } catch (err) { toast(err.message, true); } };
         $('#logout').onclick = async () => { try { await api('POST', '/users/logout'); } catch { /* token already invalid */ } tokens.clear(); toast('로그아웃되었습니다.'); location.hash = '#/'; };
         $('#leave').onclick = () => openModal(`<h2 style="margin-top:0">정말 탈퇴하시겠어요?</h2><label>비밀번호 확인<input name="password" type="password" required></label>`, async d => {
@@ -359,7 +377,7 @@
         if (!requireLogin()) return;
         if (!isStaff()) { app.innerHTML = '<div class="empty">관리자 또는 입점 사업자만 접근할 수 있습니다.</div>'; return; }
         const admin = state.user.role === 'ADMIN';
-        const tabs = [['brand', '브랜드/상품'], ['coupon', '쿠폰'], ...(admin ? [['category', '카테고리'], ['report', '신고 관리'], ['stats', '통계']] : [])];
+        const tabs = [['orders', '주문 관리'], ['brand', '브랜드/상품'], ['coupon', '쿠폰'], ...(admin ? [['category', '카테고리'], ['report', '신고 관리'], ['stats', '통계']] : [])];
         app.innerHTML = `<h1>관리</h1><div class="tabs">${tabs.map(([k, t], i) => `<button class="btn sm ${i ? '' : 'active'}" data-tab="${k}">${t}</button>`).join('')}</div><div id="panel"></div>`;
         const show = k => { app.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === k)); adminTabs[k]($('#panel'), admin).catch(err => toast(err.message, true)); };
         app.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => show(b.dataset.tab));
@@ -391,6 +409,30 @@
         panel.append(list);
     };
 
+    /* 주문 관리: ADMIN 은 전체, VENDOR 는 자기 브랜드 상품이 포함된 주문만 (GET /orders/manage) */
+    adminTabs.orders = async (panel) => {
+        panel.innerHTML = `<div class="card"><h2 style="margin-top:0">주문 관리</h2>
+            <form class="row" id="of"><select name="status"><option value="">전체 상태</option>${Object.entries(STATUS_KO).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
+            <label>시작일<input type="date" name="startDate"></label><label>종료일<input type="date" name="endDate"></label><button class="btn sm" style="align-self:end">조회</button></form>
+            <div id="olist" style="margin-top:12px"></div><div id="opg"></div></div>`;
+        const load = async (page = 0) => {
+            const f = Object.fromEntries(new FormData($('#of')));
+            const j = await api('GET', `/orders/manage${qs({ ...f, page, size: 10 })}`);
+            const orders = j.data.content;
+            $('#olist').innerHTML = orders.length ? `<table><thead><tr><th>주문번호</th><th>주문자</th><th>상품</th><th>금액</th><th>상태</th><th></th></tr></thead><tbody>${orders.map(o => `<tr data-id="${o.id}">
+                <td class="muted" style="font-size:12px">${esc(o.orderId)}</td><td>${esc(o.userName || '#' + o.userId)}</td>
+                <td>${(o.orderItems || []).map(it => `${esc(it.productName)} × ${it.quantity}`).join('<br>')}</td><td>${won(o.totalPrice)}</td>
+                <td><span class="badge ${BADGE(o.status)}">${STATUS_KO[o.status] || esc(o.status)}</span></td>
+                <td>${(STAFF_ACTIONS[o.status] || []).map(([to, label]) => `<button class="btn sm ghost act" data-to="${to}">${label}</button>`).join('')}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">조건에 맞는 주문이 없습니다.</p>';
+            $('#opg').innerHTML = ''; mount($('#opg'), j.data, load);
+            $('#olist').querySelectorAll('tr[data-id]').forEach(tr => tr.querySelectorAll('.act').forEach(b => b.onclick = async () => {
+                try { const r = await api('PATCH', '/orders', { orderId: +tr.dataset.id, status: b.dataset.to }); toast(r.message); load(page); } catch (err) { toast(err.message, true); }
+            }));
+        };
+        $('#of').onsubmit = e => { e.preventDefault(); load(0).catch(err => toast(err.message, true)); };
+        await load();
+    };
+
     adminTabs.brand = async (panel, admin) => {
         panel.innerHTML = '';
         const mine = (await api('GET', '/brands/owners')).data;
@@ -401,7 +443,7 @@
             <label>소개<textarea name="context" required></textarea></label>
             <label>서브 카테고리<select name="subCategoryId" required>${subOpts || '<option value="">먼저 카테고리 탭에서 서브 카테고리를 만드세요</option>'}</select></label>
             <label>상태<select name="status"><option value="OPEN">OPEN (승인)</option><option value="APPLY">APPLY (신청)</option></select></label>`,
-            d => api('POST', '/brands', { ...d, subCategoryId: +d.subCategoryId })));
+            d => api('POST', '/brands', { ...d, subCategoryId: +d.subCategoryId }).then(r => { adminTabs.brand(panel, admin); return r; })));
         panel.append(formCard('상품 등록', `<label>브랜드<select name="brandId" required>${brandOpts || '<option value="">먼저 브랜드를 만드세요</option>'}</select></label>
             <label>상품명<input name="name" required></label><label>가격<input name="price" type="number" min="0" required></label>
             <label>상태<select name="status"><option>AVAILABLE</option><option>SOLD_OUT</option><option>UNAVAILABLE</option><option>DISCONTINUED</option></select></label>
@@ -410,14 +452,55 @@
                 const fd = new FormData();
                 fd.append('productRequestDto', new Blob([JSON.stringify({ name: d.name, price: +d.price, brandId: +d.brandId, status: d.status })], { type: 'application/json' }));
                 if (form.imageFile.files[0]) fd.append('imageFile', form.imageFile.files[0]);
-                return api('POST', `/products/brands/${d.brandId}`, fd);
+                return api('POST', `/products/brands/${d.brandId}`, fd).then(r => { loadProducts(); return r; });
             }));
-        panel.append(formCard('상품 옵션 추가', `<label>상품 ID<input name="productId" type="number" required></label><label>사이즈<input name="size" required placeholder="M"></label>
-            <label>색상<input name="color" required placeholder="Black"></label><label>상태<select name="status"><option>AVAILABLE</option><option>SOLD_OUT</option></select></label>`,
-            d => api('POST', `/options/products/${d.productId}`, { size: d.size, color: d.color, status: d.status })));
-        const list = document.createElement('div'); list.className = 'card';
-        list.innerHTML = `<h2 style="margin-top:0">내 브랜드</h2>${mine.length ? `<table><tbody>${mine.map(b => `<tr><td>#${b.id}</td><td><a href="#/brand/${b.id}"><u>${esc(b.name)}</u></a></td><td class="muted">${esc(b.registrationNum)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">없음</p>'}`;
-        panel.append(list);
+        /* 내 브랜드 상품/옵션 관리 */
+        const mgr = document.createElement('div'); mgr.className = 'card';
+        mgr.innerHTML = `<h2 style="margin-top:0">내 브랜드 상품 관리</h2>${mine.length ? `<div class="row"><select id="mb">${brandOpts}</select><span class="muted" id="mcount"></span></div><div id="mp" style="margin-top:12px"></div><div id="mpg"></div>` : '<p class="muted">브랜드가 없습니다.</p>'}`;
+        panel.append(mgr);
+        const statusSel = (name, cur, opts) => `<select name="${name}" class="sm">${opts.map(s => `<option ${s === cur ? 'selected' : ''}>${s}</option>`).join('')}</select>`;
+        const PSTAT = ['AVAILABLE', 'SOLD_OUT', 'UNAVAILABLE', 'DISCONTINUED'], OSTAT = ['AVAILABLE', 'SOLD_OUT'];
+        const loadProducts = async (page = 0) => {
+            if (!mine.length) return;
+            const bid = $('#mb').value;
+            const j = await api('GET', `/products/brands/${bid}${qs({ page, size: 10 })}`);
+            const list = j.data.content;
+            $('#mcount').textContent = `상품 ${j.data.totalElements}개`;
+            if (!list.length) { $('#mp').innerHTML = '<p class="muted">이 브랜드에 상품이 없습니다. 위 폼에서 등록하세요.</p>'; $('#mpg').innerHTML = ''; return; }
+            const details = await Promise.all(list.map(p => api('GET', `/products/${p.id}`).then(r => r.data).catch(() => ({ ...p, options: [] }))));
+            $('#mp').innerHTML = details.map(p => `<div class="card" data-pid="${p.id}">
+                <div class="row between"><div class="row"><img src="${img(p.imageUrl, p.id)}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:8px"><div><strong>${esc(p.name)}</strong> <span class="muted">#${p.id}</span><br><span>${won(p.price)}</span> <span class="badge ${p.status === 'AVAILABLE' ? 'ok' : 'warn'}">${esc(p.status)}</span></div></div>
+                    <div><button class="btn sm ghost pedit">수정</button><button class="btn sm danger pdel">삭제</button></div></div>
+                <table style="margin-top:10px"><thead><tr><th>옵션</th><th>상태</th><th></th></tr></thead><tbody>
+                    ${(p.options || []).map(o => `<tr data-oid="${o.id}"><td>${esc(o.size)} / ${esc(o.color)}</td><td>${statusSel('status', o.status, OSTAT)}</td><td><button class="btn sm ghost osave">저장</button></td></tr>`).join('')}
+                    <tr class="oadd"><td><input name="size" placeholder="사이즈" style="width:90px"> <input name="color" placeholder="색상" style="width:110px"></td><td>${statusSel('status', 'AVAILABLE', OSTAT)}</td><td><button class="btn sm primary oadd">옵션 추가</button></td></tr>
+                </tbody></table></div>`).join('');
+            $('#mpg').innerHTML = ''; mount($('#mpg'), j.data, loadProducts);
+            $('#mp').querySelectorAll('[data-pid]').forEach(card => {
+                const pid = +card.dataset.pid; const p = details.find(x => x.id === pid);
+                $('.pedit', card).onclick = () => openModal(`<h2 style="margin-top:0">상품 수정</h2><label>상품명<input name="name" value="${esc(p.name)}" required></label><label>가격<input name="price" type="number" min="0" value="${Number(p.price)}" required></label>
+                    <label>상태${statusSel('status', p.status, PSTAT)}</label><label>이미지 교체 (선택)<input type="file" name="imageFile" accept="image/*"></label>`, async (d, form) => {
+                    const fd = new FormData();
+                    fd.append('productUpdateDto', new Blob([JSON.stringify({ name: d.name, price: +d.price, status: d.status })], { type: 'application/json' }));
+                    if (form.imageFile.files[0]) fd.append('imageFile', form.imageFile.files[0]);
+                    const r = await api('PATCH', `/products/${pid}`, fd); toast(r.message); loadProducts(page);
+                });
+                $('.pdel', card).onclick = () => openModal(`<h2 style="margin-top:0">"${esc(p.name)}" 을(를) 삭제할까요?</h2><p class="muted">옵션·리뷰·주문 항목이 함께 삭제됩니다.</p>`, async () => {
+                    await api('DELETE', `/products/${pid}`); toast('삭제되었습니다.'); loadProducts(page);
+                });
+                card.querySelectorAll('tr[data-oid]').forEach(tr => $('.osave', tr).onclick = async () => {
+                    const o = p.options.find(x => x.id === +tr.dataset.oid);
+                    try { const r = await api('PATCH', `/options/${tr.dataset.oid}`, { size: o.size, color: o.color, status: $('select', tr).value }); toast(r.message); } catch (err) { toast(err.message, true); }
+                });
+                const add = $('tr.oadd', card);
+                $('button.oadd', add).onclick = async () => {
+                    const size = $('[name=size]', add).value.trim(), color = $('[name=color]', add).value.trim();
+                    if (!size || !color) { toast('사이즈와 색상을 입력하세요.', true); return; }
+                    try { const r = await api('POST', `/options/products/${pid}`, { size, color, status: $('select', add).value }); toast(r.message); loadProducts(page); } catch (err) { toast(err.message, true); }
+                };
+            });
+        };
+        if (mine.length) { $('#mb').onchange = () => loadProducts(0).catch(err => toast(err.message, true)); await loadProducts(0); }
     };
 
     adminTabs.coupon = async (panel) => {
@@ -430,33 +513,45 @@
                 productId: d.productId ? +d.productId : null, brands: d.brandId ? [{ brandId: +d.brandId }] : [] })));
     };
 
-    adminTabs.report = async (panel) => {
-        const j = await api('GET', '/reports?page=0&size=100');
+    adminTabs.report = async (panel, admin, page = 0) => {
+        const j = await api('GET', `/reports?page=${page}&size=10`);
         const list = j.data.content;
         panel.innerHTML = `<div class="card"><h2 style="margin-top:0">신고 목록</h2>${list.length ? `<table><thead><tr><th>#</th><th>대상</th><th>상태</th><th>내용</th><th></th></tr></thead><tbody>
             ${list.map(r => `<tr><td>${r.id}</td><td>${esc(r.targetType)} #${r.targetId}</td><td><span class="badge">${esc(r.status)}</span></td><td>${esc(r.content)}</td>
             <td><select data-id="${r.id}" class="st"><option value="">처리…</option>${['IN_PROGRESS','APPROVED','REJECTED','RESOLVED'].map(s=>`<option>${s}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table>` : '<p class="muted">신고가 없습니다.</p>'}</div>`;
+        mount(panel.firstElementChild, j.data, p => adminTabs.report(panel, admin, p));
         panel.querySelectorAll('.st').forEach(s => s.onchange = async () => {
             if (!s.value) return;
             const body = { status: s.value, rejectReason: s.value === 'REJECTED' ? prompt('반려 사유') || '' : null };
-            try { await api('PATCH', `/reports/${s.dataset.id}/status`, body); toast('처리되었습니다.'); adminTabs.report(panel); } catch (err) { toast(err.message, true); }
+            try { await api('PATCH', `/reports/${s.dataset.id}/status`, body); toast('처리되었습니다.'); adminTabs.report(panel, admin, page); } catch (err) { toast(err.message, true); }
         });
     };
 
     adminTabs.stats = async (panel) => {
-        panel.innerHTML = `<div class="card"><h2 style="margin-top:0">매출 통계</h2><form class="row" id="sf">
+        const today = new Date().toISOString().slice(0, 10), monthAgo = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+        panel.innerHTML = `<div class="card"><h2 style="margin-top:0">집계 실행</h2><p class="muted">통계는 하루 단위로 집계된 테이블을 읽습니다. 야간 배치(매일 00:00)를 기다리지 않으려면 날짜를 골라 즉시 집계하세요. 같은 날짜를 다시 돌리면 덮어씁니다.</p>
+            <form class="row" id="agg"><input type="date" name="date" value="${today}"><button class="btn sm primary">이 날짜 집계</button><span class="muted" id="aggout"></span></form></div>
+            <div class="card"><h2 style="margin-top:0">매출 통계</h2><form class="row" id="sf">
             <select name="kind"><option value="sales">매출액</option><option value="count">판매 수량</option></select>
-            <select name="periodType"><option>DAY</option><option selected>MONTH</option><option>YEAR</option></select>
-            <input type="date" name="startDate"><input type="date" name="endDate"><button class="btn sm">조회</button></form><div id="out" style="margin-top:12px"></div></div>`;
+            <select name="periodType"><option selected>DAY</option><option>MONTH</option><option>YEAR</option></select>
+            <select name="orderStatus"><option value="">모든 주문 상태</option>${Object.entries(STATUS_KO).map(([k, v]) => `<option value="${k}" ${k === 'PAYMENTCOMPLETED' ? '' : ''}>${v}</option>`).join('')}</select>
+            <input type="date" name="startDate" value="${monthAgo}"><input type="date" name="endDate" value="${today}"><button class="btn sm">조회</button></form><div id="out" style="margin-top:12px"></div></div>`;
+        $('#agg').onsubmit = async e => {
+            e.preventDefault();
+            try { const r = await api('POST', `/admin/statistics/aggregate${qs(Object.fromEntries(new FormData(e.target)))}`); $('#aggout').textContent = `${r.date} 집계 완료: ${r.rows}건`; toast('집계되었습니다.'); $('#sf').requestSubmit(); } catch (err) { toast(err.message, true); }
+        };
         $('#sf').onsubmit = async e => {
             e.preventDefault();
             const d = Object.fromEntries(new FormData(e.target)); const kind = d.kind; delete d.kind;
             try {
                 const r = await api('GET', `/admin/statistics/${kind}${qs(d)}`);
                 const h = r.headerData, rows = r.bodyDataList || [];
-                $('#out').innerHTML = h ? `<table><thead><tr>${(h.columnList || []).map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(b => `<tr>${b.dataList.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table>` : '<p class="muted">데이터 없음</p>';
+                // headerData.rowList = 날짜 축, columnList = 브랜드 축(+총합); bodyDataList[brand].dataList[date]
+                const dates = h?.rowList || [], brands = h?.columnList || [];
+                $('#out').innerHTML = dates.length ? `<table><thead><tr><th>브랜드 \\ 날짜</th>${dates.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${rows.map((b, i) => `<tr><th>${esc(brands[i] ?? '')}</th>${b.dataList.map(v => `<td>${kind === 'sales' ? won(v) : esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table>` : '<p class="muted">해당 기간에 집계된 데이터가 없습니다. 위에서 먼저 집계를 실행하세요.</p>';
             } catch (err) { toast(err.message, true); }
         };
+        $('#sf').requestSubmit();
     };
 
     /* ---------- router ---------- */

@@ -34,7 +34,13 @@ public class CouponController {
     }
     /** 사용 가능한(미만료, 수량 남은) 쿠폰 목록 — 장바구니에서 선택용 */
     @org.springframework.web.bind.annotation.GetMapping
-    public ResponseEntity<CommonResponse<java.util.List<CouponResponseDto>>> findAvailable() {
-        return ResponseEntity.ok(new CommonResponse<>(ResponseMessage.COUPON_SELECT_SUCCESS, couponService.findAvailable()));
+    public ResponseEntity<CommonResponse<java.util.List<CouponResponseDto>>> findAvailable(@AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(new CommonResponse<>(ResponseMessage.COUPON_SELECT_SUCCESS, couponService.findAvailable(UserUtils.getUser(userDetails))));
+    }
+
+    /** 내가 발급받은/사용한 쿠폰 */
+    @org.springframework.web.bind.annotation.GetMapping("/me")
+    public ResponseEntity<CommonResponse<java.util.List<com.Soo_Shinsa.coupon.dto.MyCouponResponseDto>>> findMine(@AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(new CommonResponse<>(ResponseMessage.COUPON_SELECT_SUCCESS, couponService.findMine(UserUtils.getUser(userDetails))));
     }
 }

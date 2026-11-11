@@ -101,8 +101,10 @@ public class CouponServiceImpl implements CouponService {
     }
     @Transactional(readOnly = true)
     @Override
-    public java.util.List<CouponResponseDto> findAvailable() {
+    public java.util.List<CouponResponseDto> findAvailable(User user) {
+        java.util.Set<Long> used = new java.util.HashSet<>(couponUserRepository.findUsedCouponIdsByUserId(user.getUserId()));
         return couponRepository.findAllByExpirationDateGreaterThanEqualAndMaxCountGreaterThan(java.time.LocalDate.now(), 0).stream()
+                .filter(c -> !used.contains(c.getId()))
                 .map(c -> CouponResponseDto.builder()
                         .id(c.getId()).couponName(c.getCouponName()).couponCode(c.getCouponCode())
                         .discountRate(c.getDiscountRate()).couponType(c.getCouponType())
@@ -110,5 +112,11 @@ public class CouponServiceImpl implements CouponService {
                         .brandRelations(CouponBrandRelationDto.toDtos(c.getCouponBrandRelations()))
                         .build())
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public java.util.List<com.Soo_Shinsa.coupon.dto.MyCouponResponseDto> findMine(User user) {
+        return couponUserRepository.findAllByUserId(user.getUserId()).stream().map(com.Soo_Shinsa.coupon.dto.MyCouponResponseDto::toDto).toList();
     }
 }

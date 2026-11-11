@@ -21,4 +21,10 @@ public interface CouponUserRepository extends JpaRepository<CouponUser, Long> {
 
 
     boolean existsByCouponAndUser(Coupon coupon, User user);
+
+    @Query("SELECT cu FROM CouponUser cu JOIN FETCH cu.coupon WHERE cu.user.userId = :userId ORDER BY cu.id DESC")
+    java.util.List<CouponUser> findAllByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT cu.coupon.id FROM CouponUser cu WHERE cu.user.userId = :userId AND cu.isUsed = true")
+    java.util.List<Long> findUsedCouponIdsByUserId(@Param("userId") Long userId);
 }

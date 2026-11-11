@@ -23,10 +23,26 @@ public class OrderCustomRepositoryImpl implements OrderCustomRepository {
 
     @Override
     public Page<OrdersResponseDto> getAllByUserId(User user, OrderDateRequestDto dateRequestDto, Pageable pageable) {
-        QOrders orders = QOrders.orders;
+        BooleanBuilder builder = new BooleanBuilder().and(QOrders.orders.user.userId.eq(user.getUserId()));
+        return fetchPage(builder, dateRequestDto, pageable);
+    }
 
+    @Override
+    public Page<OrdersResponseDto> getAllForStaff(Long vendorUserId, com.Soo_Shinsa.constant.OrdersStatus status, OrderDateRequestDto dateRequestDto, Pageable pageable) {
         BooleanBuilder builder = new BooleanBuilder();
-        builder.and(orders.user.userId.eq(user.getUserId()));
+        if (status != null) builder.and(QOrders.orders.status.eq(status));
+        if (vendorUserId != null) {
+            com.Soo_Shinsa.order.model.QOrderItem oi = com.Soo_Shinsa.order.model.QOrderItem.orderItem;
+            com.Soo_Shinsa.product.model.QProduct p = com.Soo_Shinsa.product.model.QProduct.product;
+            com.Soo_Shinsa.brand.model.QBrand b = com.Soo_Shinsa.brand.model.QBrand.brand;
+            // QueryDSL 기본 경로 깊이(2) 때문에 oi.product.brand.user 는 null → 명시적 join
+            builder.and(QOrders.orders.id.in(com.querydsl.jpa.JPAExpressions.select(oi.order.id).from(oi).join(oi.product, p).join(p.brand, b).where(b.user.userId.eq(vendorUserId))));
+        }
+        return fetchPage(builder, dateRequestDto, pageable);
+    }
+
+    private Page<OrdersResponseDto> fetchPage(BooleanBuilder builder, OrderDateRequestDto dateRequestDto, Pageable pageable) {
+        QOrders orders = QOrders.orders;
 
         if (dateRequestDto.getStartDate() != null) {
             builder.and(orders.createdAt.goe(Timestamp.valueOf(dateRequestDto.getStartDate().atStartOfDay())));
@@ -52,6 +68,7 @@ public class OrderCustomRepositoryImpl implements OrderCustomRepository {
                         .totalPrice(order.getTotalPrice())
                         .status(order.getStatus())
                         .userId(order.getUser().getUserId())
+                        .userName(order.getUser().getName())
                         .orderItems(order.getOrderItems().stream().map(OrderItemResponseDto::toDto).collect(Collectors.toList())) // 변환 추가
                         .build()
                 )

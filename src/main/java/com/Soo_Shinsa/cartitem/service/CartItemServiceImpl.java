@@ -114,59 +114,36 @@ public class CartItemServiceImpl implements CartItemService {
     @Transactional
     public ApplyCouponCartResponseDto applyCoupon(Long cartId, ApplyCouponCartRequestDto requestDto, User user) {
         CartItem cartItem = cartItemRepository.findByIdOrElseThrow(cartId);
+        EntityValidator.validateUserOwnership(user.getUserId(), cartItem.getUser().getUserId());
 
-        Optional<CouponUser> existingCouponUser = couponUserRepository.findByCouponIdAndUserUserId(requestDto.getCouponId(), user.getUserId());
-        if (existingCouponUser.isPresent() && existingCouponUser.get().isUsed()) {
+        // 이 사용자의 발급 내역만 본다 (다른 사용자의 미사용 쿠폰을 가져다 쓰던 버그 수정)
+        Optional<CouponUser> mine = couponUserRepository.findByCouponIdAndUserUserId(requestDto.getCouponId(), user.getUserId());
+        if (mine.isPresent() && mine.get().isUsed()) {
             throw new InvalidInputException(ErrorCode.ALREADY_USED_COUPON);
         }
 
-        // 사용되지 않은 쿠폰이 있는지 확인
-
-        Coupon coupon;
-        CouponUser couponUser;
-
-        Optional<CouponUser> optionalCouponUser = couponUserRepository.findUnusedCouponByCouponId(requestDto.getCouponId());
-        if (optionalCouponUser.isPresent()) {
-            // 기존에 사용하지 않은 쿠폰이 있으면 그대로 사용
-            couponUser = optionalCouponUser.get();
-            coupon = couponUser.getCoupon();
-
-        } else {
-            // 기존 쿠폰이 없지만 maxCount가 남아 있다면 새로운 CouponUser 생성
-            coupon = couponRepository.findById(requestDto.getCouponId())
-                    .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_COUPON));
-
-            if (coupon.getMaxCount() <= 0) {
-                throw new InvalidInputException(ErrorCode.COUPON_OUT_OF_STOCK);
-            }
-
-            // 새로운 CouponUser 발급
-            couponUser = CouponUser.builder()
-                    .coupon(coupon)
-                    .user(user)
-                    .isUsed(false)
-                    .usedAt(null)
-                    .build();
-
-            couponUserRepository.save(couponUser);
-        }
-
-        // 쿠폰이 만료되었는지 확인
+        Coupon coupon = couponRepository.findById(requestDto.getCouponId())
+                .orElseThrow(() -> new InvalidInputException(ErrorCode.NOT_FOUND_COUPON));
         if (coupon.isExpired()) {
             throw new InvalidInputException(ErrorCode.EXPIRED_COUPON);
         }
 
-        // 할인 가격 계산
+        // 쿠폰 종류(전체/특정 브랜드/특정 상품) 검증 + 할인가 계산
         DiscountCouponCalculator discountCouponCalculator = new PercentageDiscountCalculator();
-        BigDecimal discountPrice = discountCouponCalculator.calculateDiscountedPrice(cartItem.getProduct().getPrice(), coupon.getDiscountRate());
+        BigDecimal discountPrice = discountCouponCalculator.applyCoupon(coupon, cartItem.getProduct(), cartItem.getProduct().getPrice());
 
-        // 장바구니 아이템에 쿠폰 적용
+        CouponUser couponUser = mine.orElseGet(() -> {
+            if (coupon.getMaxCount() <= 0) {
+                throw new InvalidInputException(ErrorCode.COUPON_OUT_OF_STOCK);
+            }
+            coupon.decreaseMaxCount(1);  // 새로 발급되는 경우에만 재고 감소
+            return couponUserRepository.save(CouponUser.builder().coupon(coupon).user(user).isUsed(false).usedAt(null).build());
+        });
+
         cartItem.applyCoupon(coupon, discountPrice);
         cartItemRepository.save(cartItem);
 
-        // 쿠폰 사용 처리
         couponUser.markAsUsed();
-        coupon.decreaseMaxCount(1);  // 재고 감소
         couponUserRepository.save(couponUser);
 
         // 응답 DTO 반환

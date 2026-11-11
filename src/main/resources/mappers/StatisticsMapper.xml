@@ -1,120 +1,122 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTO Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.Soo_Shinsa.statistics.repository.StatisticsMybatisRepository">
 
     <select id="getBrandList" parameterType="com.Soo_Shinsa.statistics.dto.StatisticsRequestDto" resultType="string">
         select distinct brand_name
         from statistics
-        where 1=1
-        and date_format(order_date,#{periodType.dateFormat}) between date_format(#{startDate},#{periodType.dateFormat})
-        and date_format(#{endDate},
-        #{periodType.dateFormat})
-
-        <if test="categoryList != null and categoryList.size!=0">
+        where date_format(order_date, #{periodType.dateFormat}) between date_format(#{startDate}, #{periodType.dateFormat}) and date_format(#{endDate}, #{periodType.dateFormat})
+        <if test="categoryList != null and categoryList.size() != 0">
             and category_name in
-            <foreach collection='categoryList' item='category' open='(' separator=',' close=')'>
-                #{category}
-            </foreach>
+            <foreach collection="categoryList" item="category" open="(" separator="," close=")">#{category}</foreach>
         </if>
-
-
-        <if test="brandList != null and brandList.size()!=0">
+        <if test="brandList != null and brandList.size() != 0">
             and brand_name in
-            <foreach collection='brandList' item='brand' open='(' separator=',' close=')'>
-                #{brand}
-            </foreach>
+            <foreach collection="brandList" item="b" open="(" separator="," close=")">#{b}</foreach>
         </if>
         <if test="orderStatus != null">
             and order_status = #{orderStatus}
         </if>
-
-        order by 1;
+        order by 1
     </select>
+
     <select id="getDateList" parameterType="com.Soo_Shinsa.statistics.dto.StatisticsRequestDto" resultType="string">
-        select distinct date_format(order_date,#{periodType.dateFormat})
+        select distinct date_format(order_date, #{periodType.dateFormat})
         from statistics
-        where 1=1
-        and date_format(order_date,#{periodType.dateFormat}) between date_format(#{startDate},#{periodType.dateFormat})
-        and date_format(#{endDate},
-        #{periodType.dateFormat})
-
-        <if test="categoryList != null and categoryList.size!=0">
+        where date_format(order_date, #{periodType.dateFormat}) between date_format(#{startDate}, #{periodType.dateFormat}) and date_format(#{endDate}, #{periodType.dateFormat})
+        <if test="categoryList != null and categoryList.size() != 0">
             and category_name in
-            <foreach collection='categoryList' item='category' open='(' separator=',' close=')'>
-                #{category}
-            </foreach>
-
+            <foreach collection="categoryList" item="category" open="(" separator="," close=")">#{category}</foreach>
         </if>
-        <if test="brandList != null and brandList.size!=0">
+        <if test="brandList != null and brandList.size() != 0">
             and brand_name in
-            <foreach collection='brandList' item='brand' open='(' separator=',' close=')'>
-                #{brand}
-            </foreach>
+            <foreach collection="brandList" item="b" open="(" separator="," close=")">#{b}</foreach>
         </if>
         <if test="orderStatus != null">
             and order_status = #{orderStatus}
         </if>
-
-        order by 1;
+        order by 1
     </select>
 
+    <!-- 행(브랜드) × 열(날짜) 한 줄. 날짜 축(d)은 getDateList 와 같은 조건이라 길이가 항상 일치한다. brand 가 null 이면 총합. -->
     <select id="getBodyDataListForSales" parameterType="map" resultType="decimal">
-        select cast(sum(if(total_price is null, 0, total_price)) as decimal ) as total_price
-        from (select total_price, brand_name, order_date
-        from statistics
-        where order_date between #{dto.startDate} and #{dto.endDate}
-        <if test="brand != null">
-            and brand_name = #{brand}
-        </if>) t
-        right outer join
-        (select distinct date_format(order_date, #{dto.periodType.dateFormat}) as order_date
-        from statistics) d
-        on date_format(t.order_date, #{dto.periodType.dateFormat}) = d.order_date
-
-        <if test="dto.categoryList != null and dto.categoryList.size!=0">
+        select cast(sum(coalesce(t.total_price, 0)) as decimal(38, 2)) as total_price
+        from (select distinct date_format(order_date, #{dto.periodType.dateFormat}) as order_date
+              from statistics
+              where date_format(order_date, #{dto.periodType.dateFormat}) between date_format(#{dto.startDate}, #{dto.periodType.dateFormat}) and date_format(#{dto.endDate}, #{dto.periodType.dateFormat})
+        <if test="dto.categoryList != null and dto.categoryList.size() != 0">
             and category_name in
-            <foreach collection='categoryList' item='category' open='(' separator=',' close=')'>
-                #{category}
-            </foreach>
+            <foreach collection="dto.categoryList" item="category" open="(" separator="," close=")">#{category}</foreach>
+        </if>
+        <if test="dto.brandList != null and dto.brandList.size() != 0">
+            and brand_name in
+            <foreach collection="dto.brandList" item="b" open="(" separator="," close=")">#{b}</foreach>
         </if>
         <if test="dto.orderStatus != null">
             and order_status = #{dto.orderStatus}
         </if>
-
+             ) d
+        left join (select total_price, quantity, order_date
+                   from statistics
+                   where date_format(order_date, #{dto.periodType.dateFormat}) between date_format(#{dto.startDate}, #{dto.periodType.dateFormat}) and date_format(#{dto.endDate}, #{dto.periodType.dateFormat})
+        <if test="dto.categoryList != null and dto.categoryList.size() != 0">
+            and category_name in
+            <foreach collection="dto.categoryList" item="category" open="(" separator="," close=")">#{category}</foreach>
+        </if>
+        <if test="dto.brandList != null and dto.brandList.size() != 0">
+            and brand_name in
+            <foreach collection="dto.brandList" item="b" open="(" separator="," close=")">#{b}</foreach>
+        </if>
+        <if test="dto.orderStatus != null">
+            and order_status = #{dto.orderStatus}
+        </if>
+            <if test="brand != null">
+            and brand_name = #{brand}
+            </if>
+                  ) t
+          on date_format(t.order_date, #{dto.periodType.dateFormat}) = d.order_date
         group by d.order_date
         order by d.order_date
-
     </select>
 
+    <!-- 행(브랜드) × 열(날짜) 한 줄. 날짜 축(d)은 getDateList 와 같은 조건이라 길이가 항상 일치한다. brand 가 null 이면 총합. -->
     <select id="getBodyDataListForCount" parameterType="map" resultType="string">
-        select cast(sum(if(quantity is null, 0, quantity)) as char ) as quantity
-        from (select quantity, brand_name, order_date
-        from statistics
-        where order_date between #{dto.startDate} and #{dto.endDate}
-        <if test="brand != null">
-            and brand_name = #{brand}
-        </if>) t
-        right outer join
-        (select distinct date_format(order_date, #{dto.periodType.dateFormat}) as order_date
-        from statistics) d
-        on date_format(t.order_date, #{dto.periodType.dateFormat}) = d.order_date
-
-        <if test="dto.categoryList != null and dto.categoryList.size!=0">
+        select cast(sum(coalesce(t.quantity, 0)) as char) as quantity
+        from (select distinct date_format(order_date, #{dto.periodType.dateFormat}) as order_date
+              from statistics
+              where date_format(order_date, #{dto.periodType.dateFormat}) between date_format(#{dto.startDate}, #{dto.periodType.dateFormat}) and date_format(#{dto.endDate}, #{dto.periodType.dateFormat})
+        <if test="dto.categoryList != null and dto.categoryList.size() != 0">
             and category_name in
-            <foreach collection='categoryList' item='category' open='(' separator=',' close=')'>
-                #{category}
-            </foreach>
+            <foreach collection="dto.categoryList" item="category" open="(" separator="," close=")">#{category}</foreach>
         </if>
-
-
+        <if test="dto.brandList != null and dto.brandList.size() != 0">
+            and brand_name in
+            <foreach collection="dto.brandList" item="b" open="(" separator="," close=")">#{b}</foreach>
+        </if>
         <if test="dto.orderStatus != null">
             and order_status = #{dto.orderStatus}
         </if>
-
+             ) d
+        left join (select total_price, quantity, order_date
+                   from statistics
+                   where date_format(order_date, #{dto.periodType.dateFormat}) between date_format(#{dto.startDate}, #{dto.periodType.dateFormat}) and date_format(#{dto.endDate}, #{dto.periodType.dateFormat})
+        <if test="dto.categoryList != null and dto.categoryList.size() != 0">
+            and category_name in
+            <foreach collection="dto.categoryList" item="category" open="(" separator="," close=")">#{category}</foreach>
+        </if>
+        <if test="dto.brandList != null and dto.brandList.size() != 0">
+            and brand_name in
+            <foreach collection="dto.brandList" item="b" open="(" separator="," close=")">#{b}</foreach>
+        </if>
+        <if test="dto.orderStatus != null">
+            and order_status = #{dto.orderStatus}
+        </if>
+            <if test="brand != null">
+            and brand_name = #{brand}
+            </if>
+                  ) t
+          on date_format(t.order_date, #{dto.periodType.dateFormat}) = d.order_date
         group by d.order_date
         order by d.order_date
-
     </select>
 </mapper>

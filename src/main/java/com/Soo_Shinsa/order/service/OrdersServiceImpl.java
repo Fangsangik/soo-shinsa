@@ -92,6 +92,7 @@ public class OrdersServiceImpl implements OrdersService {
     @Override
     public OrdersResponseDto createSingleOrderCartItem (User user, Long cartItemId) {
         CartItem cartItem = cartItemRepository.findByIdOrElseThrow(cartItemId);
+        EntityValidator.validateUserOwnership(user.getUserId(), cartItem.getUser().getUserId());
 
         Product product = cartItem.getProductOption().getProduct();
 
@@ -121,7 +122,7 @@ public class OrdersServiceImpl implements OrdersService {
         order.addOrderItem(orderItem);
         ordersRepository.save(order);
 
-        cartItemRepository.deleteAll();
+        cartItemRepository.delete(cartItem); // 다른 사용자의 장바구니까지 지우던 deleteAll() 제거
 
         return OrdersResponseDto.toDto(order);
     }
@@ -191,7 +192,13 @@ public class OrdersServiceImpl implements OrdersService {
         User findUser = userRepository.findByIdOrElseThrow(user.getUserId());
         Orders findOrder = ordersRepository.findByIdOrElseThrow(orderId);
 
-        if (!findUser.isAdminOrVendor()) {
+        if (findUser.isAdmin()) {
+            // 관리자: 제한 없음
+        } else if (findUser.isVendor()) {
+            if (!ordersRepository.existsByIdAndVendorUserId(orderId, findUser.getUserId())) {
+                throw new com.Soo_Shinsa.exception.NoAuthorizedException(ErrorCode.NO_CONNECT);
+            }
+        } else {
             EntityValidator.validateAndOrders(findOrder, findUser.getUserId());
             if (!isCustomerTransitionAllowed(findOrder.getStatus(), status)) {
                 throw new com.Soo_Shinsa.exception.InvalidInputException(ErrorCode.INVALID_ORDER_STATUS);
@@ -200,6 +207,14 @@ public class OrdersServiceImpl implements OrdersService {
         findOrder.updateStatus(status);
         Orders savedOrder = ordersRepository.save(findOrder);
         return OrdersResponseDto.toDto(savedOrder);
+    }
+
+    @Override
+    public Page<OrdersResponseDto> getAllForStaff(User user, OrdersStatus status, OrderDateRequestDto dateRequestDto, int page, int size) {
+        User findUser = userRepository.findByIdOrElseThrow(user.getUserId());
+        EntityValidator.validateAdminOrVendorAccess(findUser);
+        Long vendorUserId = findUser.isAdmin() ? null : findUser.getUserId();
+        return ordersRepository.getAllForStaff(vendorUserId, status, dateRequestDto, PageRequest.of(page, size));
     }
 
     /** 고객이 직접 바꿀 수 있는 상태 전이. 결제/배송 상태는 ADMIN/VENDOR만 변경 가능. */

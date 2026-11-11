@@ -28,6 +28,14 @@ public class EntityValidator {
         }
     }
 
+    /** ADMIN 은 모든 브랜드, VENDOR 는 자기 브랜드만 */
+    public static void validateBrandOwner(User user, com.Soo_Shinsa.brand.model.Brand brand) {
+        validateAdminOrVendorAccess(user);
+        if (!user.isAdmin() && (brand.getUser() == null || !brand.getUser().getUserId().equals(user.getUserId()))) {
+            throw new NoAuthorizedException(NO_AUTHORITY);
+        }
+    }
+
     public static void validateAndOrders(Orders orders,Long userId) {
         if (!orders.getUser().getUserId().equals(userId)) {
             throw new NoAuthorizedException(NO_CONNECT);

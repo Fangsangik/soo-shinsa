@@ -48,6 +48,18 @@ public class OrdersController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    /** 관리자(전체)/입점사(자기 브랜드 상품이 포함된 주문) 주문 관리 목록 */
+    @GetMapping("/manage")
+    public ResponseEntity<CommonResponse<Page<OrdersResponseDto>>> getOrdersForStaff(@AuthenticationPrincipal UserDetails userDetails,
+                                                                                @RequestParam(required = false) com.Soo_Shinsa.constant.OrdersStatus status,
+                                                                                @ModelAttribute OrderDateRequestDto dateRequestDto,
+                                                                                @RequestParam(defaultValue = "0") int page,
+                                                                                @RequestParam(defaultValue = "10") int size) {
+        User user = UserUtils.getUser(userDetails);
+        Page<OrdersResponseDto> result = ordersService.getAllForStaff(user, status, dateRequestDto, page, size);
+        return ResponseEntity.ok(new CommonResponse<>(ResponseMessage.ORDER_SELECT_SUCCESS, result));
+    }
+
     //    단품 구매 생성
     @PostMapping("/single")
     public ResponseEntity<CommonResponse<OrdersResponseDto>> createSingleProductOrder(@AuthenticationPrincipal UserDetails userDetails,

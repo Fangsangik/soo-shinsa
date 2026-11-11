@@ -75,5 +75,7 @@ dependencies {
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    // 단위 테스트만 기본 실행. MySQL/Redis 가 필요한 @Tag("integration") 은 -Pintegration 으로 포함.
+    useJUnitPlatform { if (!project.hasProperty('integration')) excludeTags 'integration' }
+    testLogging { events 'failed'; exceptionFormat 'full' }
 }

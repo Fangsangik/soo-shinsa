@@ -23,9 +23,15 @@ python3 scripts/seed-local.py            # 테스트 계정 + 카테고리/브�
 ```
 
 - http://localhost:8080/ → 브랜드 둘러보기 / 회원가입 / 로그인 / 장바구니 / 주문 / 결제(Toss 테스트) / 리뷰 / 신고
-- 관리자(ADMIN)·입점사(VENDOR) 계정은 상단 `관리` 메뉴에서 카테고리 → 서브카테고리 → 브랜드(서브카테고리 드롭다운) → 상품 → 옵션 순으로 등록
+- 관리자(ADMIN)·입점사(VENDOR) 계정은 상단 `관리` 메뉴에서 카테고리 → 서브카테고리 → 브랜드(서브카테고리 드롭다운) → 상품 → 옵션 순으로 등록. `내 브랜드 상품 관리`에서 가격/상태 수정, 옵션 추가/상태 변경, 삭제 가능 (VENDOR 는 자기 브랜드만, ADMIN 은 전부)
+- `주문 관리` 탭: ADMIN 은 전체, VENDOR 는 자기 브랜드 상품이 포함된 주문만 (`GET /orders/manage`). 결제 확인 → 배송 시작 → 배송 완료 → 구매 확정, 취소/반품/교환 완료 처리
+- `통계` 탭: 야간 배치(매일 00:00, 전날 주문)를 기다리지 않고 `이 날짜 집계` 버튼(`POST /admin/statistics/aggregate?date=`)으로 즉시 집계. 같은 날짜 재실행은 덮어씀(멱등)
+- 쿠폰: 장바구니 드롭다운(`GET /coupons`)은 이미 쓴 쿠폰을 제외하고, `내 정보 > 내 쿠폰`(`GET /coupons/me`)에 발급/사용 내역이 보입니다
 - 결제는 SPA `#/pay/{orderId}`에서 인증된 주문 조회 + `GET /api/client-key`(공개) 로 Toss 결제창을 띄웁니다. 주문 상태는 고객이 취소/반품/교환 신청만 가능하고 결제·배송 상태는 ADMIN/VENDOR만 변경합니다.
-- 테스트: `python3 scripts/contract-test.py` (프론트가 읽는 필드/PK ↔ 백엔드 응답 계약 175개 체크)
+- 테스트
+  - `./gradlew test` — 단위 테스트 55개 (Mockito, DB 불필요: 주문 상태 전이·소유권, 장바구니 쿠폰, 결제 멱등, 상품 소유권, 통계 집계, 예외 응답)
+  - `./gradlew test -Pintegration` — MySQL/Redis 필요한 통합 테스트(쿠폰 동시성)까지 포함
+  - `python3 scripts/contract-test.py` — 서버 기동 후, 프론트가 읽는 필드/PK ↔ 백엔드 응답 계약 285개 체크 (페이지네이션, 주문 관리, 입점사 상품 관리, 통계 포함)
 - 이미지 업로드는 로컬 프로필(local)에서 S3 대신 mock URL(picsum)로 저장됩니다 (`app.image.mock=true`). 이미지 없는 상품도 프론트에서 mock 이미지로 표시됩니다.
 
 ## 👨‍💻 About Project 

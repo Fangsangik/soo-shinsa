@@ -21,17 +21,19 @@ public class OrdersResponseDto {
     private OrdersStatus status;
 
     private Long userId;
+    private String userName;
 
     private List<OrderItemResponseDto> orderItems;
 
 
     @Builder
-    public OrdersResponseDto(Long id, String orderId, BigDecimal totalPrice, OrdersStatus status, Long userId, List<OrderItemResponseDto> orderItems) {
+    public OrdersResponseDto(Long id, String orderId, BigDecimal totalPrice, OrdersStatus status, Long userId, String userName, List<OrderItemResponseDto> orderItems) {
         this.id = id;
         this.orderId = orderId;
         this.totalPrice = totalPrice;
         this.status = status;
         this.userId = userId;
+        this.userName = userName;
         this.orderItems = orderItems;
     }
 
@@ -42,6 +44,7 @@ public class OrdersResponseDto {
                 .totalPrice(orders.getTotalPrice())
                 .status(orders.getStatus())
                 .userId(orders.getUser().getUserId())
+                .userName(orders.getUser().getName())
                 .orderItems(orders.getOrderItems().stream().map(OrderItemResponseDto::toDto).collect(Collectors.toList()))
                 .build();
     }

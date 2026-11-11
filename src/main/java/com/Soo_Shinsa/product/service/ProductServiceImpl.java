@@ -45,7 +45,7 @@ public class ProductServiceImpl implements ProductService {
         User userById = userRepository.findByIdOrElseThrow(user.getUserId());
         Brand brand = brandRepository.findByIdOrElseThrow(brandId);
 
-        EntityValidator.validateAdminOrVendorAccess(userById);
+        EntityValidator.validateBrandOwner(userById, brand);
 
         String imageUrl = null;
         if (imageFile != null && !imageFile.isEmpty()) {
@@ -75,7 +75,7 @@ public class ProductServiceImpl implements ProductService {
 
         Product product = productRepository.findByIdOrElseThrow(productId);
 
-        EntityValidator.validateAdminOrVendorAccess(user);
+        EntityValidator.validateBrandOwner(user, product.getBrand());
 
         String newImageUrl = product.getImageUrl(); // 기존 이미지 URL 유지
         if (imageFile != null && !imageFile.isEmpty()) {
@@ -107,9 +107,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Transactional
     public void deleteProduct(Long productId, User user) {
-        EntityValidator.validateAdminOrVendorAccess(user);
 
         Product product = productRepository.findByIdOrElseThrow(productId);
+        EntityValidator.validateBrandOwner(user, product.getBrand());
 
         reviewRepository.deleteAllByProductId(productId);
         orderItemRepository.deleteAllByProductId(productId);

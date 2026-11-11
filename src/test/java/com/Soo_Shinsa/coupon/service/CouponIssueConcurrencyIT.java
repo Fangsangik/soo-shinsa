@@ -31,8 +31,10 @@ import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/** 실제 MySQL/Redis 가 필요한 동시성 통합 테스트. 기본 `./gradlew test` 에서는 제외되며 `./gradlew test -Pintegration` 으로 실행. */
+@org.junit.jupiter.api.Tag("integration")
 @SpringBootTest
-class CouponServiceImplTest {
+class CouponIssueConcurrencyIT {
 
     @Autowired
     private CouponServiceImpl couponService;

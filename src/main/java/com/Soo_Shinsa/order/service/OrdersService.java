@@ -15,4 +15,6 @@ public interface OrdersService {
     OrdersResponseDto createOrder (User user);
 
     OrdersResponseDto updateOrder (User user, Long orderId, OrdersStatus status);
+
+    Page<OrdersResponseDto> getAllForStaff(User user, OrdersStatus status, OrderDateRequestDto dateRequestDto, int page, int size);
 }
