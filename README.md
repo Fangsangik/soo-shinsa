@@ -20,6 +20,7 @@ brew services start redis            # Redis 필수
 # src/main/resources/application-local.properties 에 MySQL 비밀번호 입력 (DB soo_shinsa 자동 생성)
 ./gradlew bootRun
 python3 scripts/seed-local.py            # 테스트 계정 + 카테고리/브랜드/상품 시드
+python3 scripts/seed-stats.py            # (선택) 브랜드별 지난 30일 mock 주문 → 통계 탭에 매출/수량이 바로 보임
 ```
 
 - http://localhost:8080/ → 브랜드 둘러보기 / 회원가입 / 로그인 / 장바구니 / 주문 / 결제(Toss 테스트) / 리뷰 / 신고
