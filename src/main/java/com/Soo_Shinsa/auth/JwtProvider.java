@@ -1,5 +1,6 @@
 package com.Soo_Shinsa.auth;
 
+import com.Soo_Shinsa.constant.Role;
 import com.Soo_Shinsa.user.model.User;
 import com.Soo_Shinsa.user.repository.UserRepository;
 import io.jsonwebtoken.*;
@@ -63,6 +64,8 @@ public class JwtProvider {
                 .issuedAt(currentDate)
                 .expiration(expireDate)
                 .claim("role", user.getRole())
+                .claim("uid", user.getUserId())
+                .claim("name", user.getName())
                 .signWith(Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8)), Jwts.SIG.HS256)
                 .compact();
     }
@@ -73,6 +76,19 @@ public class JwtProvider {
             return false;
         }
         return validToken(token);
+    }
+
+    /** null 이면 정상. 만료면 TOKEN_EXPIRED, 서명 불일치·형식 오류면 INVALID_TOKEN */
+    public com.Soo_Shinsa.exception.ErrorCode check(String token) {
+        try {
+            Claims c = getClaims(token);
+            // uid/role 클레임이 없는 토큰(이전 버전 발급분)은 인증 주체를 만들 수 없으므로 재로그인 유도
+            return c.get("uid") == null || c.get("role") == null ? com.Soo_Shinsa.exception.ErrorCode.INVALID_TOKEN : null;
+        } catch (ExpiredJwtException e) {
+            return com.Soo_Shinsa.exception.ErrorCode.TOKEN_EXPIRED;
+        } catch (JwtException | IllegalArgumentException e) {
+            return com.Soo_Shinsa.exception.ErrorCode.INVALID_TOKEN;
+        }
     }
 
     public boolean validToken(String token) {
@@ -87,6 +103,17 @@ public class JwtProvider {
         }
     }
 
+
+    /** 토큰 클레임으로 인증 주체 생성 (DB 조회 없음) */
+    public User principalFrom(String token) {
+        Claims c = getClaims(token);
+        return User.principal(c.get("uid", Long.class), c.getSubject(), c.get("name", String.class), Role.valueOf(String.valueOf(c.get("role"))));
+    }
+
+    /** 토큰 만료까지 남은 ms (블랙리스트 TTL 용) */
+    public long remainingMillis(String token) {
+        return Math.max(1, getExpirationDateFromToken(token).getTime() - System.currentTimeMillis());
+    }
 
     private Claims getClaims(String token) {
         if (!StringUtils.hasText(token)) {

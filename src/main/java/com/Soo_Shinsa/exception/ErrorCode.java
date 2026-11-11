@@ -37,7 +37,11 @@ public enum ErrorCode {
 
     // NoAuthorizedException
     //로그인이 안 되었을 떄 출력하는 오류 메시지
-    NO_TOKEN("로그인이 필요합니다.", HttpStatus.UNAUTHORIZED),
+    NO_TOKEN("로그인이 필요한 기능입니다.", HttpStatus.UNAUTHORIZED),
+    TOKEN_EXPIRED("로그인 유효 시간이 지났습니다. 자동으로 다시 연결합니다.", HttpStatus.UNAUTHORIZED),
+    INVALID_TOKEN("유효하지 않은 로그인 정보입니다. 다시 로그인해주세요.", HttpStatus.UNAUTHORIZED),
+    SESSION_EXPIRED("30분 동안 활동이 없어 로그인 세션이 만료되었습니다. 다시 로그인해주세요.", HttpStatus.UNAUTHORIZED),
+    LOGGED_OUT("로그아웃된 계정입니다. 다시 로그인해주세요.", HttpStatus.UNAUTHORIZED),
     //이미 로그인이 되어있을 때 출력하는 오류 메시지
     ALREADY_LOGIN("이미 로그인이 되어있습니다.", HttpStatus.UNAUTHORIZED),
     //권한이 없는 사용자가 수정, 삭제를 하려고 할 때
@@ -46,8 +50,8 @@ public enum ErrorCode {
     FAIl_IMAGE_DELETE("로컬 파일 삭제에 실패했습니다.", HttpStatus.BAD_REQUEST),
     MAX_10MB_SIZE("파일 크기가 10MB를 초과할 수 없습니다.", HttpStatus.BAD_REQUEST),
     NO_EXTENSION("확장자가 없는 파일은 업로드할 수 없습니다.", HttpStatus.BAD_REQUEST),
-    NO_AUTHORITY("권헌이 없습니다.", HttpStatus.UNAUTHORIZED),
-    NO_CONNECT("수정 또는 삭제할 권한이 없습니다.", HttpStatus.UNAUTHORIZED),
+    NO_AUTHORITY("권한이 없습니다. 관리자 또는 입점사 계정만 사용할 수 있는 기능입니다.", HttpStatus.FORBIDDEN),
+    NO_CONNECT("본인의 주문·장바구니·게시물만 수정하거나 삭제할 수 있습니다.", HttpStatus.FORBIDDEN),
     SELECT_COLOR_OR_SIZE("색상과 사이즈 중 하나는 필수입니다.",HttpStatus.BAD_REQUEST),
     FAIL_UPLOAD_FILE("이미지 업로드 중 오류가 발생했습니다.",HttpStatus.BAD_REQUEST),
     CAN_NOT_USE_PRODUCT("해당 상품을 사용할 수 없습니다.",HttpStatus.BAD_REQUEST),

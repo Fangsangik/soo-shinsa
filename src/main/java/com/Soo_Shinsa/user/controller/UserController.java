@@ -42,7 +42,7 @@ public class UserController {
     public ResponseEntity<CommonResponse<JwtAuthResponseDto>> login(@RequestBody LoginRequestDto dto) {
         JwtAuthResponseDto login = userService.login(dto);
 
-        jwtAccessTokenService.saveAccessToken(login.getAccessToken(), login.getEmail(), jwtProvider.getExpiryMillis());
+        // access token 세션 저장은 UserServiceImpl.login 이 유휴 TTL(jwt.idle-millis)로 처리한다 (여기서 다시 저장하면 1시간으로 덮어씀)
         jwtRefreshTokenService.saveRefreshToken(login.getEmail(), login.getRefreshToken(), login.getRefreshTokenExpiration());
 
         return ResponseEntity.ok(new CommonResponse<>(ResponseMessage.USER_LOG_IN_SUCCESS, login));

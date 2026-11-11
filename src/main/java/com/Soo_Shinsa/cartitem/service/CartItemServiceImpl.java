@@ -71,6 +71,7 @@ public class CartItemServiceImpl implements CartItemService {
         return CartItemResponseDto.toDto(cartItem, productOptions);
     }
 
+    @Transactional(readOnly = true) // 주문/장바구니 ↔ 상품 lazy 로딩을 서비스 안에서 끝내기 위한 최소 범위 (OSIV off)
     @Override
     public CartItemResponseDto findById(Long cartId, User user) {
         // 사용자 정보 가져오기
@@ -86,6 +87,7 @@ public class CartItemServiceImpl implements CartItemService {
         return CartItemResponseDto.toDto(cartItem, productOptions);
     }
 
+    @Transactional(readOnly = true) // 주문/장바구니 ↔ 상품 lazy 로딩을 서비스 안에서 끝내기 위한 최소 범위 (OSIV off)
     @Override
     public Page<CartItemResponseDto> findByAll(User user, CartItemDateRequestDto requestDto, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);

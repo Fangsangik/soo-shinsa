@@ -43,6 +43,8 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
     private final JwtAccessTokenService jwtAccessTokenService;
+    @org.springframework.beans.factory.annotation.Value("${jwt.idle-millis:1800000}")
+    private long idleMillis;
     private final JwtRefreshTokenService jwtRefreshTokenService;
     private final UserDetailsServiceImp userDetailsService;
     private final JwtBlackListService jwtBlackListService;
@@ -106,14 +108,14 @@ public class UserServiceImpl implements UserService {
         String refreshToken = jwtProvider.generateRefreshToken(user.getEmail());
         Long refreshTokenExpiration = jwtProvider.getRefreshExpiryMillis();
 
-        jwtAccessTokenService.saveAccessToken(accessToken, user.getEmail(), jwtProvider.getExpiryMillis());
+        jwtAccessTokenService.saveAccessToken(accessToken, user.getEmail(), idleMillis); // 슬라이딩 세션: 활동마다 필터가 연장
 
         return new JwtAuthResponseDto(AuthenticationScheme.BEARER.getName(), refreshToken, refreshTokenExpiration, accessToken, user.getEmail());
     }
 
     @Override
     public UserDetailResponseDto getUser(User user) {
-        return new UserDetailResponseDto(user);
+        return new UserDetailResponseDto(userRepository.findByIdOrElseThrow(user.getUserId())); // principal 은 클레임만 담고 있음
     }
 
     @Transactional
@@ -180,7 +182,7 @@ public class UserServiceImpl implements UserService {
         String newAccessToken = jwtProvider.generateTokenBy(email, jwtProvider.getExpiryMillis());
 
         // Redis에 Access Token 저장
-        jwtAccessTokenService.saveAccessToken(newAccessToken, email, jwtProvider.getExpiryMillis());
+        jwtAccessTokenService.saveAccessToken(newAccessToken, email, idleMillis);
 
         // SecurityContext에 새로운 인증 정보 반영
         UserDetails userDetails = userDetailsService.loadUserByUsername(email);
@@ -202,7 +204,8 @@ public class UserServiceImpl implements UserService {
 
     @Transactional
     @Override
-    public void leave(String password, User user) {
+    public void leave(String password, User principal) {
+        User user = userRepository.findByIdOrElseThrow(principal.getUserId());
         //비밀번호 확인
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new DuplicatedException(DELETED_USER);

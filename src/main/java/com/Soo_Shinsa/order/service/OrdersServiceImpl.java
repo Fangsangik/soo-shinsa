@@ -38,6 +38,7 @@ public class OrdersServiceImpl implements OrdersService {
     private final UserRepository userRepository;
 
 
+    @Transactional(readOnly = true) // 주문/장바구니 ↔ 상품 lazy 로딩을 서비스 안에서 끝내기 위한 최소 범위 (OSIV off)
     @Override
     public OrdersResponseDto getOrderById(Long orderId, User user) {
         User findUser = userRepository.findByIdOrElseThrow(user.getUserId());
@@ -50,6 +51,7 @@ public class OrdersServiceImpl implements OrdersService {
         return OrdersResponseDto.toDto(findOrder);
     }
 
+    @Transactional(readOnly = true) // 주문/장바구니 ↔ 상품 lazy 로딩을 서비스 안에서 끝내기 위한 최소 범위 (OSIV off)
     @Override
     public Page<OrdersResponseDto> getAllByUserId(User user, OrderDateRequestDto dateRequestDto, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -209,6 +211,7 @@ public class OrdersServiceImpl implements OrdersService {
         return OrdersResponseDto.toDto(savedOrder);
     }
 
+    @Transactional(readOnly = true) // 주문/장바구니 ↔ 상품 lazy 로딩을 서비스 안에서 끝내기 위한 최소 범위 (OSIV off)
     @Override
     public Page<OrdersResponseDto> getAllForStaff(User user, OrdersStatus status, OrderDateRequestDto dateRequestDto, int page, int size) {
         User findUser = userRepository.findByIdOrElseThrow(user.getUserId());

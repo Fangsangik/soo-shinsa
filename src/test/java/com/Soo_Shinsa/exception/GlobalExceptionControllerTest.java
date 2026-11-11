@@ -34,7 +34,7 @@ class GlobalExceptionControllerTest {
     void 도메인_예외는_ErrorCode_의_상태와_메시지로() throws Exception {
         mvc.perform(get("/nf")).andExpect(status().isNotFound()).andExpect(jsonPath("$.message").value("오더를 찾을 수 없습니다."));
         mvc.perform(get("/bad")).andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(ErrorCode.INVALID_ORDER_STATUS.getMessage()));
-        mvc.perform(get("/auth")).andExpect(status().isUnauthorized()).andExpect(jsonPath("$.httpStatus").value("UNAUTHORIZED"));
+        mvc.perform(get("/auth")).andExpect(status().isForbidden()).andExpect(jsonPath("$.httpStatus").value("FORBIDDEN")).andExpect(jsonPath("$.code").value("NO_AUTHORITY"));
     }
 
     @Test

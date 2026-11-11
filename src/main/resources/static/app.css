@@ -92,3 +92,7 @@ dialog::backdrop { background: rgba(0,0,0,.4); }
 @media (max-width: 640px) { nav { gap: 10px; font-size: 13px; } .container { padding: 16px 16px 80px; } }
 .pager { display: flex; gap: 12px; align-items: center; justify-content: center; margin: 16px 0; }
 select.sm { padding: 4px 8px; font-size: 13px; }
+.gate { max-width: 440px; margin: 64px auto; text-align: center; padding: 32px 24px; border: 1px solid var(--line); border-radius: 16px; }
+.gate-icon { font-size: 40px; margin-bottom: 8px; }
+.gate h1 { margin-bottom: 8px; }
+.gate p { margin: 4px 0 20px; }

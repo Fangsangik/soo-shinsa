@@ -33,6 +33,9 @@ python3 scripts/seed-stats.py            # (선택) 브랜드별 지난 30일 mo
   - `./gradlew test` — 단위 테스트 55개 (Mockito, DB 불필요: 주문 상태 전이·소유권, 장바구니 쿠폰, 결제 멱등, 상품 소유권, 통계 집계, 예외 응답)
   - `./gradlew test -Pintegration` — MySQL/Redis 필요한 통합 테스트(쿠폰 동시성)까지 포함
   - `python3 scripts/contract-test.py` — 서버 기동 후, 프론트가 읽는 필드/PK ↔ 백엔드 응답 계약 285개 체크 (페이지네이션, 주문 관리, 입점사 상품 관리, 통계 포함)
+- 로그인 세션: JWT 는 서명 검증만 하고(매 요청 DB 조회 없음) Redis 세션 키를 30분 슬라이딩 TTL 로 유지합니다(`jwt.idle-millis`). 30분 동안 요청이 없으면 다음 요청에서 토큰을 블랙리스트에 넣고 refresh token 도 지워 강제 로그아웃됩니다.
+- 오류 응답은 항상 `{httpStatus, code, message}` 입니다. 401 은 code 로 이유를 구분하고(NO_TOKEN / TOKEN_EXPIRED → 자동 갱신 / SESSION_EXPIRED / LOGGED_OUT / INVALID_TOKEN) 프론트가 이유와 함께 로그인 안내 화면을 보여줍니다. 권한 부족은 403(NO_AUTHORITY, NO_CONNECT).
+- 부하 테스트: `scripts/jmeter/run-ramp.sh [초] ["50 100 200 400"]` (JMeter, 스레드별 로그인 1회 후 둘러보기→장바구니→주문내역 루프). 결과는 build/jmeter/. OSIV 는 꺼져 있고(`spring.jpa.open-in-view=false`) lazy 로딩이 필요한 조회 메서드에만 `@Transactional(readOnly = true)` 를 둡니다.
 - 이미지 업로드는 로컬 프로필(local)에서 S3 대신 mock URL(picsum)로 저장됩니다 (`app.image.mock=true`). 이미지 없는 상품도 프론트에서 mock 이미지로 표시됩니다.
 
 ## 👨‍💻 About Project 

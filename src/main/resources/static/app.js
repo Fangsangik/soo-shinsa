@@ -42,30 +42,47 @@
         set(d) { localStorage.setItem('accessToken', d.accessToken); localStorage.setItem('refreshToken', d.refreshToken); localStorage.setItem('email', d.email); },
         clear() { ['accessToken', 'refreshToken', 'email'].forEach(k => localStorage.removeItem(k)); state.user = null; }
     };
+    /* 백엔드 오류 응답 {httpStatus, code, message} 를 사용자가 이해할 수 있는 화면으로.
+       401: 왜 로그인이 끊겼는지(유휴 만료/로그아웃/위조) 카드로 보여주고 로그인 버튼. 403: 권한 안내. 그 외: 토스트. */
+    const ERROR_TITLE = { NO_TOKEN: '로그인이 필요합니다', SESSION_EXPIRED: '세션이 만료되었습니다', LOGGED_OUT: '로그아웃된 상태입니다', INVALID_TOKEN: '로그인 정보가 올바르지 않습니다', TOKEN_EXPIRED: '로그인이 만료되었습니다' };
+    const authGate = (code, message) => {
+        tokens.clear(); renderNav(); state.gate = { code, message }; // 페이지 진입 시 requireLogin 이 같은 이유를 다시 보여줌
+        app.innerHTML = `<div class="gate"><div class="gate-icon">🔒</div><h1>${esc(ERROR_TITLE[code] || '로그인이 필요합니다')}</h1><p class="muted">${esc(message)}</p>
+            <div class="row" style="justify-content:center"><a class="btn primary" href="#/login">로그인하기</a><a class="btn ghost" href="#/">홈으로</a></div></div>`;
+    };
+    const forbidden = (message) => {
+        app.innerHTML = `<div class="gate"><div class="gate-icon">⛔</div><h1>접근 권한이 없습니다</h1><p class="muted">${esc(message)}</p>
+            <p class="muted">현재 계정: ${esc(state.user?.name || '')} (${esc(state.user?.role || '-')})</p>
+            <div class="row" style="justify-content:center"><a class="btn primary" href="#/">홈으로</a></div></div>`;
+    };
+    class ApiError extends Error { constructor(status, code, message) { super(message); this.status = status; this.code = code; } }
     const api = async (method, path, body, retry = true) => {
         const headers = {};
         if (tokens.access) headers.Authorization = 'Bearer ' + tokens.access;
         if (body && !(body instanceof FormData)) { headers['Content-Type'] = 'application/json'; body = JSON.stringify(body); }
         const res = await fetch(path, { method, headers, body });
-        if (res.status === 401 && retry && tokens.refresh) {
-            const ok = await refreshToken();
-            if (ok) return api(method, path, body instanceof FormData ? body : (body && JSON.parse(body)), false);
-        }
         if (res.status === 204) return null;
         const text = await res.text();
         let json = null; try { json = text ? JSON.parse(text) : null; } catch { /* html error page */ }
-        if (!res.ok) {
-            if (res.status === 401 || res.status === 403) { if (!tokens.access) location.hash = '#/login'; }
-            throw new Error(json?.message || json?.error || `요청 실패 (${res.status})`);
+        if (res.ok) return json;
+        const code = json?.code || '', message = json?.message || json?.error || `요청 실패 (${res.status})`;
+        if (res.status === 401) {
+            // 액세스 토큰만 만료된 경우: refresh 로 조용히 이어간다
+            if (code === 'TOKEN_EXPIRED' && retry && tokens.refresh && await refreshToken()) {
+                return api(method, path, body instanceof FormData ? body : (body && JSON.parse(body)), false);
+            }
+            if (tokens.access || code === 'NO_TOKEN') authGate(code, message);
+            throw new ApiError(401, code, message);
         }
-        return json;
+        if (res.status === 403) { forbidden(message); throw new ApiError(403, code, message); }
+        throw new ApiError(res.status, code, message);
     };
     const refreshToken = async () => {
         try {
             const res = await fetch('/users/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken: tokens.refresh, accessToken: tokens.access }) });
             if (!res.ok) throw 0;
             const j = await res.json(); tokens.set(j.data); return true;
-        } catch { tokens.clear(); return false; }
+        } catch { return false; }
     };
     const loadMe = async () => {
         if (!tokens.access) { state.user = null; return null; }
@@ -73,7 +90,11 @@
         return state.user;
     };
     const isStaff = () => ['ADMIN', 'VENDOR'].includes(state.user?.role);
-    const requireLogin = () => { if (!tokens.access) { toast('로그인이 필요합니다.'); location.hash = '#/login'; return false; } return true; };
+    const requireLogin = () => {
+        if (tokens.access) return true;
+        const g = state.gate || { code: 'NO_TOKEN', message: '로그인 후 이용할 수 있는 페이지입니다.' }; state.gate = null;
+        authGate(g.code, g.message); return false;
+    };
 
     /* ---------- nav ---------- */
     const renderNav = () => {

@@ -15,6 +15,7 @@ import static com.Soo_Shinsa.exception.ErrorCode.FAIL_UPLOAD_FILE;
 
 @Slf4j
 @Service
+@org.springframework.transaction.annotation.Transactional(readOnly = true) // OSIV off: 조회도 트랜잭션 안에서 lazy 로딩
 @RequiredArgsConstructor
 public class ImageServiceImpl implements ImageService {
 

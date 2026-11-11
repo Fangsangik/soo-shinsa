@@ -22,6 +22,11 @@ public class JwtAccessTokenService {
         return redisTemplate.opsForValue().get(ACCESS_TOKEN_PREFIX + accessToken);
     }
 
+    /** 활동이 있을 때마다 유휴 만료 시간을 다시 늘린다 (슬라이딩 세션) */
+    public void touch(String accessToken, long idleMillis) {
+        redisTemplate.expire(ACCESS_TOKEN_PREFIX + accessToken, idleMillis, TimeUnit.MILLISECONDS);
+    }
+
     public void deleteAccessToken(String accessToken) {
         redisTemplate.delete(ACCESS_TOKEN_PREFIX + accessToken);
     }

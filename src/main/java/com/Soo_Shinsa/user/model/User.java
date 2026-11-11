@@ -53,6 +53,14 @@ public class User {
         this.userGrade = userGrade;
     }
 
+    /** JWT 클레임만으로 만든 인증 주체. 필터에서 매 요청 DB 조회를 없애기 위한 것이라 id/email/name/role 만 채워진다.
+     *  비밀번호·전화번호·등급이 필요한 서비스는 userRepository.findByIdOrElseThrow(user.getUserId()) 로 다시 읽어야 한다. */
+    public static User principal(Long userId, String email, String name, Role role) {
+        User u = new User();
+        u.userId = userId; u.email = email; u.name = name; u.role = role; u.status = UserStatus.ACTIVE;
+        return u;
+    }
+
     public void updateUserGrade(UserGrade userGrade) {
         this.userGrade = userGrade;
     }
