@@ -58,21 +58,109 @@
 
 ## 2. 아키텍처
 
+### 시스템 구성
+
+```mermaid
+flowchart LR
+    subgraph Client["Browser"]
+        SPA["Vanilla JS SPA<br/>index.html · app.js · app.css<br/>(hash router, no build step)"]
+    end
+
+    subgraph App["Spring Boot 3.4 · :8080"]
+        direction TB
+        Static["Static Resources<br/>(same origin → CORS 불필요)"]
+        Filter["JwtAuthFilter<br/>서명 검증 + Redis 세션 TTL 갱신<br/>(DB 조회 없음)"]
+        WS["ChatWebSocketHandler<br/>/ws/chat"]
+        subgraph Domain["Domain Layer"]
+            direction LR
+            U["user · auth"] ~~~ C["catalog<br/>category · brand<br/>product · option"]
+            O["order · cart<br/>coupon · point"] ~~~ R["review · report<br/>wish · chat"]
+        end
+        Batch["Spring Batch<br/>일일 매출 집계 Job<br/>(00:00 스케줄)"]
+        Ex["GlobalExceptionController<br/>{httpStatus, code, message}"]
+    end
+
+    subgraph Data["Infra"]
+        MySQL[("MySQL 8<br/>HikariCP pool 30<br/>JPA · QueryDSL · MyBatis")]
+        Redis[("Redis<br/>세션 · 블랙리스트 · refresh<br/>쿠폰 분산락 · 채팅 Pub/Sub · 히스토리")]
+    end
+
+    subgraph Ext["External"]
+        Toss["Toss Payments"]
+        S3["AWS S3<br/>(local: mock URL)"]
+    end
+
+    SPA -- "GET /" --> Static
+    SPA -- "fetch JSON<br/>Bearer JWT" --> Filter --> Domain
+    SPA -- "WebSocket" --> WS
+    Domain --> MySQL
+    Domain --> Redis
+    WS <--> Redis
+    Batch --> MySQL
+    Domain -. "결제 승인/취소" .-> Toss
+    Domain -. "이미지 업로드" .-> S3
+    Domain --> Ex
 ```
-┌──────────────────────── Browser ────────────────────────┐
-│  static/index.html + app.js (hash-router SPA, no build)  │
-│  fetch(JSON) ──────────────┐    WebSocket /ws/chat ──┐   │
-└────────────────────────────┼────────────────────────┼───┘
-                             ▼                        ▼
-┌───────────────────── Spring Boot 3.4 (:8080) ───────────────────────┐
-│ JwtAuthFilter(서명검증+Redis 세션) → Controller → Service → Repository │
-│  ├ JPA / QueryDSL (동적 조회, DTO 프로젝션)                            │
-│  ├ MyBatis (통계 집계 SQL)        ├ Spring Batch (일일 매출 집계 Job)    │
-│  ├ Redisson AOP 분산 락 (쿠폰)    ├ ChatWebSocketHandler + Redis Pub/Sub │
-│  └ GlobalExceptionController → {httpStatus, code, message}            │
-└───────────┬──────────────────────────────┬───────────────────────────┘
-            ▼                              ▼
-     MySQL 8 (Hikari 30)          Redis (세션·블랙리스트·refresh·쿠폰락·채팅)
+
+### 요청 흐름 — 로그인 세션과 자동 로그아웃
+
+```mermaid
+sequenceDiagram
+    participant B as Browser (SPA)
+    participant F as JwtAuthFilter
+    participant R as Redis
+    participant S as Service / DB
+
+    B->>S: POST /users/login
+    S->>R: SET session:{jti} TTL 30m · refresh token
+    S-->>B: access + refresh JWT (uid, role, name 클레임)
+
+    loop 매 API 요청
+        B->>F: Authorization: Bearer access
+        F->>F: 서명·만료 검증 (DB 조회 없음)
+        F->>R: EXISTS session:{jti} → EXPIRE 30m 갱신
+        alt 세션 있음
+            F->>S: principal(uid, role) 로 진행
+            S-->>B: 200
+        else 30분 유휴로 세션 소멸
+            F->>R: 블랙리스트 등록 · refresh 삭제
+            F-->>B: 401 {code: SESSION_EXPIRED}
+            B->>B: "30분 동안 활동이 없어 로그아웃되었습니다" 안내 카드
+        end
+    end
+
+    B->>F: access 만료 (TOKEN_EXPIRED)
+    B->>S: POST /users/refresh (single-flight)
+    S-->>B: 새 access → 원 요청 1회 재시도
+```
+
+### 요청 흐름 — 입점사 상담 채팅 (다중 인스턴스 대응)
+
+```mermaid
+sequenceDiagram
+    participant C as 고객 Browser
+    participant A1 as App #1
+    participant R as Redis
+    participant A2 as App #2
+    participant V as 입점사 Browser
+
+    C->>A1: WS /ws/chat?token=&room=brand-1
+    A1->>A1: HandshakeInterceptor: JWT + 세션 확인
+    V->>A2: WS /ws/chat?token=&room=brand-1
+    A2->>A2: VENDOR → 자기 브랜드 방만 허용
+    A1->>R: LRANGE chat:history:brand-1 (최근 50개)
+    A1-->>C: 히스토리 리플레이
+
+    C->>A1: "배송 언제 되나요?"
+    A1->>R: RPUSH chat:history:brand-1 · PUBLISH chat:room:brand-1
+    R-->>A1: onMessage
+    R-->>A2: onMessage (PatternTopic chat:room:*)
+    A1-->>C: echo
+    A2-->>V: 메시지 전달
+    V->>A2: "내일 출고됩니다"
+    A2->>R: PUBLISH
+    R-->>A1: onMessage
+    A1-->>C: 답변 수신
 ```
 
 - **프론트를 백엔드와 같은 origin**에서 서빙 → CORS·빌드 도구·Node 없이 `./gradlew bootRun` 하나로 전체 데모
